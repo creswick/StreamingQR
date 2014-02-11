@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/QRStream.iml" filepath="$PROJECT_DIR$/QRStream.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android.iml" filepath="$PROJECT_DIR$/android.iml" />
       <module fileurl="file://$PROJECT_DIR$/qrdemo.iml" filepath="$PROJECT_DIR$/qrdemo.iml" />
       <module fileurl="file://$PROJECT_DIR$/qrstream/qrstream.iml" filepath="$PROJECT_DIR$/qrstream/qrstream.iml" />
       <module fileurl="file://$PROJECT_DIR$/qrstreamlib/qrstreamlib.iml" filepath="$PROJECT_DIR$/qrstreamlib/qrstreamlib.iml" />
