@@ -9,6 +9,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.galois.qrstream.lib.CameraFragment;
+
 public class MainActivity extends Activity {
 
     @Override
@@ -61,17 +63,5 @@ public class MainActivity extends Activity {
         }
     }
 
-    public static class CameraFragment extends Fragment {
-
-        public CameraFragment() {
-        }
-
-        @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                                 Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.camera_main, container, false);
-            return rootView;
-        }
-    }
 
 }
