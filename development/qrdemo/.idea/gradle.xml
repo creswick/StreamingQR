@@ -9,6 +9,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/qrstream" />
+            <option value="$PROJECT_DIR$/qrstreamlib" />
           </set>
         </option>
       </GradleProjectSettings>

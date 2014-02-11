@@ -1,1 +1,1 @@
-include ':qrstream'
+include ':qrstream', ':qrstreamlib'
