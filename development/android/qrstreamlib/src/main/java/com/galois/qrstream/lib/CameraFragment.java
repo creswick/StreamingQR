@@ -42,10 +42,6 @@ public class CameraFragment extends Fragment implements SurfaceHolder.Callback {
     @Override
     public void onPause(){
         super.onPause();
-        if(camera != null) {
-            camera.stopPreview();
-            camera.release();
-        }
     }
 
     @Override
@@ -61,11 +57,11 @@ public class CameraFragment extends Fragment implements SurfaceHolder.Callback {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-
+        camera.stopPreview();
+        camera.release();
     }
 }
