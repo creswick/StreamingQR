@@ -8,4 +8,9 @@
         android:layout_width="fill_parent"
         android:layout_height="50dp"
         android:src="@drawable/ic_launcher" />
+    
+    <SurfaceView
+        android:id="@+id/camera_window"
+        android:layout_width="fill_parent"
+        android:layout_height="100dp" />
 </LinearLayout>
