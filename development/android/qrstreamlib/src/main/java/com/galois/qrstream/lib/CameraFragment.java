@@ -45,10 +45,7 @@ public class CameraFragment extends Fragment implements SurfaceHolder.Callback {
     public void onResume(){
         super.onResume();
         camera = Camera.open();
-        Camera.Parameters params = camera.getParameters();
-        params.setPictureSize(640, 480);
-        params.setPictureFormat(ImageFormat.JPEG);
-        camera.setParameters(params);
+        // 640x480 = 3110400 byte frame
         camera.setPreviewCallback(new Preview());
         camera_window.getHolder().addCallback(this);
     }
@@ -56,6 +53,7 @@ public class CameraFragment extends Fragment implements SurfaceHolder.Callback {
     @Override
     public void onPause(){
         super.onPause();
+        camera.setPreviewCallback(null);
     }
 
     @Override
