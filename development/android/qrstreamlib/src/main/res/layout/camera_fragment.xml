@@ -13,4 +13,10 @@
         android:id="@+id/camera_window"
         android:layout_width="fill_parent"
         android:layout_height="100dp" />
+
+    <Button
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="Capture"
+        android:tag="capture"/>
 </LinearLayout>
