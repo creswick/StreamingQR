@@ -12,7 +12,7 @@
     <SurfaceView
         android:id="@+id/camera_window"
         android:layout_width="fill_parent"
-        android:layout_height="100dp" />
+        android:layout_height="200dp" />
 
     <Button
         android:layout_width="fill_parent"
