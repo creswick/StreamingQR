@@ -9,7 +9,10 @@ android {
         targetSdkVersion 19
         versionCode 1
         versionName "1.0"
+
+        testPackageName "com.galois.qrstream.test"
     }
+
     buildTypes {
         release {
             runProguard false
