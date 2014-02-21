@@ -11,16 +11,17 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 
 import java.io.IOException;
 
 /**
  * Created by donp on 2/11/14.
  */
-public class TransmitFragment extends Fragment implements SurfaceHolder.Callback {
+public class TransmitFragment extends Fragment {
 
     static Camera camera;
-    SurfaceView camera_window;
+    ImageView send_window;
     Button capture;
     static Handler ui;
 
@@ -33,7 +34,7 @@ public class TransmitFragment extends Fragment implements SurfaceHolder.Callback
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.transmit_fragment, container, false);
 
-        camera_window = (SurfaceView)rootView.findViewById(R.id.flash_window);
+        send_window = (ImageView)rootView.findViewById(R.id.send_window);
         capture = (Button)rootView.findViewWithTag("send");
         capture.setOnClickListener(new CaptureClick());
         return rootView;
@@ -42,32 +43,12 @@ public class TransmitFragment extends Fragment implements SurfaceHolder.Callback
     @Override
     public void onResume(){
         super.onResume();
-        camera = Camera.open();
-        Camera.Parameters params = camera.getParameters();
-        // 640x480 = 3110400 byte frame
-        camera.setPreviewCallback(new Preview());
-        camera_window.getHolder().addCallback(this);
+        send_window.setImageDrawable(getResources().getDrawable(R.drawable.sample1));
     }
 
     @Override
     public void onPause(){
         super.onPause();
-        camera.setPreviewCallback(null);
-    }
-
-    @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-
-    }
-
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-        camera.stopPreview();
-        camera.release();
     }
 
     public static class CaptureClick implements View.OnClickListener{

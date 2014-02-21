@@ -16,8 +16,8 @@
         android:textColor="#00ff00"
         />
 
-    <SurfaceView
-        android:id="@+id/flash_window"
+    <ImageView
+        android:id="@+id/send_window"
         android:layout_width="fill_parent"
         android:layout_height="200dp" />
 
