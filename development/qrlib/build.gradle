@@ -1,4 +1,5 @@
 apply plugin: 'java'
+apply plugin: 'eclipse'
 
 // Compile with and generate classes for Java 1.6
 sourceCompatibility = 1.6
