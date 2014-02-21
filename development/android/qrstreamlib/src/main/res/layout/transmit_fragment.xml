@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="520dp"
+    android:layout_gravity="center_vertical"
+    >
+
+    <TextView
+        android:text="@string/transmit_title"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:textSize="13pt"
+        android:textColor="#00ff00"
+        />
+
+    <SurfaceView
+        android:id="@+id/flash_window"
+        android:layout_width="fill_parent"
+        android:layout_height="200dp" />
+
+    <Button
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="Send"
+        android:tag="send"/>
+</LinearLayout>

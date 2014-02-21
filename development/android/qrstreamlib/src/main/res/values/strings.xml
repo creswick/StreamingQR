@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">My Module</string>
+    <string name="transmit_title">Transmitting</string>
+    <string name="receive_title">Receiving</string>
 </resources>

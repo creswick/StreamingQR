@@ -1,14 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical" android:layout_width="match_parent"
-    android:layout_height="520dp">
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="520dp"
+    android:layout_gravity="center_vertical"
+    >
 
-    <ImageView
+    <TextView
+        android:text="@string/receive_title"
         android:layout_width="fill_parent"
-        android:layout_height="50dp"
-        android:src="@drawable/ic_launcher" />
-    
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:textSize="13pt"
+        android:textColor="#0000ff"
+        />
+
     <SurfaceView
         android:id="@+id/camera_window"
         android:layout_width="fill_parent"

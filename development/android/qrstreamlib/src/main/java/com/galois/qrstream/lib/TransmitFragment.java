@@ -1,11 +1,9 @@
 package com.galois.qrstream.lib;
 
 import android.app.Fragment;
-import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
@@ -19,24 +17,24 @@ import java.io.IOException;
 /**
  * Created by donp on 2/11/14.
  */
-public class CameraFragment extends Fragment implements SurfaceHolder.Callback {
+public class TransmitFragment extends Fragment implements SurfaceHolder.Callback {
 
     static Camera camera;
     SurfaceView camera_window;
     Button capture;
     static Handler ui;
 
-    public CameraFragment() {
+    public TransmitFragment() {
         ui = new Handler();
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.camera_fragment, container, false);
+        View rootView = inflater.inflate(R.layout.transmit_fragment, container, false);
 
-        camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
-        capture = (Button)rootView.findViewWithTag("capture");
+        camera_window = (SurfaceView)rootView.findViewById(R.id.flash_window);
+        capture = (Button)rootView.findViewWithTag("send");
         capture.setOnClickListener(new CaptureClick());
         return rootView;
     }
@@ -64,13 +62,6 @@ public class CameraFragment extends Fragment implements SurfaceHolder.Callback {
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        try {
-            camera.setPreviewDisplay(holder);
-            camera.startPreview();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
@@ -79,28 +70,10 @@ public class CameraFragment extends Fragment implements SurfaceHolder.Callback {
         camera.release();
     }
 
-    public static class TakePicture implements Runnable {
-        public void run() {
-            Log.d("qrstream", "** Taking picture");
-            camera.takePicture(new Shutter(), new Picture(ui, "raw"),
-                                              new Picture(ui, "postdata"),
-                                              new Picture(ui, "jpeg"));
-        }
-    }
-
-    public static class StartPreview implements Runnable {
-        public void run() {
-            Log.d("qrstream", "** Start preview");
-            camera.startPreview();
-        }
-    }
-
     public static class CaptureClick implements View.OnClickListener{
         @Override
         public void onClick(View v) {
-            Log.d("qstream", "Capture Pushed");
-            Thread thread = new Thread(new TakePicture());
-            thread.run();
+            Log.d("qstream", "Send Pushed");
         }
     }
 }

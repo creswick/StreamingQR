@@ -2,6 +2,7 @@ package com.galois.qrstream;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.app.FragmentManager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -9,19 +10,22 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.galois.qrstream.lib.CameraFragment;
+import com.galois.qrstream.lib.ReceiveFragment;
+import com.galois.qrstream.lib.TransmitFragment;
 
 public class MainActivity extends Activity {
+
+    FragmentManager fragmentManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        fragmentManager = getFragmentManager();
 
         if (savedInstanceState == null) {
-            getFragmentManager().beginTransaction()
-                    .add(R.id.container, new PlaceholderFragment())
-                    .add(R.id.container, new CameraFragment())
+            fragmentManager.beginTransaction()
+                    .add(R.id.container, new ReceiveFragment())
                     .commit();
         }
     }
@@ -42,6 +46,18 @@ public class MainActivity extends Activity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if (id == R.id.action_settings) {
+            return true;
+        }
+        if (id == R.id.action_receive) {
+            fragmentManager.beginTransaction()
+                    .replace(R.id.container, new ReceiveFragment())
+                    .commit();
+            return true;
+        }
+        if (id == R.id.action_transmit) {
+            fragmentManager.beginTransaction()
+                    .replace(R.id.container, new TransmitFragment())
+                    .commit();
             return true;
         }
         return super.onOptionsItemSelected(item);
