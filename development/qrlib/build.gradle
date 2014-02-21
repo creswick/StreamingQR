@@ -20,3 +20,12 @@ dependencies {
     // Junit requried to compile the unit tests
     testCompile group: 'junit', name: 'junit', version: '4.+'
 }
+
+test {
+    testLogging.showStandardStreams = true
+
+    // listen to events in the test execution lifecycle
+    afterTest { descriptor, result ->
+       logger.lifecycle("test result: " + result + ", " + descriptor)
+    }
+}
