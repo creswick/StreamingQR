@@ -1,1 +1,22 @@
 apply plugin: 'java'
+
+// Compile with and generate classes for Java 1.6
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+version = '0.1'
+jar {
+    manifest {
+        attributes 'Implementation-Version': version
+    }
+}
+
+// Look for external dependencies in these repositories
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Junit requried to compile the unit tests
+    testCompile group: 'junit', name: 'junit', version: '4.+'
+}
