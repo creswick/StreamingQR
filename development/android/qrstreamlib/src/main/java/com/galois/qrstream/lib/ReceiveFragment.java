@@ -11,6 +11,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import com.galois.qrstream.qrpipe.Manager;
 
 import java.io.IOException;
 
@@ -23,6 +24,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     SurfaceView camera_window;
     Button capture;
     static Handler ui;
+    Manager qrpipe;
 
     public ReceiveFragment() {
         ui = new Handler();
@@ -40,12 +42,20 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     }
 
     @Override
+    public void onStart(){
+        super.onStart();
+        qrpipe = new Manager();
+    }
+
+    @Override
     public void onResume(){
         super.onResume();
         camera = Camera.open();
         Camera.Parameters params = camera.getParameters();
         // 640x480 = 3110400 byte frame
-        camera.setPreviewCallback(new Preview());
+        Preview previewCallback = new Preview();
+        previewCallback.setQrpipe(qrpipe);
+        camera.setPreviewCallback(previewCallback);
         camera_window.getHolder().addCallback(this);
     }
 

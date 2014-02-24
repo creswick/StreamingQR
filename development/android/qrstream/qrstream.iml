@@ -71,6 +71,7 @@
     <orderEntry type="jdk" jdkName="Android API 19 Platform" jdkType="Android SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="qrstreamlib" exported="" />
+    <orderEntry type="library" exported="" name="qrlib" level="project" />
   </component>
 </module>
 
