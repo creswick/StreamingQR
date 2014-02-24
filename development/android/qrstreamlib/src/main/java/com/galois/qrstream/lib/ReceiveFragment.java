@@ -18,13 +18,12 @@ import java.io.IOException;
 /**
  * Created by donp on 2/11/14.
  */
-public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
+public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Callback {
 
     static Camera camera;
     SurfaceView camera_window;
     Button capture;
     static Handler ui;
-    Manager qrpipe;
 
     public ReceiveFragment() {
         ui = new Handler();
@@ -39,12 +38,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         capture = (Button)rootView.findViewWithTag("capture");
         capture.setOnClickListener(new CaptureClick());
         return rootView;
-    }
-
-    @Override
-    public void onStart(){
-        super.onStart();
-        qrpipe = new Manager();
     }
 
     @Override
