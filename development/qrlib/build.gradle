@@ -1,0 +1,39 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+// Compile with and generate classes for Java 1.6
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+version = '0.1'
+jar {
+    manifest {
+        attributes 'Implementation-Version': version
+    }
+}
+
+// Look for external dependencies in these repositories
+repositories {
+    mavenCentral()
+}
+
+// By default, Gradle includes all of the compile time dependencies at
+// runtime.
+dependencies {
+    // ZXing core, i.e. the QR code library
+    compile "com.google.zxing:core:2.3.0"
+    // functions to export images
+    compile "com.google.zxing:javase:2.2"
+
+    // Junit requried to compile the unit tests
+    testCompile group: 'junit', name: 'junit', version: '4.+'
+}
+
+test {
+    testLogging.showStandardStreams = true
+
+    // listen to events in the test execution lifecycle
+    afterTest { descriptor, result ->
+       logger.lifecycle("test result: " + result + ", " + descriptor)
+    }
+}
