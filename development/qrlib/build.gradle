@@ -17,7 +17,14 @@ repositories {
     mavenCentral()
 }
 
+// By default, Gradle includes all of the compile time dependencies at
+// runtime.
 dependencies {
+    // ZXing core, i.e. the QR code library
+    compile "com.google.zxing:core:2.3.0"
+    // functions to export images
+    compile "com.google.zxing:javase:2.2"
+
     // Junit requried to compile the unit tests
     testCompile group: 'junit', name: 'junit', version: '4.+'
 }
