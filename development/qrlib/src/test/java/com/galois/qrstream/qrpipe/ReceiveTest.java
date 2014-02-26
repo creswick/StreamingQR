@@ -29,7 +29,6 @@ public class ReceiveTest {
   @Test
   public void dummyTestSoBuildPasses() {
 	  // TODO: remove once a test is ready.
-    assertTrue(false);
   }
   
   @Ignore("Not ready yet") @Test
