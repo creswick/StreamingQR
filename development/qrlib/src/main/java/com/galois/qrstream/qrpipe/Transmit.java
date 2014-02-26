@@ -1,11 +1,13 @@
 package com.galois.qrstream.qrpipe;
 
+import com.galois.qrstream.image.BitmapImage;
+
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 
-import com.galois.qrstream.image.BitmapImage;
+import java.util.ArrayList;
 
 /**
  * Class provides API for interfacing with Android application. It
@@ -43,7 +45,10 @@ public class Transmit {
    * @return The sequence of QR codes generated from input data.
    */
   public Iterable<BitmapImage> encodeQRCodes (byte[] data) {
-    return null;
+    // The collection of qr codes containing encoded data
+    ArrayList<BitmapImage> qrCodes = new ArrayList<BitmapImage>();
+    return qrCodes;
+
     // TODO Step 2: change function to: public Iterable<byte[]> encodeQRCodes (Iterable<byte[]>)
     //
     // The image width and height provided in constructor.

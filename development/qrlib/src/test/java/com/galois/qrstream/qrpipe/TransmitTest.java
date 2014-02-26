@@ -3,6 +3,8 @@ package com.galois.qrstream.qrpipe;
 
 import static org.junit.Assert.*;
 
+import com.galois.qrstream.image.BitmapImage;
+
 import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
@@ -29,4 +31,16 @@ public class TransmitTest {
     fail("testEncodeQRCodes() not implemented yet.");
   }
 
+  @Test
+  public void testEncodeQRCodesNoData() {
+    Transmit transmitter = new Transmit(350,350);
+    byte[] noByteData = new byte[0];
+
+    Iterable<BitmapImage> qrCodes = transmitter.encodeQRCodes(noByteData);
+    int size = 0;
+    for(@SuppressWarnings("unused") BitmapImage c : qrCodes) {
+       size++;
+    }
+    assertEquals("Empty transmission should yield no QR code", 0, size);
+  }
 }
