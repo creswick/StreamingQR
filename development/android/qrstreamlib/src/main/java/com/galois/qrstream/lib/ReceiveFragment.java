@@ -11,7 +11,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import com.galois.qrstream.qrpipe.Manager;
+import com.galois.qrstream.qrpipe.Receive;
 
 import java.io.IOException;
 
