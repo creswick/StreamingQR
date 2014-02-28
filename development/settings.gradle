@@ -1,1 +1,1 @@
-include ':development:qrlib'
+include ':qrlib'
