@@ -1,1 +1,1 @@
-include ':development:qrlib', ':development:android:qrstreamlib'
+include ':development:qrlib'
