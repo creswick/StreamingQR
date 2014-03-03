@@ -16,20 +16,23 @@ import com.galois.qrstream.lib.TransmitFragment;
 public class MainActivity extends Activity {
 
     FragmentManager fragmentManager;
+    public Fragment receiveFragment;
+    public Fragment transmitFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         fragmentManager = getFragmentManager();
+        receiveFragment = new ReceiveFragment();
+        transmitFragment = new TransmitFragment();
 
         if (savedInstanceState == null) {
             fragmentManager.beginTransaction()
-                    .add(R.id.container, new ReceiveFragment())
+                    .add(R.id.container, receiveFragment)
                     .commit();
         }
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -48,15 +51,16 @@ public class MainActivity extends Activity {
         if (id == R.id.action_settings) {
             return true;
         }
+
         if (id == R.id.action_receive) {
             fragmentManager.beginTransaction()
-                    .replace(R.id.container, new ReceiveFragment())
+                    .replace(R.id.container, receiveFragment)
                     .commit();
             return true;
         }
         if (id == R.id.action_transmit) {
             fragmentManager.beginTransaction()
-                    .replace(R.id.container, new TransmitFragment())
+                    .replace(R.id.container, transmitFragment)
                     .commit();
             return true;
         }
