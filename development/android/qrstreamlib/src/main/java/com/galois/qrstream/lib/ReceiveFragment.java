@@ -58,7 +58,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         startPipe(params);
     }
 
-
     @Override
     public void onPause(){
         super.onPause();
