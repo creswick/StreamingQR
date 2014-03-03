@@ -52,10 +52,24 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         super.onResume();
         camera = Camera.open();
         Camera.Parameters params = camera.getParameters();
+<<<<<<< HEAD
         Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
         camera.setPreviewCallback(previewCallback);
         camera_window.getHolder().addCallback(this);
         startPipe(params);
+=======
+        previewSetup(camera, params);
+        camera_window.getHolder().addCallback(this);
+        startPipe(params);
+    }
+
+    private void previewSetup(Camera camera, Camera.Parameters params) {
+        Preview previewCallback = new Preview();
+        previewCallback.setQueue(frameQueue);
+        previewCallback.setHeight(params.getPreviewSize().height);
+        previewCallback.setWidth(params.getPreviewSize().width);
+        camera.setPreviewCallback(previewCallback);
+>>>>>>> DecodeThread approach
     }
 
     @Override
