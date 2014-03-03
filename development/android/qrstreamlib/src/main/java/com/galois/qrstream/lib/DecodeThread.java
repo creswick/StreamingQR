@@ -1,5 +1,7 @@
 package com.galois.qrstream.lib;
 
+import android.util.Log;
+
 import com.galois.qrstream.image.YuvImage;
 import com.galois.qrstream.qrpipe.Receive;
 
@@ -8,7 +10,7 @@ import java.util.Queue;
 /**
  * Created by donp on 2/28/14.
  */
-public class DecodeThread extends Thread {
+public class DecodeThread extends Thread implements Constants {
     private Receive receiver;
     public volatile boolean cont = true;
     private Queue<YuvImage> queue;
@@ -19,8 +21,10 @@ public class DecodeThread extends Thread {
 
     @Override
     public void run(){
-        while(cont) {
-            receiver.decodeQRCodes(queue);
-        }
+        //while(cont) {
+            byte[] message;
+            message = receiver.decodeQRCodes(queue);
+            Log.d(APP_TAG, "DecodeThread heard "+message);
+        //}
     }
 }

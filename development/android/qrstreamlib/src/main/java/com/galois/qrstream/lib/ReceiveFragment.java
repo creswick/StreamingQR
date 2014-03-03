@@ -62,6 +62,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
     public void onPause(){
         super.onPause();
         camera.setPreviewCallback(null);
+        stopPipe();
     }
 
     @Override

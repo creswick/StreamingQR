@@ -40,11 +40,13 @@ public class Receive {
    * @return The data decoded from collection of detected QR codes.
    */
   public byte[] decodeQRCodes (Iterable<YuvImage> qrCodeImages) {
-    throw new UnsupportedOperationException("Function not yet implemented.");
+    System.out.println("decodeQRcodes STARTED");
+    //throw new UnsupportedOperationException("Function not yet implemented.");
     // TODO Be sure to remove elements from Iterable collection after processing
     // TODO Step 2: Use Iterable interface, change definition to
     //      public Iterable<byte[]> decodeQRCodes(Iterable<YuvImage>)
-
+    System.out.println("decodeQRcodes ENDED");
+    return null;
   }
 
   // TODO Possibly add conversion between YUV image to Bitmap image
