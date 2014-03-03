@@ -1,6 +1,8 @@
 package com.galois.qrstream.qrpipe;
 
 import com.galois.qrstream.image.YuvImage;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.lang.InterruptedException;
 
 import java.lang.Iterable;
 
@@ -39,8 +41,15 @@ public class Receive {
    * @param qrCodeImages The collection of YUV images to decode
    * @return The data decoded from collection of detected QR codes.
    */
-  public byte[] decodeQRCodes (Iterable<YuvImage> qrCodeImages) {
+  public byte[] decodeQRCodes (ArrayBlockingQueue<YuvImage> qrCodeImages) {
     System.out.println("decodeQRcodes STARTED");
+    try {
+      while(true) {
+        qrCodeImages.take();
+        System.out.println("decodeQRcodes Frame Taken");
+      }
+    } catch (InterruptedException e) {
+    }
     //throw new UnsupportedOperationException("Function not yet implemented.");
     // TODO Be sure to remove elements from Iterable collection after processing
     // TODO Step 2: Use Iterable interface, change definition to
