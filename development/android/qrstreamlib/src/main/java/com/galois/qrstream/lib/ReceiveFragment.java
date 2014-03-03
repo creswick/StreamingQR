@@ -43,16 +43,17 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
         super.onResume();
         camera = Camera.open();
         Camera.Parameters params = camera.getParameters();
-        Preview previewCallback = new Preview();
-        previewSetup(params, previewCallback);
-        camera.setPreviewCallback(previewCallback);
+        previewSetup(camera, params);
         camera_window.getHolder().addCallback(this);
+        startPipe(params);
     }
 
-    private void previewSetup(Camera.Parameters params, Preview previewCallback) {
+    private void previewSetup(Camera camera, Camera.Parameters params) {
+        Preview previewCallback = new Preview();
         previewCallback.setQueue(frameQueue);
         previewCallback.setHeight(params.getPreviewSize().height);
         previewCallback.setWidth(params.getPreviewSize().width);
+        camera.setPreviewCallback(previewCallback);
     }
 
     @Override
