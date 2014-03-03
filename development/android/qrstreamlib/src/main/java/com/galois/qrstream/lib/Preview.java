@@ -26,6 +26,5 @@ public class Preview implements Camera.PreviewCallback {
     public void onPreviewFrame(byte[] data, Camera camera) {
         Log.d("qrstream", "previewFrame data "+data.length);
         YuvImage frame = new YuvImage(data, height, width);
-        frames.add(frame);
     }
 }
