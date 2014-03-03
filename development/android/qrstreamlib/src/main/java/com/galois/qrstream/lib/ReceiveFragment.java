@@ -60,6 +60,7 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
     public void onPause(){
         super.onPause();
         camera.setPreviewCallback(null);
+        stopPipe();
     }
 
     @Override

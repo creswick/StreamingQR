@@ -21,6 +21,7 @@ public class QrpipeFragment extends Fragment implements Constants {
     @Override
     public void onStart() {
         super.onStart();
+        frameQueue = new ArrayBlockingQueue<YuvImage>(1);
     }
 
     public void startPipe(Camera.Parameters params) {
@@ -28,9 +29,9 @@ public class QrpipeFragment extends Fragment implements Constants {
             Camera.Size previewSize = params.getPreviewSize();
             receiveQrpipe = new Receive(previewSize.height,
                                         previewSize.width);
-            frameQueue = new ArrayBlockingQueue<YuvImage>(1);
             decodeThread = new DecodeThread();
             decodeThread.setReceiver(receiveQrpipe);
+            decodeThread.setQueue(frameQueue);
             decodeThread.start();
         } else {
             Log.e(APP_TAG, "Error: DecodeThread already running");
@@ -39,6 +40,6 @@ public class QrpipeFragment extends Fragment implements Constants {
 
     public void stopPipe() {
         // Threads can only be suggested to stop
-        decodeThread.cont = false;
+        decodeThread.end();
     }
 }
