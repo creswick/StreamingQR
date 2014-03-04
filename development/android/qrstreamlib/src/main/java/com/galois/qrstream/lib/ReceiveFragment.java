@@ -1,6 +1,5 @@
 package com.galois.qrstream.lib;
 
-import android.app.Fragment;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
@@ -11,7 +10,6 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import com.galois.qrstream.qrpipe.Manager;
 
 import java.io.IOException;
 
@@ -45,11 +43,16 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
         super.onResume();
         camera = Camera.open();
         Camera.Parameters params = camera.getParameters();
-        // 640x480 = 3110400 byte frame
         Preview previewCallback = new Preview();
-        previewCallback.setQrpipe(qrpipe);
+        previewSetup(params, previewCallback);
         camera.setPreviewCallback(previewCallback);
         camera_window.getHolder().addCallback(this);
+    }
+
+    private void previewSetup(Camera.Parameters params, Preview previewCallback) {
+        previewCallback.setQueue(frameQueue);
+        previewCallback.setHeight(params.getPreviewSize().height);
+        previewCallback.setWidth(params.getPreviewSize().width);
     }
 
     @Override
