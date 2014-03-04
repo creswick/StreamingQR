@@ -3,7 +3,8 @@ package com.galois.qrstream.image;
 
 /**
  * Class used for converting from Zebra Xing library BitMatrix image type to
- * byte[] for Android to consume and convert into Bitmap.
+ * byte[] for Android to convert into Bitmap. This intermediate class is needed
+ * since Android does not have BufferedImage in its Java implementation.
  */
 public class BitmapImage {
   private final byte[] data;
