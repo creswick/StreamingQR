@@ -1,5 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
+apply plugin: 'pmd'
 
 // Compile with and generate classes for Java 1.6
 sourceCompatibility = 1.6
@@ -36,4 +37,12 @@ test {
     afterTest { descriptor, result ->
        logger.lifecycle("test result: " + result + ", " + descriptor)
     }
+}
+
+// Java source code analyzer configuration
+// Run 'gradle check' to invoke
+pmd {
+  // Available ruleSets: http://pmd.sourceforge.net/pmd-4.3.0/rules/index.html
+  ruleSets = ["basic", "braces", "sunsecure" ]
+
 }

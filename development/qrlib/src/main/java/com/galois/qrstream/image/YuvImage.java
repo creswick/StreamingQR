@@ -1,5 +1,7 @@
 package com.galois.qrstream.image;
 
+import java.util.Arrays;
+
 /**
  * Class representing data from the YUV color space. It contains
  * luminance data, Y, followed by the (U=Cb and V=Cr) chroma
@@ -12,9 +14,13 @@ public class YuvImage {
   private final int h;
 
   public YuvImage(byte[] yuvData, int width, int height) {
-    data = yuvData;
     w = width;
     h = height;
+    if (yuvData == null) {
+      data = new byte[0];
+    } else {
+      data = Arrays.copyOf(yuvData, yuvData.length);
+    }
   }
 
   public int getWidth() {
@@ -28,7 +34,7 @@ public class YuvImage {
   // To get luminance data, we could create ZXing's
   // PlanarYUVLuminanceSource object and call getMatrix().
   public byte[] getYuvData() {
-    return data;
+    return data.clone();
   }
 }
 

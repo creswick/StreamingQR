@@ -1,5 +1,7 @@
 package com.galois.qrstream.image;
 
+import java.util.Arrays;
+
 
 /**
  * Class used for converting from Zebra Xing library BitMatrix image type to
@@ -12,9 +14,13 @@ public class BitmapImage {
   private final int h;
 
   public BitmapImage(byte[] imgData, int width, int height) {
-    data = imgData;
     w = width;
     h = height;
+    if (imgData == null) {
+      data = new byte[0];
+    } else {
+      data = Arrays.copyOf(imgData, imgData.length);
+    }
   }
   
   public int getWidth() {
@@ -26,7 +32,7 @@ public class BitmapImage {
   }
   
   public byte[] getData() {
-    return data;
+    return data.clone();
   }
 
 }
