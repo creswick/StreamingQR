@@ -49,17 +49,6 @@ public class TransmitTest {
     assertEquals("Empty transmission should yield no QR code", 0, size);
   }
 
-  private byte[] stringToBytes(String origStr) throws AssertionError {
-    byte[] utfStr;
-    try {
-      utfStr = origStr.getBytes("ISO-8859-1");
-    } catch (UnsupportedEncodingException e) {
-      // ISO-8859-1 is supported, it would be unusual for ZXing library to fail here.
-      throw new AssertionError("ISO-8859-1 character set encoding not supported");
-    }
-    return utfStr;
-  }
-
   @Test
   public void testBytesToQRCode() {
     // The string to encode as a QR code
@@ -115,6 +104,25 @@ public class TransmitTest {
   }
 
   /**
+   * Encodes this {@code String} into a sequence of bytes using the
+   * ISO-8859-1 charset, storing the result into a new byte array.
+   *
+   * @param origStr The string to encode with ISO-8859-1 charset
+   * @return The resulting byte array
+   * @throws AssertionError
+   */
+  private byte[] stringToBytes(String origStr) throws AssertionError {
+    byte[] utfStr = new byte[0];
+    try {
+      utfStr = origStr.getBytes("ISO-8859-1");
+    } catch (UnsupportedEncodingException e) {
+      // ISO-8859-1 is supported, it would be unusual for ZXing library to fail here.
+      throw new AssertionError("ISO-8859-1 character set encoding not supported");
+    }
+    return utfStr;
+  }
+
+  /**
    * Reads image from file and returns its BitMatrix. This function
    * will return null whenever the resource file cannot be found or read.
    * 
@@ -147,15 +155,15 @@ public class TransmitTest {
    * @return The BitMatrix of the QR code found in img
    */
   private BitMatrix toBitMatrix (BufferedImage img){
-    BitMatrix result = null;
 
     BufferedImageLuminanceSource lumSrc = new BufferedImageLuminanceSource(img);
     HybridBinarizer hb = new HybridBinarizer(lumSrc);
     try {
-      result = hb.getBlackMatrix();
+      return hb.getBlackMatrix();
     } catch (NotFoundException e) {
       // Ok to ignore, returning null when QR code not found.
+      // PMD complained about empty catch block
+      return null;
     }
-    return result;
   }
 }
