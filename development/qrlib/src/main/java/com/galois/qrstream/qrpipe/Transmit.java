@@ -13,6 +13,7 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,11 +23,20 @@ import java.util.Map;
  * facilitates transmission of QR codes in streaming QR code protocol.
  *
  * We may find it necessary to add context to the transmission. For example,
- *  - resulting image dimension (px) (DONE)
+ *  - resulting image dimension (px)
  *  - density of QR code
  *  - others?
  */
 public class Transmit {
+  /* There can be at most 4 bytes to represent an integer */
+  private static final int MAX_INT_SIZE = 4;
+
+  /* Number of bytes per integer to reserve at the front of QR code
+   * payload. They will be used to keep track of the total QR codes
+   * encoded as well as the id of the current QR code.
+   * Must be <= MAX_INT_SIZE.
+   */
+  private static final int NUM_BYTES_PER_INT = 4;
 
   /* Dimension of transmitted QR code images */
   private final int imgHeight;
@@ -36,7 +46,7 @@ public class Transmit {
     imgHeight = height;
     imgWidth = width;
   }
-  
+
   public int getHeight() {
     return imgHeight;
   }
@@ -63,6 +73,44 @@ public class Transmit {
   }
 
   /**
+   * Injects chunk# and totalChunks into byte[] for encoding into QR code.
+   * The first {@code NUM_BYTES_PER_INT} bytes are the chunk# followed by
+   * {@code NUM_BYTES_PER_INT} bytes for the total # chunks.
+   * 
+   * Note:
+   * Four bytes may be too much space to reserve, but it was convenient
+   * to think about. We could probably just use 3 bytes for each int
+   * and let MAX_INTEGER=2^24-1 = 16,777,215.
+   * 
+   * If 4 bytes, then max bytes transferred in indices alone would
+   * equal 2,147,483,647 * 8 bytes = ~16GB.
+   * If QR code could transfer ~1200 bytes, then largest transfer we could handle
+   * is 2,147,483,647 * (1200 - 8 bytes) = ~2,384 GB.
+   * Number realistic max chunks likely to be = 16 GB file / (1200 - 8) bytes
+   *                                         ~= 14,412,642
+   * Number realistic bits we'd need = log2(14,412,642) ~= 24
+   */
+  protected byte[] prependChunkId(byte[] rawData, int chunk, int totalChunks) {
+    // Unable to prepend chunk number to rawData if receive invalid inputs
+    if ( totalChunks < 0 || chunk < 0) {
+      throw new IllegalArgumentException("Number of chunks must be positive");
+    }
+
+    byte[] inputData = rawData == null ? new byte[0] : rawData.clone();
+    // Reserve first NUM_BYTES_PER_INT bytes of data for chunk id and
+    // another NUM_BYTES_PER_INT bytes of data for the totalChunks.
+    byte[] chunkId = intToBytes(chunk);
+    byte[] nChunks = intToBytes(totalChunks);
+    byte[] combined = new byte[inputData.length + chunkId.length + nChunks.length];
+
+    System.arraycopy(chunkId, 0, combined, 0, chunkId.length);
+    System.arraycopy(nChunks, 0, combined, chunkId.length, nChunks.length);
+    System.arraycopy(inputData, 0, combined, chunkId.length + nChunks.length, inputData.length);
+
+    return combined;
+  }
+
+  /**
    * Generates a QR code given a set of input bytes. This function
    * assumes that any injection of a sequence number has already occurred.
    *
@@ -74,11 +122,10 @@ public class Transmit {
    * @param rawData the binary data to encode into a single QR code image.
    */
   protected BitMatrix bytesToQRCode(byte[] rawData) throws WriterException {
-    /* TODO We should probably throw exception if number of input
-     *      bytes is greater than max QR code density.
-     *      Max QR code density is function of error correction level and version of QR code.
-     *      Max bytes for QR in binary/byte mode = 2,953 bytes using,
-     *      QR code version 40 and error-correction level L.
+    /*
+     * Max QR code density is function of error correction level and version of QR code.
+     * Max bytes for QR in binary/byte mode = 2,953 bytes using,
+     * QR code version 40 and error-correction level L.
      */
     String data;
     try {
@@ -144,6 +191,72 @@ public class Transmit {
    */
   private Map<EncodeHintType, Object> getEncodeHints() {
     return getEncodeHints(ErrorCorrectionLevel.L);
+  }
+
+  /**
+   * Converts integer to big-endian byte array. The integer must be less than
+   * max 2^*(8bits * {@code NUM_BYTES_PER_INT}) for conversion to work and
+   * less than {@code Integer.MAX_VALUE}.
+   *
+   * @throws IllegalArgumentException if integer is negative.
+   * @throws IllegalArgumentException if integer would need more than
+   * NUM_BYTES_PER_INT to represent correctly.
+   */
+  @SuppressWarnings("unused")
+  protected static byte[] intToBytes( final int i ) throws IllegalArgumentException {
+    // TODO Move to Utility class?
+    if (i < 0) {
+      throw new IllegalArgumentException("Cannot convert negative integers.");
+    }
+    // When using fewer than 4 bytes to represent an integer, check
+    // that converted integer will fit into expected byte array length.
+    if (NUM_BYTES_PER_INT < MAX_INT_SIZE && (i > (2 ^ (8 * NUM_BYTES_PER_INT)))) {
+      // Suppress dead-code warning since someone could change
+      // NUM_BYTES_PER_INT to be less than MAX_INT_SIZE.
+      throw new IllegalArgumentException("Byte array too large");
+    }
+    ByteBuffer bb = ByteBuffer.allocate(MAX_INT_SIZE).putInt(i);
+
+    byte[] result = new byte[NUM_BYTES_PER_INT];
+    if (bb.hasArray()) {
+      bb.rewind();
+      bb.get(result, MAX_INT_SIZE - NUM_BYTES_PER_INT, MAX_INT_SIZE);
+    }
+    return result;
+  }
+
+  /**
+   * Converts big-endian byte array to integer. Expects input will
+   * convert to non-negative integer value.
+   *
+   * @param b The array of bytes to convert to int.
+   * @throws IllegalArgumentException if input bytes converts to negative number.
+   * @throws IllegalArgumentException if length of input bytes is greater than
+   * 32bit integer could hold
+   * @throws IllegalArgumentException if length of input bytes is greater than
+   * the reserved {@source NUM_BYTES_PER_INT} for integers in the QR code.
+   */
+  protected static int bytesToInt (final byte[] b) throws IllegalArgumentException {
+    // TODO Move to shared Utility class?
+    int result = 0;
+
+    if (b != null) {
+      if (b.length > NUM_BYTES_PER_INT || b.length > MAX_INT_SIZE) {
+        throw new IllegalArgumentException("Byte array too large");
+      }
+
+      // Pad with zeros, as needed, to ensure we have 4 bytes to read integer
+      ByteBuffer bb = ByteBuffer.allocate(NUM_BYTES_PER_INT);
+      for (int i=b.length; i<MAX_INT_SIZE; i++) {
+        bb.put((byte) 0);
+      }
+      bb.put(b, 0, b.length);
+      result = bb.getInt(0);
+    }
+    if (result < 0) {
+      throw new IllegalArgumentException("Input must be >= 0.");
+    }
+    return result;
   }
 
 }//public class Transmit
