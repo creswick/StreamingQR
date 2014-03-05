@@ -173,34 +173,5 @@ public class TransmitTest {
       return null;
     }
   }
-  
-  @Test
-  public void testBytesToIntConversions() {
-    // Check that we padded smaller inputs correctly
-    assertEquals("Expect 0 = 0x00", 0,
-        Transmit.bytesToInt(new byte[] {0x00}));
-    assertEquals("Expect 1 = 0x01", 1,
-                 Transmit.bytesToInt(new byte[] {0x01}));
-    assertEquals("Expect 10,000 = 0x2710", 10000,
-                 Transmit.bytesToInt(new byte[] {0x27, 0x10}));
-    assertEquals("Expect 98,048 = 0x017f00", 98048,
-                 Transmit.bytesToInt(new byte[] {0x01,0x7f,0x00}));
-    assertEquals("Expect 98,048 = 0x017f00", 655360018,
-                 Transmit.bytesToInt(new byte[] {0x27,0x10,0x00,0x12}));
-    
-    // Check int converts to byte[]
-    assertArrayEquals("Expect 0 = 0x00000000",
-        new byte[] {0x00,0x00,0x00,0x00}, Transmit.intToBytes(0));
 
-    // Check that round trip conversion works
-    byte[] bytesMax = Transmit.intToBytes(Integer.MAX_VALUE);
-    assertEquals("Expect Integer.MAX_VALUE = bytesToInt(intToBytes(MAX_VALUE))",
-                 Integer.MAX_VALUE, Transmit.bytesToInt(bytesMax));
-  }
-
-  @Test(expected=IllegalArgumentException.class)
-  public void testIntToBytesThrowsException() {
-    byte[] negOne = new byte[] { (byte) 0xff,(byte) 0xff,(byte) 0xff,(byte) 0xff };
-    System.out.println("Expect exception to occur" + Transmit.bytesToInt(negOne));
-  }
 }
