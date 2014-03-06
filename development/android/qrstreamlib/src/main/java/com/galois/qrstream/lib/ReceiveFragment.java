@@ -1,5 +1,6 @@
 package com.galois.qrstream.lib;
 
+import android.app.Activity;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
@@ -9,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.TextView;
 import android.view.ViewGroup;
 import android.widget.Button;
 
@@ -22,6 +24,7 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
     static Camera camera;
     SurfaceView camera_window;
     Button capture;
+    TextView statusLine;
     static Handler ui;
 
     public ReceiveFragment() {
@@ -34,6 +37,7 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
         View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
 
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
+        statusLine = (TextView)rootView.findViewById(R.id.receive_status);
         capture = (Button)rootView.findViewWithTag("capture");
         capture.setOnClickListener(new CaptureClick());
         return rootView;
@@ -46,7 +50,7 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
         Camera.Parameters params = camera.getParameters();
         previewSetup(camera, params);
         camera_window.getHolder().addCallback(this);
-        startPipe(params, new DisplayUpdate());
+        startPipe(params, new DisplayUpdate(getActivity()));
     }
 
     private void previewSetup(Camera camera, Camera.Parameters params) {
@@ -112,9 +116,22 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
     }
 
     public class DisplayUpdate extends Handler {
+        private final Activity activity;
+
+        public DisplayUpdate(Activity activity) {
+            this.activity = activity;
+        }
+
         @Override
         public void handleMessage(Message msg) {
             Log.d(APP_TAG, "DisplayUpdate.handleMessage");
+            final Bundle params = msg.getData();
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    statusLine.setText(params.getString("message"));
+                }
+            });
         }
     }
 }
