@@ -20,10 +20,14 @@ public class Receive {
   /* Dimension of received images */
   private int imgHeight;
   private int imgWidth;
+  private IProgress progress;
+  private DecodeState state;
 
-  public Receive(int height, int width) {
+  public Receive(int height, int width, IProgress progress) {
     imgHeight = height;
     imgWidth = width;
+    this.progress = progress;
+    this.state = new DecodeState(2);
   }
   
   public int getHeight() {
@@ -43,6 +47,7 @@ public class Receive {
    */
   public byte[] decodeQRCodes (ArrayBlockingQueue<YuvImage> qrCodeImages) {
     System.out.println("decodeQRcodes STARTED");
+    progress.changeState(state);
     try {
       while(true) {
         qrCodeImages.take();
