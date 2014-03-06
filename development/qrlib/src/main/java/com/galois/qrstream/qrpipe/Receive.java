@@ -48,10 +48,16 @@ public class Receive {
   public byte[] decodeQRCodes (ArrayBlockingQueue<YuvImage> qrCodeImages) {
     System.out.println("decodeQRcodes STARTED");
     progress.changeState(state);
+    int count = 0;
     try {
       while(true) {
+        count += 1;
         qrCodeImages.take();
-        System.out.println("decodeQRcodes Frame Taken");
+        System.out.println("decodeQRcodes Frame Taken "+count);
+        if(count == 500) {
+          state.set(0);
+          progress.changeState(state);
+        }
       }
     } catch (InterruptedException e) {
     }
