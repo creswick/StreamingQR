@@ -21,7 +21,11 @@ public class DecodeState {
 			return State.Intermediate;
 		}
 	}
-	
+
+        public void set(int position) {
+          data.set(position);
+        }
+
 	/**
 	 * Get a deep copy of the underlying bitset.
 	 * 
