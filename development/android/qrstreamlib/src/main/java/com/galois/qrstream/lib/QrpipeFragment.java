@@ -2,6 +2,7 @@ package com.galois.qrstream.lib;
 
 import android.app.Fragment;
 import android.hardware.Camera;
+import android.os.Handler;
 import android.util.Log;
 
 import com.galois.qrstream.image.YuvImage;
@@ -24,11 +25,13 @@ public class QrpipeFragment extends Fragment implements Constants {
         frameQueue = new ArrayBlockingQueue<YuvImage>(1);
     }
 
-    public void startPipe(Camera.Parameters params) {
+    public void startPipe(Camera.Parameters params, Handler handler) {
         if(decodeThread == null) {
             Camera.Size previewSize = params.getPreviewSize();
+            Progress progress = new Progress();
+            progress.setStateHandler(handler);
             receiveQrpipe = new Receive(previewSize.height,
-                                        previewSize.width);
+                                        previewSize.width, progress);
             decodeThread = new DecodeThread();
             decodeThread.setReceiver(receiveQrpipe);
             decodeThread.setQueue(frameQueue);

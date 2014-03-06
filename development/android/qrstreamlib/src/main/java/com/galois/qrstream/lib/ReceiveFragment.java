@@ -3,6 +3,7 @@ package com.galois.qrstream.lib;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
@@ -45,7 +46,7 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
         Camera.Parameters params = camera.getParameters();
         previewSetup(camera, params);
         camera_window.getHolder().addCallback(this);
-        startPipe(params);
+        startPipe(params, new DisplayUpdate());
     }
 
     private void previewSetup(Camera camera, Camera.Parameters params) {
@@ -107,6 +108,13 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
             Log.d("qstream", "Capture Pushed");
             Thread thread = new Thread(new TakePicture());
             thread.run();
+        }
+    }
+
+    public class DisplayUpdate extends Handler {
+        @Override
+        public void handleMessage(Message msg) {
+            Log.d(APP_TAG, "DisplayUpdate.handleMessage");
         }
     }
 }
