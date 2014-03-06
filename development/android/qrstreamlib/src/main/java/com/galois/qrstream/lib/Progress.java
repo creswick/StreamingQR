@@ -23,11 +23,13 @@ public class Progress implements IProgress {
         Bundle changeMsg = new Bundle();
         switch(state.getState()) {
             case Initial:
-
+                changeMsg.putString("message", "Initial state");
                 break;
             case Intermediate:
+                changeMsg.putString("message", "Intermediate state");
                 break;
             case Final:
+                changeMsg.putString("message", "Final state");
                 break;
         }
         Message stateChange = new Message();

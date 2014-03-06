@@ -1,6 +1,8 @@
 package com.galois.qrstream.lib;
 
 import android.app.Fragment;
+import android.util.Log;
+
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
@@ -10,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.TextView;
 import android.view.ViewGroup;
 import android.widget.Button;
 
@@ -31,7 +34,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
     private ArrayBlockingQueue frameQueue;
     private Receive receiveQrpipe;
     private DecodeThread decodeThread;
-
+    private TextView statusLine;
 
     public ReceiveFragment() {
         ui = new Handler();
@@ -43,6 +46,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
 
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
+        statusLine = (TextView)rootView.findViewById(R.id.receive_status);
         capture = (Button)rootView.findViewWithTag("capture");
         capture.setOnClickListener(new CaptureClick());
         return rootView;
