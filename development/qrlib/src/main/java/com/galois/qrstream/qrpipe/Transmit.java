@@ -9,6 +9,7 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import com.google.zxing.qrcode.decoder.Version;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,6 +61,27 @@ public class Transmit {
     // TODO Step 2: change function to: public Iterable<byte[]> encodeQRCodes (Iterable<byte[]>)
     //
     // The image width and height provided in constructor.
+  }
+
+  /**
+   * Returns the maximum number of bytes that can be encoded in QR code
+   * with version {@code v} and error correction level, {@code l}.
+   * @param ecLevel The error correction level, can be one of these values {@code L, M, Q, H}.
+   * @param version The version corresponding to the density of the QR code, 1-40.
+   * @return
+   */
+  protected int getPayloadMaxBytes(ErrorCorrectionLevel ecLevel, int version) {
+    if (version < 1 || version > 40) {
+      throw new IllegalArgumentException("Must input QR version between 1 and 40.");
+    }
+
+    // Max payload for (version,ecLevel) = number data bytes - header bytes
+    Version v = Version.getVersionForNumber(version);
+    Version.ECBlocks ecBlocks = v.getECBlocksForLevel(ecLevel);
+    int numReservedBytes = Utils.getNumberQRHeaderBytes(v);
+    int numDataBytes = v.getTotalCodewords() - ecBlocks.getTotalECCodewords();
+
+    return numDataBytes - numReservedBytes;
   }
 
   /**
