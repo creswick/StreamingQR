@@ -54,7 +54,7 @@ public class Receive {
         count += 1;
         qrCodeImages.take();
         System.out.println("decodeQRcodes Frame Taken "+count);
-        if(count == 500) {
+        if(count == 200) {
           state.set(0);
           progress.changeState(state);
         }

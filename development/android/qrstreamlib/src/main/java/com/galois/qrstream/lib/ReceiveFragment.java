@@ -16,6 +16,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 
 import com.galois.qrstream.image.YuvImage;
+import com.galois.qrstream.qrpipe.IProgress;
 import com.galois.qrstream.qrpipe.Receive;
 
 import java.io.IOException;
@@ -29,14 +30,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
     private static Camera camera;
     private SurfaceView camera_window;
     private Button capture;
-    private static Handler ui;
-    private ArrayBlockingQueue frameQueue;
+    private final static Handler ui = new Handler();
+    private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(1);
     private Receive receiveQrpipe;
     private DecodeThread decodeThread;
     private TextView statusLine;
+    private final Progress progress = new Progress();
 
     public ReceiveFragment() {
-        ui = new Handler();
     }
 
     @Override
@@ -59,7 +60,9 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
         camera.setPreviewCallback(previewCallback);
         camera_window.getHolder().addCallback(this);
-        startPipe(params);
+        DisplayUpdate displayUpdate = new DisplayUpdate(getActivity());
+        progress.setStateHandler(displayUpdate);
+        startPipe(params, progress);
     }
 
     @Override
@@ -105,14 +108,15 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         }
     }
 
-    public void startPipe(Camera.Parameters params) {
+    public void startPipe(Camera.Parameters params, IProgress progress) {
         if(decodeThread == null) {
             Camera.Size previewSize = params.getPreviewSize();
             receiveQrpipe = new Receive(previewSize.height,
-                    previewSize.width);
-            frameQueue = new ArrayBlockingQueue<YuvImage>(1);
+                                        previewSize.width,
+                                        progress);
             decodeThread = new DecodeThread();
             decodeThread.setReceiver(receiveQrpipe);
+            decodeThread.setQueue(frameQueue);
             decodeThread.start();
         } else {
             Log.e(APP_TAG, "Error: DecodeThread already running");
@@ -123,7 +127,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         // Threads can only be suggested to stop
         decodeThread.cont = false;
     }
-    
+
     public class DisplayUpdate extends Handler {
         private final Activity activity;
 
