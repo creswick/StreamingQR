@@ -15,9 +15,9 @@ import com.galois.qrstream.lib.TransmitFragment;
 
 public class MainActivity extends Activity {
 
-    FragmentManager fragmentManager;
-    public Fragment receiveFragment;
-    public Fragment transmitFragment;
+    private FragmentManager fragmentManager;
+    public Fragment receiveFragment; // accessed via unittest
+    public Fragment transmitFragment; // accessed via unittest
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

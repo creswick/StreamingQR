@@ -1,32 +1,25 @@
 package com.galois.qrstream.lib;
 
 import android.app.Fragment;
-import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
-
-import java.io.IOException;
 
 /**
  * Created by donp on 2/11/14.
  */
 public class TransmitFragment extends Fragment {
 
-    static Camera camera;
-    ImageView send_window;
-    Button capture;
-    static Handler ui;
+    private ImageView send_window;
+    private Button sendButton;
+    private static Handler ui = new Handler();
 
     public TransmitFragment() {
-        ui = new Handler();
     }
 
     @Override
@@ -35,8 +28,8 @@ public class TransmitFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.transmit_fragment, container, false);
 
         send_window = (ImageView)rootView.findViewById(R.id.send_window);
-        capture = (Button)rootView.findViewWithTag("send");
-        capture.setOnClickListener(new CaptureClick());
+        sendButton = (Button)rootView.findViewWithTag("send");
+        sendButton.setOnClickListener(new CaptureClick());
         return rootView;
     }
 

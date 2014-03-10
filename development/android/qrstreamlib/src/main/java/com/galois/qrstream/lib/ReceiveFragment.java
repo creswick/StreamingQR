@@ -83,15 +83,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera.release();
     }
 
-    public static class TakePicture implements Runnable {
-        public void run() {
-            Log.d("qrstream", "** Taking picture");
-            camera.takePicture(new Shutter(), new Picture(ui, "raw"),
-                    new Picture(ui, "postdata"),
-                    new Picture(ui, "jpeg"));
-        }
-    }
-
     public static class StartPreview implements Runnable {
         public void run() {
             Log.d("qrstream", "** Start preview");
@@ -103,8 +94,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         @Override
         public void onClick(View v) {
             Log.d("qstream", "Capture Pushed");
-            Thread thread = new Thread(new TakePicture());
-            thread.run();
         }
     }
 }
