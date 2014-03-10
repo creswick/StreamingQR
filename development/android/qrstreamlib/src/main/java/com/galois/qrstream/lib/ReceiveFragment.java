@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -47,6 +48,7 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
     public void onResume(){
         super.onResume();
         camera = Camera.open();
+        setCameraDisplayOrientation(camera);
         Camera.Parameters params = camera.getParameters();
         previewSetup(camera, params);
         camera_window.getHolder().addCallback(this);
@@ -88,6 +90,31 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
     public void surfaceDestroyed(SurfaceHolder holder) {
         camera.stopPreview();
         camera.release();
+    }
+
+    public void setCameraDisplayOrientation(android.hardware.Camera camera) {
+        int cameraId = 0;
+        android.hardware.Camera.CameraInfo info =
+                new android.hardware.Camera.CameraInfo();
+        android.hardware.Camera.getCameraInfo(cameraId, info);
+        int rotation = getActivity().getWindowManager().getDefaultDisplay()
+                .getRotation();
+        int degrees = 0;
+        switch (rotation) {
+            case Surface.ROTATION_0: degrees = 0; break;
+            case Surface.ROTATION_90: degrees = 90; break;
+            case Surface.ROTATION_180: degrees = 180; break;
+            case Surface.ROTATION_270: degrees = 270; break;
+        }
+
+        int result;
+        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            result = (info.orientation + degrees) % 360;
+            result = (360 - result) % 360;  // compensate the mirror
+        } else {  // back-facing
+            result = (info.orientation - degrees + 360) % 360;
+        }
+        camera.setDisplayOrientation(result);
     }
 
     public static class TakePicture implements Runnable {
