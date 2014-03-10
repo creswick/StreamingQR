@@ -12,15 +12,23 @@ import java.util.Queue;
  * Created by donp on 2/13/14.
  */
 public class Preview implements Camera.PreviewCallback {
-    Queue frames;
-    int height;
-    int width;
+    private Queue frames;
+    private int height;
+    private int width;
+
+    public Preview(Queue frames, Camera.Size size) {
+        setQueue(frames);
+        setSize(size);
+    }
 
     public void setQueue(Queue frames) {
         this.frames = frames;
     }
-    public void setHeight(int h) { this.height = h; }
-    public void setWidth(int w) { this.width = w; }
+
+    public void setSize(Camera.Size size) {
+        this.height = size.height;
+        this.width = size.width;
+    }
 
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {

@@ -8,8 +8,8 @@ import android.util.Log;
  * Created by donp on 2/12/14.
  */
 public class Picture implements Camera.PictureCallback {
-    Handler ui;
-    String label;
+    private Handler ui;
+    private String label;
 
     public Picture(Handler ui, String label) {
         this.ui = ui;
@@ -19,11 +19,7 @@ public class Picture implements Camera.PictureCallback {
     @Override
     public void onPictureTaken(byte[] data, Camera camera) {
         String dataReport = "";
-        if(data != null){
-            dataReport = ""+data.length+" bytes";
-        } else {
-            dataReport = "data is null";
-        }
-        Log.d("qrstream", "Picture taken - " + dataReport+" callback "+label);
+        dataReport = ""+data.length+" bytes";
+        Log.d("qrstream", "Picture taken - "+dataReport+" callback "+label);
     }
 }

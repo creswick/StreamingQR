@@ -18,7 +18,7 @@ import java.io.IOException;
 /**
  * Created by donp on 2/11/14.
  */
-public class TransmitFragment extends QrpipeFragment {
+public class TransmitFragment extends Fragment {
 
     static Camera camera;
     ImageView send_window;
