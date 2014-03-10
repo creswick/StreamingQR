@@ -1,8 +1,7 @@
 package com.galois.qrstream.lib;
 
+import android.app.Activity;
 import android.app.Fragment;
-import android.util.Log;
-
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
@@ -123,5 +122,25 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
     public void stopPipe() {
         // Threads can only be suggested to stop
         decodeThread.cont = false;
+    }
+    
+    public class DisplayUpdate extends Handler {
+        private final Activity activity;
+
+        public DisplayUpdate(Activity activity) {
+            this.activity = activity;
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            Log.d(APP_TAG, "DisplayUpdate.handleMessage");
+            final Bundle params = msg.getData();
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    statusLine.setText(params.getString("message"));
+                }
+            });
+        }
     }
 }

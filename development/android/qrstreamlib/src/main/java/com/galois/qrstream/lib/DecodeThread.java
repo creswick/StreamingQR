@@ -1,13 +1,11 @@
 package com.galois.qrstream.lib;
 
-
 import android.util.Log;
 
 import com.galois.qrstream.image.YuvImage;
 import com.galois.qrstream.qrpipe.Receive;
 
 import java.util.concurrent.ArrayBlockingQueue;
-
 
 /**
  * Created by donp on 2/28/14.
