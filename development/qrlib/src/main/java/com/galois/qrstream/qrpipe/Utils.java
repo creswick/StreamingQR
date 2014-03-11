@@ -2,6 +2,8 @@ package com.galois.qrstream.qrpipe;
 
 import java.nio.ByteBuffer;
 
+import com.galois.qrstream.image.BitmapImage;
+import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.decoder.Mode;
 import com.google.zxing.qrcode.decoder.Version;
 
@@ -76,17 +78,18 @@ public class Utils {
     // When using fewer than 4 bytes to represent an integer, check
     // that converted integer will fit into expected byte array length.
     if (NUM_BYTES_PER_INT < MAX_INT_SIZE && (i > (2 ^ (8 * NUM_BYTES_PER_INT)))) {
-      // Suppress dead-code warning since someone could change
+      // We suppress dead-code warning since someone could change
       // NUM_BYTES_PER_INT to be less than MAX_INT_SIZE.
       throw new IllegalArgumentException("Byte array too large");
     }
+    // Write bytes corresponding to integer, i, into buffer,
+    // making sure to reset position before reading
     ByteBuffer bb = ByteBuffer.allocate(MAX_INT_SIZE).putInt(i);
+    bb.rewind();
 
     byte[] result = new byte[NUM_BYTES_PER_INT];
-    if (bb.hasArray()) {
-      bb.rewind();
-      bb.get(result, MAX_INT_SIZE - NUM_BYTES_PER_INT, MAX_INT_SIZE);
-    }
+    bb.get(result, MAX_INT_SIZE - NUM_BYTES_PER_INT, MAX_INT_SIZE);
+
     return result;
   }
 
@@ -99,8 +102,8 @@ public class Utils {
    */
   public static int getNumberQRHeaderBytes(Version v) {
     return Utils.getNumberOfReservedBytes() +
-           ((Mode.BYTE.getBits() +
-            Mode.BYTE.getCharacterCountBits(v) + 7) / 8);
+           ((DATA_ENCODING.getBits() +
+             DATA_ENCODING.getCharacterCountBits(v) + 7) / 8);
   }
 
   /**
@@ -110,4 +113,24 @@ public class Utils {
   public static int getNumberOfReservedBytes() {
     return NUM_RESERVED_INTS * NUM_BYTES_PER_INT;
   }
+
+  /**
+   * Convert BitMatrix to BitmapImage type
+   * @param mat the BitMatrix to convert
+   */
+  protected static BitmapImage toBitmapImage (BitMatrix mat) {
+    int w = mat.getWidth();
+    int h = mat.getHeight();
+    BitmapImage img = new BitmapImage(w, h);
+    for (int x = 0; x < w; x++) {
+      for (int y = 0; y < h; y++) {
+        if (mat.get(x, y)) {
+          img.set(x, y);
+        }
+      }
+    }
+    return img;
+  }
+
+
 }

@@ -1,8 +1,22 @@
 package com.galois.qrstream.qrpipe;
 
+import com.galois.qrstream.image.BitmapImage;
 import com.galois.qrstream.image.YuvImage;
-
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.DecodeHintType;
+import com.google.zxing.LuminanceSource;
+import com.google.zxing.MultiFormatReader;
+import com.google.zxing.NotFoundException;
+import com.google.zxing.PlanarYUVLuminanceSource;
+import com.google.zxing.Result;
+import com.google.zxing.common.HybridBinarizer;
 import java.lang.Iterable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Class provides API for interfacing with Android application. It
@@ -44,10 +58,60 @@ public class Receive {
     // TODO Be sure to remove elements from Iterable collection after processing
     // TODO Step 2: Use Iterable interface, change definition to
     //      public Iterable<byte[]> decodeQRCodes(Iterable<YuvImage>)
-
   }
 
+  // TODO Keep track of total frames decoded thus far.
+  // Android will poll these ints to track decoding progress
+  // and we'll use them to know when we've received all of the messages.
+  // int TotalQrCodes;
+  // int TotalQrCodesDecoded
+
+  // Stop processing when we've decoded all QR code chunks.
+
+  
   // TODO Possibly add conversion between YUV image to Bitmap image
   // types (only for testing)
 
+  
+  protected byte[] decodeQRCode(byte[] yuvData) {
+    return null;
+  }
+
+  /**
+   * Returns properties for the ZXing barcode reader indicating use of
+   * ISO-8859-1 character set and decoding of QR codes.
+   */
+  protected static Map<DecodeHintType, Object> getDecodeHints() {
+    /* Hints */
+    HashMap<DecodeHintType, Object> hints = new HashMap<DecodeHintType, Object>();
+    hints.put(DecodeHintType.CHARACTER_SET, "ISO-8859-1");
+    // 
+    Collection<BarcodeFormat> possibleFormats =
+        new ArrayList<BarcodeFormat>(Collections.singletonList(BarcodeFormat.QR_CODE));
+    hints.put(DecodeHintType.POSSIBLE_FORMATS, possibleFormats);
+    hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
+
+    return hints;
+  }
+
+  /**
+   * Detects and decode QR code from a luminance image.
+   * @param lumSrc The luminance image containing a QR code to decode.
+   */
+  public static Result decode(LuminanceSource lumSrc) throws NotFoundException {
+    BinaryBitmap bmap = toBinaryBitmap(lumSrc);
+    return new MultiFormatReader().decode(bmap, Receive.getDecodeHints());
+  }
+
+  /**
+   * Convert luminance image to ZXing's BinaryBitmap type.
+   * The ZXing decoders require input as BinaryBitmap.
+   *
+   * @param img The luminance image to convert to BinaryBitmap
+   * @return The bitmap of the input image to be decoded by QR reader.
+   */
+  private static BinaryBitmap toBinaryBitmap (LuminanceSource lumSrc){
+    HybridBinarizer hb = new HybridBinarizer(lumSrc);
+    return (new BinaryBitmap(hb));
+  }
 }

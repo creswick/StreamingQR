@@ -5,23 +5,20 @@ import static org.junit.Assert.*;
 
 import com.galois.qrstream.image.BitmapImage;
 
-import com.google.zxing.NotFoundException;
 import com.google.zxing.WriterException;
-import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
-import com.google.zxing.client.j2se.ImageReader;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
-import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import com.google.zxing.qrcode.decoder.Version;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import java.awt.image.BufferedImage;
+
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URISyntaxException;
-import java.net.URL;
 
 public class TransmitTest {
 
@@ -33,15 +30,68 @@ public class TransmitTest {
   @AfterClass
   public static void testCleanup() {}
 
-  @Ignore("Not ready yet") @Test
-  public void testEncodeQRCodes() {
-    // TODO: Ensure that we encoded sequence of QR codes correctly
-    fail("testEncodeQRCodes() not implemented yet.");
+  /**
+   * Encoding of QR code with no data should yield no BitmapImage.
+   * @throws WriterException
+   */
+  @Test
+  public void testEncodeQRCodesNoData() throws TransmitException {
+    byte[] noByteData = new byte[0];
+    
+    Iterable<BitmapImage> qrCodes = encodeQRAndCheckNotNull(noByteData);
+
+    int size = 0;
+    for(@SuppressWarnings("unused") BitmapImage c : qrCodes) {
+       size++;
+    }
+    assertEquals("Empty transmission should yield no QR code", 0, size);
   }
 
+  /**
+   * TODO Ensure that we encoded sequence of QR codes correctly
+   * @throws WriterException 
+   */
+  @Ignore("ignore until we add prepending of chunkId back into encode call") @Test
+  public void testEncodeQRCodes() throws TransmitException {
+    // The string to encode as a QR code
+    String origStr = "foo";
+    // The bytes corresponding to origStr
+    byte[] expectedBytes = null;
+    try {
+      expectedBytes = origStr.getBytes("ISO-8859-1");
+    } catch (UnsupportedEncodingException e) {
+      fail("ISO-8859-1 character set encoding not supported");
+    }
+
+    //The expected QR code
+    BitMatrix qrExpected = null;
+    try {
+      qrExpected = UtilsTest.readQRImage("photo.png");
+    } catch (IOException e) {
+      fail(e.getMessage());
+    }
+    assertNotNull(qrExpected);
+
+    Iterable<BitmapImage> qrCodes = encodeQRAndCheckNotNull(expectedBytes);
+    int size = 0;
+    for(@SuppressWarnings("unused") BitmapImage c : qrCodes) {
+       size++;
+    }
+    assertEquals("Expected one QR code", 1, size);
+    BitmapImage qrActual = qrCodes.iterator().next();
+    
+    System.out.println("qrExpected: w: "+qrExpected.getWidth() + " h: "+qrExpected.getHeight());
+    System.out.println("qrActual: w: "+qrActual.getWidth() + " h: "+qrActual.getHeight());
+    assertArrayEquals ("BitmapImages equal?",
+        Utils.toBitmapImage(qrExpected).getData(), qrActual.getData());
+  }
+
+  /**
+   * Compare maximum QR code payload to maximums listed
+   * in the QR standard, ISO/IEC 18004:2006.
+   */
   @Test
   public void testGetMaxDataEncoding() {
-    // Expected values retrieved from QR standard, ISO/IEC 18004:2006
     int[] expectedMaxForLevelL = new int[] { 17, 32, 53, 78, 106, 134, 154,
         192, 230, 271, 321, 367, 425, 458, 520, 586, 644, 718, 792, 858, 929,
         1003, 1091, 1171, 1273, 1367, 1465, 1528, 1628, 1732, 1840, 1952, 2068,
@@ -65,6 +115,10 @@ public class TransmitTest {
     compareMaxPayload(expectedMaxForLevelH, ErrorCorrectionLevel.H);
   }
 
+  /**
+   * Helper function that compares maximum QR code payload to 
+   * maximums listed in the QR standard, ISO/IEC 18004:2006.
+   */
   private void compareMaxPayload(int[] expectedMaxForLevel, ErrorCorrectionLevel ecLevel) {
     // We have to add the bytes that we set aside for tracking data chunks
     // in sequence before comparing the max to the standard.
@@ -73,23 +127,8 @@ public class TransmitTest {
       assertEquals("Expected max bytes=" +expectedMaxForLevel[i-1] +
           " when QR version="+ i + ", errorLevel="+ecLevel,
           expectedMaxForLevel[i-1],
-          transmitter.getPayloadMaxBytes(ecLevel, i) + reservedChunkSize);
+          transmitter.getPayloadMaxBytes(ecLevel, Version.getVersionForNumber(i)) + reservedChunkSize);
     }
-  }
-
-  /**
-   * Encoding of QR code with no data should yield no BitmapImage.
-   */
-  @Test
-  public void testEncodeQRCodesNoData() {
-    byte[] noByteData = new byte[0];
-
-    Iterable<BitmapImage> qrCodes = transmitter.encodeQRCodes(noByteData);
-    int size = 0;
-    for(@SuppressWarnings("unused") BitmapImage c : qrCodes) {
-       size++;
-    }
-    assertEquals("Empty transmission should yield no QR code", 0, size);
   }
 
   /**
@@ -122,8 +161,8 @@ public class TransmitTest {
     try {
       qrActual = transmitter.bytesToQRCode(utfStr);
       // Output file just to check QR scanner can read it
-      System.out.println("wrote tmp file, " + transmitter.bitMatrixToTmpFile(qrActual,1,filePrefix));
-    } catch (WriterException e) {
+      System.out.println("wrote tmp file, " + bitMatrixToTmpFile(qrActual,1,filePrefix));
+    } catch (TransmitException e) {
       fail("Failed to generate QR code: " + e.getMessage());
     } catch (IOException e) {
       fail("Failed to write qr code file, " + filePrefix + ":" + e.getMessage());
@@ -138,8 +177,8 @@ public class TransmitTest {
     BitMatrix qrExpected = null;
     BitMatrix qrUnequal = null;
     try {
-      qrExpected = readQRImage(filePrefix + ".png");
-      qrUnequal = readQRImage("qr_anystringyouwant.png");
+      qrExpected = UtilsTest.readQRImage(filePrefix + ".png");
+      qrUnequal = UtilsTest.readQRImage("qr_anystringyouwant.png");
     } catch (IOException e) {
       fail("Failed to read expected QR code: " + e.getMessage());
     }
@@ -170,47 +209,32 @@ public class TransmitTest {
   }
 
   /**
-   * Reads image from file and returns its BitMatrix. This function
-   * will return null whenever the resource file cannot be found or read.
-   * 
-   * @param resourceName
-   * @return
-   * @throws IOException if resourceName cannot be opened.
-   * @throws NotFoundException
+   * Sets up a collection of QR codes generated from the input data. It
+   * fails if there was some error in the initialization.
+   * @throws WriterException if QR encoding fails to encode {@code data}. 
    */
-  private BitMatrix readQRImage (String resourceName) throws IOException {
-    BitMatrix img = null;
-
-    // Look for resource in classpath
-    URL resource = TransmitTest.class.getClassLoader().getResource(resourceName);
-    if (resource != null) {
-      try {
-        // Convert BufferedImage to BitMatrix
-        img = toBitMatrix(ImageReader.readImage(resource.toURI()));
-      } catch (URISyntaxException e) {
-        throw new AssertionError("Malformed URL: " + resource.toString());
-      }
-    }
-    return img;
+  private Iterable<BitmapImage> encodeQRAndCheckNotNull(byte[] data) throws TransmitException{
+    Iterable<BitmapImage> qrCodes = transmitter.encodeQRCodes(data);
+    assertNotNull("Expect encoding will be successful", qrCodes);
+    return qrCodes;
   }
-
+  
   /**
-   * Convert from Java's BufferedImage type to ZXing's BitMatrix type.
-   * Returns null when there is no QR code found in the image.
+   * Output a QR BitMatrix to png file in temporary directory for debugging
+   * purposes. For example, a call to bitMatrixToTmpFile(m,12,"foo") will create
+   * a temporary file, /tmp/foo_12.png.
    * 
-   * @param img The BufferedImage to convert to BitMatrix
-   * @return The BitMatrix of the QR code found in img
+   * @param m The bit matrix that will be written to file.
+   * @param sequence Identifies the chunk of data that this QR code encodes.
+   * @param filePrefix Name that identifies the output file.
+   * @return The absolute path of the created temporary file.
    */
-  private BitMatrix toBitMatrix (BufferedImage img){
+  private String bitMatrixToTmpFile(BitMatrix m, int sequence,
+                                    String filePrefix) throws IOException {
+    String imgType = "png";
+    File tmp = File.createTempFile(filePrefix + "_" + sequence, "." + imgType);
+    MatrixToImageWriter.writeToFile(m, imgType, tmp);
 
-    BufferedImageLuminanceSource lumSrc = new BufferedImageLuminanceSource(img);
-    HybridBinarizer hb = new HybridBinarizer(lumSrc);
-    try {
-      return hb.getBlackMatrix();
-    } catch (NotFoundException e) {
-      // Ok to ignore, returning null when QR code not found.
-      // PMD complained about empty catch block
-      return null;
-    }
+    return tmp.getAbsolutePath();
   }
 }

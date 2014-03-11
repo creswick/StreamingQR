@@ -2,11 +2,21 @@ package com.galois.qrstream.qrpipe;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import com.google.zxing.NotFoundException;
+import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
+import com.google.zxing.client.j2se.ImageReader;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.common.HybridBinarizer;
 
 public class UtilsTest {
 
@@ -94,5 +104,49 @@ public class UtilsTest {
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("Byte array too large.");
     Utils.intToBytes(Integer.MAX_VALUE);
+  }
+
+  /**
+   * Reads image from file and returns its BitMatrix. This function
+   * will return null whenever the resource file cannot be found or read.
+   *
+   * @param resourceName
+   * @return
+   * @throws IOException if resourceName cannot be opened.
+   * @throws NotFoundException
+   */
+  public static BitMatrix readQRImage (String resourceName) throws IOException {
+    BitMatrix img = null;
+
+    // Look for resource in classpath
+    URL resource = UtilsTest.class.getClassLoader().getResource(resourceName);
+    if (resource != null) {
+      try {
+        // Convert BufferedImage to BitMatrix
+        img = toBitMatrix(ImageReader.readImage(resource.toURI()));
+      } catch (URISyntaxException e) {
+        throw new AssertionError("Malformed URL: " + resource.toString());
+      }
+    }
+    return img;
+  }
+
+  /**
+   * Convert from Java's BufferedImage type to ZXing's BitMatrix type.
+   * Returns null when there is no QR code found in the image.
+   *
+   * @param img The BufferedImage to convert to BitMatrix
+   * @return The BitMatrix of the QR code found in img
+   */
+  private static BitMatrix toBitMatrix (BufferedImage img){
+    BufferedImageLuminanceSource lumSrc = new BufferedImageLuminanceSource(img);
+    HybridBinarizer hb = new HybridBinarizer(lumSrc);
+    try {
+      return hb.getBlackMatrix();
+    } catch (NotFoundException e) {
+      // Ok to ignore, returning null when QR code not found.
+      // PMD complained about empty catch block
+      return null;
+    }
   }
 }

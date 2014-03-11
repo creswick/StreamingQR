@@ -5,13 +5,12 @@ import com.galois.qrstream.image.BitmapImage;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.google.zxing.qrcode.decoder.Version;
 
-import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -47,36 +46,108 @@ public class Transmit {
   }
 
   /**
-   * Encodes array of bytes into a collection of QR codes.
-   * Designed to interface with QRStream Android application.
+   * Encodes array of bytes into a collection of QR codes. It is designed to
+   * interface with QRStream Android application. It will break input data into
+   * chunks small enough for encoding into QR codes.
    *
    * @param data The array of bytes to encode
    * @return The sequence of QR codes generated from input data.
+   * @throws TransmitException if input {@code data} cannot be encoded as QR code.
    */
-  public Iterable<BitmapImage> encodeQRCodes (byte[] data) {
+  public Iterable<BitmapImage> encodeQRCodes(final byte[] data) throws TransmitException {
     // The collection of qr codes containing encoded data
     ArrayList<BitmapImage> qrCodes = new ArrayList<BitmapImage>();
-    return qrCodes;
 
-    // TODO Step 2: change function to: public Iterable<byte[]> encodeQRCodes (Iterable<byte[]>)
-    //
-    // The image width and height provided in constructor.
+    if (data != null && data.length > 0) {
+      // Assume particular QR density and error correction level so that
+      // we can calculate the appropriate chunk size for the input data.
+      Version qrVersion = Version.getVersionForNumber(40);
+      ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
+
+      int maxChunkSize = getPayloadMaxBytes(ecLevel, qrVersion);
+      int totalChunks = getTotalChunks(data.length, maxChunkSize);
+      int chunkId = 0;
+
+      ByteArrayInputStream input = null;
+      try {
+        input = new ByteArrayInputStream(data);
+        int bytesRemaining;
+        while ((bytesRemaining = input.available()) > 0) {
+          byte[] dataChunk = null;
+          if (bytesRemaining <= maxChunkSize) {
+            dataChunk = new byte[bytesRemaining];
+          } else {
+            dataChunk = new byte[maxChunkSize];
+          }
+          int bytesRead = input.read(dataChunk, 0, dataChunk.length);
+          if (bytesRead < 0) {
+            throw new AssertionError(
+                "Data reportedly available to read but read returned end of input.");
+          } else if (bytesRead != dataChunk.length) {
+            throw new AssertionError("Should be possible to read "
+                + dataChunk.length + " bytes when there are " + bytesRemaining
+                + " bytes available.");
+          }
+          chunkId += 1;
+          qrCodes.add(encodeQRCode(dataChunk, chunkId, totalChunks,
+                                   qrVersion, ecLevel));
+        }
+        if (chunkId != totalChunks) {
+          throw new TransmitException("Failed to encode as many chunks as we "
+              + "expected. Expected " + totalChunks + " but got " + chunkId);
+        }
+      } finally {
+        // The close method for ByteArrayInputStream does
+        // nothing but we have this here for completeness.
+        // If using any other stream, remove try-catch around close.
+        if (input != null) {
+          try {
+            input.close();
+          } catch (IOException e) {
+            throw new AssertionError(
+                "ByteArrayInputStream never throws IOException in close()");
+          }
+        }
+      }
+    }
+    return qrCodes;
+  }
+
+
+  protected BitmapImage encodeQRCode(byte[] chunkedData, int chunkId, int totalChunks,
+                                     Version v, ErrorCorrectionLevel ecLevel) throws TransmitException {
+    if (chunkedData == null) {
+      throw new NullPointerException("Cannot encode 'null' value as QR code.");
+    }
+    if (chunkedData.length >= getPayloadMaxBytes(ecLevel, v)) {
+      throw new IllegalArgumentException(
+          "Input data too large for QR version: " + v.getVersionNumber()
+              + " and error correction level: " + ecLevel
+              + " chunkedData.length = " + chunkedData.length + " maxPayload= "
+              + getPayloadMaxBytes(ecLevel, v));
+    }
+    BitMatrix bMat = bytesToQRCode(chunkedData);
+        //prependChunkId(chunkedData, chunkId, totalChunks));
+    if (bMat.getWidth() != imgWidth || bMat.getHeight() != imgHeight) {
+      throw new AssertionError("Expected image dimensions to be equal");
+    }
+    return Utils.toBitmapImage(bMat);
   }
 
   /**
-   * Returns the maximum number of bytes that can be encoded in QR code
-   * with version {@code v} and error correction level, {@code l}.
-   * @param ecLevel The error correction level, can be one of these values {@code L, M, Q, H}.
-   * @param version The version corresponding to the density of the QR code, 1-40.
+   * Returns the maximum number of bytes that can be encoded in QR code with
+   * version {@code v} and error correction level, {@code ecLevel}.
+   *
+   * @param ecLevel
+   *          The error correction level, can be one of these values
+   *          {@code L, M, Q, H}.
+   * @param v
+   *          The version corresponding to the density of the QR code, 1-40.
    * @return
    */
-  protected int getPayloadMaxBytes(ErrorCorrectionLevel ecLevel, int version) {
-    if (version < 1 || version > 40) {
-      throw new IllegalArgumentException("Must input QR version between 1 and 40.");
-    }
+  protected int getPayloadMaxBytes(ErrorCorrectionLevel ecLevel, Version v) {
 
     // Max payload for (version,ecLevel) = number data bytes - header bytes
-    Version v = Version.getVersionForNumber(version);
     Version.ECBlocks ecBlocks = v.getECBlocksForLevel(ecLevel);
     int numReservedBytes = Utils.getNumberQRHeaderBytes(v);
     int numDataBytes = v.getTotalCodewords() - ecBlocks.getTotalECCodewords();
@@ -104,7 +175,7 @@ public class Transmit {
    */
   protected byte[] prependChunkId(byte[] rawData, int chunk, int totalChunks) {
     // Unable to prepend chunk number to rawData if receive invalid inputs
-    if ( totalChunks < 0 || chunk < 0) {
+    if (totalChunks < 0 || chunk < 0) {
       throw new IllegalArgumentException("Number of chunks must be positive");
     }
 
@@ -133,11 +204,11 @@ public class Transmit {
    *     encoding mode to 'Byte encoding' and turn the String back to turn to byte[].
    * @param rawData the binary data to encode into a single QR code image.
    */
-  protected BitMatrix bytesToQRCode(byte[] rawData) throws WriterException {
+  protected BitMatrix bytesToQRCode(byte[] rawData) throws TransmitException {
     /*
-     * Max QR code density is function of error correction level and version of QR code.
-     * Max bytes for QR in binary/byte mode = 2,953 bytes using,
-     * QR code version 40 and error-correction level L.
+     * Max QR code density is function of error correction level and version of
+     * QR code. Max bytes for QR in binary/byte mode = 2,953 bytes using, QR
+     * code version 40 and error-correction level L.
      */
     String data;
     try {
@@ -157,25 +228,12 @@ public class Transmit {
      * ZXing will throw WriterException("Data too big").
      */
     QRCodeWriter writer = new QRCodeWriter();
-    return writer.encode(data, BarcodeFormat.QR_CODE, imgWidth, imgHeight, getEncodeHints());
-  }
-
-  /* 
-   * Output a QR BitMatrix to png file in temporary directory for debugging purposes.
-   * For example, a call to bitMatrixToTmpFile(m,12,"foo") will create a
-   * temporary file, /tmp/foo_12.png.
-   *
-   * @param m The bit matrix that will be written to file.
-   * @param sequence Identifies the chunk of data that this QR code encodes.
-   * @param filePrefix Name that identifies the output file.
-   * @return The absolute path of the created temporary file.
-   */
-  protected String bitMatrixToTmpFile(BitMatrix m, int sequence, String filePrefix) throws IOException {
-    String imgType = "png";
-    File tmp = File.createTempFile(filePrefix + "_" + sequence,"."+imgType);
-    MatrixToImageWriter.writeToFile(m, imgType, tmp);
-
-    return tmp.getAbsolutePath();
+    try {
+      return writer.encode(data, BarcodeFormat.QR_CODE, imgWidth, imgHeight,
+          getEncodeHints());
+    } catch (WriterException e) {
+      throw new TransmitException(e.getMessage());
+    }
   }
 
   /**
@@ -189,8 +247,8 @@ public class Transmit {
    *   Level H (High)      30% of codewords can be restored.
    */
   private Map<EncodeHintType, Object> getEncodeHints(ErrorCorrectionLevel errorLevel) {
-    /* Hints  */
-    HashMap <EncodeHintType, Object> hints = new HashMap <EncodeHintType, Object>();
+    /* Hints */
+    HashMap<EncodeHintType, Object> hints = new HashMap<EncodeHintType, Object>();
     hints.put(EncodeHintType.CHARACTER_SET, "ISO-8859-1");
     hints.put(EncodeHintType.ERROR_CORRECTION, errorLevel);
 
@@ -204,6 +262,22 @@ public class Transmit {
   private Map<EncodeHintType, Object> getEncodeHints() {
     return getEncodeHints(ErrorCorrectionLevel.L);
   }
+
+  /**
+   * Returns the number of {@code desiredChunkSize} servings we can fit
+   * into {@code length}. If {@code desiredChunksSize} does not fit
+   * evenly, it rounds up to the nearest integer.
+   *
+   * @param length the input size that we want to split into chunks.
+   * @param desiredChunkSize the size of split that we want to break {@source length} into.
+   */
+  private int getTotalChunks(int length, int desiredChunkSize) {
+    if (length < 0 || desiredChunkSize < 0) {
+      throw new IllegalArgumentException("Input must be non-negative.");
+    }
+    return (length + desiredChunkSize) / desiredChunkSize;
+  }
+
 
 
 }//public class Transmit
