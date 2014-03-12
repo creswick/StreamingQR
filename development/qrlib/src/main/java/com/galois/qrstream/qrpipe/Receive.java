@@ -1,6 +1,11 @@
 package com.galois.qrstream.qrpipe;
 
-import com.galois.qrstream.image.BitmapImage;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import com.galois.qrstream.image.YuvImage;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
@@ -11,12 +16,6 @@ import com.google.zxing.NotFoundException;
 import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
-import java.lang.Iterable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Class provides API for interfacing with Android application. It
@@ -60,15 +59,9 @@ public class Receive {
     //      public Iterable<byte[]> decodeQRCodes(Iterable<YuvImage>)
   }
 
-  // TODO Keep track of total frames decoded thus far.
-  // Android will poll these ints to track decoding progress
-  // and we'll use them to know when we've received all of the messages.
-  // int TotalQrCodes;
-  // int TotalQrCodesDecoded
+  // TODO Keep track of total frames decoded thus far with DecodeState.
+  // Android will use this know when they've received all of the messages.
 
-  // Stop processing when we've decoded all QR code chunks.
-
-  
   // TODO Possibly add conversion between YUV image to Bitmap image
   // types (only for testing)
 
@@ -97,6 +90,8 @@ public class Receive {
   /**
    * Detects and decode QR code from a luminance image.
    * @param lumSrc The luminance image containing a QR code to decode.
+   * @throws NotFoundException if there was problem detecting or decoding QR
+   * code from image {@source lumSrc}.
    */
   public static Result decode(LuminanceSource lumSrc) throws NotFoundException {
     BinaryBitmap bmap = toBinaryBitmap(lumSrc);

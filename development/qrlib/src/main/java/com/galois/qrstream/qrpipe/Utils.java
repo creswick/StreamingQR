@@ -2,8 +2,6 @@ package com.galois.qrstream.qrpipe;
 
 import java.nio.ByteBuffer;
 
-import com.galois.qrstream.image.BitmapImage;
-import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.decoder.Mode;
 import com.google.zxing.qrcode.decoder.Version;
 
@@ -113,24 +111,4 @@ public class Utils {
   public static int getNumberOfReservedBytes() {
     return NUM_RESERVED_INTS * NUM_BYTES_PER_INT;
   }
-
-  /**
-   * Convert BitMatrix to BitmapImage type
-   * @param mat the BitMatrix to convert
-   */
-  protected static BitmapImage toBitmapImage (BitMatrix mat) {
-    int w = mat.getWidth();
-    int h = mat.getHeight();
-    BitmapImage img = new BitmapImage(w, h);
-    for (int x = 0; x < w; x++) {
-      for (int y = 0; y < h; y++) {
-        if (mat.get(x, y)) {
-          img.set(x, y);
-        }
-      }
-    }
-    return img;
-  }
-
-
 }
