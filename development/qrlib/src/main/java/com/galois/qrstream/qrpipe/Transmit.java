@@ -36,14 +36,6 @@ public class Transmit {
     imgWidth = width;
   }
 
-  public int getHeight() {
-    return imgHeight;
-  }
-
-  public int getWidth() {
-    return imgWidth;
-  }
-
   /**
    * Encodes array of bytes into a collection of QR codes. It is designed to
    * interface with QRStream Android application. It will break input data into
