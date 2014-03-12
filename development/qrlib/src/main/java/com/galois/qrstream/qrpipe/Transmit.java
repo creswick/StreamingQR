@@ -1,7 +1,13 @@
 package com.galois.qrstream.qrpipe;
 
-import com.galois.qrstream.image.BitmapImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
+import com.galois.qrstream.image.BitmapImage;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
@@ -10,20 +16,13 @@ import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.google.zxing.qrcode.decoder.Version;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * Class provides API for interfacing with Android application. It
  * facilitates transmission of QR codes in streaming QR code protocol.
  *
  * We may find it necessary to add context to the transmission. For example,
  *  - resulting image dimension (px)
- *  - density of QR code
+ *  - density of QR code (QR version 1-40, not currently exposed in API)
  *  - others?
  */
 public class Transmit {
@@ -131,7 +130,7 @@ public class Transmit {
     if (bMat.getWidth() != imgWidth || bMat.getHeight() != imgHeight) {
       throw new AssertionError("Expected image dimensions to be equal");
     }
-    return Utils.toBitmapImage(bMat);
+    return BitmapImage.createBitmapImage(bMat);
   }
 
   /**

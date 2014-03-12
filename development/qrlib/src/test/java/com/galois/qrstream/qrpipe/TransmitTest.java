@@ -83,7 +83,7 @@ public class TransmitTest {
     System.out.println("qrExpected: w: "+qrExpected.getWidth() + " h: "+qrExpected.getHeight());
     System.out.println("qrActual: w: "+qrActual.getWidth() + " h: "+qrActual.getHeight());
     assertArrayEquals ("BitmapImages equal?",
-        Utils.toBitmapImage(qrExpected).getData(), qrActual.getData());
+        BitmapImage.createBitmapImage(qrExpected).getData(), qrActual.getData());
   }
 
   /**
