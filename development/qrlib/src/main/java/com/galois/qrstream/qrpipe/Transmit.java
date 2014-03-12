@@ -102,7 +102,7 @@ public class Transmit {
 
   /**
    * Generates a QR code for the input bytes, {@code chunkedData}. It is
-   * assumed that {@code chunkedData is subset of larger input. This function
+   * assumed that {@code chunkedData} is subset of larger input. This function
    * will concatenate the {@code chunkId} and {@code totalChunks} that input
    * was divided into, to {@code chunkedData} before encoding as QR code.
    *
