@@ -163,14 +163,9 @@ public class TransmitTest {
     BitMatrix qrActual = null;
     try {
       qrActual = transmitter.bytesToQRCode(utfStr);
-      // Output file just to check QR scanner can read it
-      System.out.println("wrote tmp file, " + bitMatrixToTmpFile(qrActual,1,filePrefix));
     } catch (TransmitException e) {
       fail("Failed to generate QR code: " + e.getMessage());
-    } catch (IOException e) {
-      fail("Failed to write qr code file, " + filePrefix + ":" + e.getMessage());
     }
-
     assertNotNull("Expected QR encoding of string,"+origStr+", to be successful", qrActual);
 
     /*
@@ -232,6 +227,8 @@ public class TransmitTest {
    * @param filePrefix Name that identifies the output file.
    * @return The absolute path of the created temporary file.
    */
+  // Example usage: Output file just to check QR scanner can read it
+  // System.out.println("wrote tmp file, " + bitMatrixToTmpFile(qrActual,1,filePrefix));
   private String bitMatrixToTmpFile(BitMatrix m, int sequence,
                                     String filePrefix) throws IOException {
     String imgType = "png";
