@@ -1,5 +1,6 @@
 package com.galois.qrstream.lib;
 
+import android.app.Fragment;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
@@ -11,17 +12,22 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 
+import com.galois.qrstream.qrpipe.Receive;
+
 import java.io.IOException;
+import java.util.concurrent.ArrayBlockingQueue;
 
 /**
  * Created by donp on 2/11/14.
  */
-public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Callback {
+public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
-    static Camera camera;
-    SurfaceView camera_window;
-    Button capture;
-    static Handler ui;
+    private static Camera camera;
+    private SurfaceView camera_window;
+    private Button capture;
+    private static Handler ui;
+    private Receive receiveQrpipe;
+    private ArrayBlockingQueue frameQueue;
 
     public ReceiveFragment() {
         ui = new Handler();
@@ -43,17 +49,11 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
         super.onResume();
         camera = Camera.open();
         Camera.Parameters params = camera.getParameters();
-        Preview previewCallback = new Preview();
-        previewSetup(params, previewCallback);
+        Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
         camera.setPreviewCallback(previewCallback);
         camera_window.getHolder().addCallback(this);
     }
 
-    private void previewSetup(Camera.Parameters params, Preview previewCallback) {
-        previewCallback.setQueue(frameQueue);
-        previewCallback.setHeight(params.getPreviewSize().height);
-        previewCallback.setWidth(params.getPreviewSize().width);
-    }
 
     @Override
     public void onPause(){
@@ -83,15 +83,6 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
         camera.release();
     }
 
-    public static class TakePicture implements Runnable {
-        public void run() {
-            Log.d("qrstream", "** Taking picture");
-            camera.takePicture(new Shutter(), new Picture(ui, "raw"),
-                                              new Picture(ui, "postdata"),
-                                              new Picture(ui, "jpeg"));
-        }
-    }
-
     public static class StartPreview implements Runnable {
         public void run() {
             Log.d("qrstream", "** Start preview");
@@ -103,8 +94,6 @@ public class ReceiveFragment extends QrpipeFragment implements SurfaceHolder.Cal
         @Override
         public void onClick(View v) {
             Log.d("qstream", "Capture Pushed");
-            Thread thread = new Thread(new TakePicture());
-            thread.run();
         }
     }
 }

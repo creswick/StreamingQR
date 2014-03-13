@@ -1,20 +1,17 @@
 package com.galois.qrstream.lib;
 
 import android.app.Fragment;
-import android.graphics.drawable.BitmapDrawable;
-import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
 
 import java.util.Iterator;
 
@@ -23,22 +20,18 @@ import com.galois.qrstream.qrpipe.TransmitException;
 import com.galois.qrstream.image.BitmapImage;
 
 
-import java.io.IOException;
-
 /**
  * Created by donp on 2/11/14.
  */
-public class TransmitFragment extends QrpipeFragment {
+public class TransmitFragment extends Fragment {
 
-    static Camera camera;
-    ImageView send_window;
-    Button capture;
-    static Handler ui;
-    final Transmit transmitter;
+    private ImageView send_window;
+    private Button sendButton;
+    private static Handler ui = new Handler();
+    private final Transmit transmitter;
 
     public TransmitFragment() {
-        ui = new Handler();
-        transmitter = new Transmit(350,350);
+      transmitter = new Transmit(350,350);
     }
 
     @Override
@@ -47,8 +40,8 @@ public class TransmitFragment extends QrpipeFragment {
         View rootView = inflater.inflate(R.layout.transmit_fragment, container, false);
 
         send_window = (ImageView)rootView.findViewById(R.id.send_window);
-        capture = (Button)rootView.findViewWithTag("send");
-        capture.setOnClickListener(new CaptureClick());
+        sendButton = (Button)rootView.findViewWithTag("send");
+        sendButton.setOnClickListener(new CaptureClick());
         return rootView;
     }
 
@@ -74,9 +67,10 @@ public class TransmitFragment extends QrpipeFragment {
         Iterable<BitmapImage> qrCodes;
         Log.d("qstream", "Trying to create QR code");
         try {
-            // try encoding string "foo" into qr code and printing to screen
+            // TODO Replace encoding of test string, 'foo', with user data
             qrCodes = transmitter.encodeQRCodes(new byte[]{0x66, 0x6F, 0x6F});
 
+            // Debugging output that prints number of generated QR codes
             int count = 0;
             for(BitmapImage i : qrCodes) {
                 count++;
