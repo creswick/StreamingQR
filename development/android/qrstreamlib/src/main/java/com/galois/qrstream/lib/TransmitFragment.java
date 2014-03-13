@@ -27,7 +27,6 @@ public class TransmitFragment extends Fragment {
 
     private ImageView send_window;
     private Button sendButton;
-    private static Handler ui = new Handler();
     private final Transmit transmitter;
 
     public TransmitFragment() {

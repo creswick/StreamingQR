@@ -30,7 +30,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
     private static Camera camera;
     private SurfaceView camera_window;
     private Button capture;
-    private final static Handler ui = new Handler();
     private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(1);
     private Receive receiveQrpipe;
     private DecodeThread decodeThread;
