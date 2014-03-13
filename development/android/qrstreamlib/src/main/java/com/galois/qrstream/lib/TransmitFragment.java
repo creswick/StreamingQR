@@ -9,6 +9,16 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
+
+import java.util.Iterator;
+
+import com.galois.qrstream.qrpipe.Transmit;
+import com.galois.qrstream.qrpipe.TransmitException;
+import com.galois.qrstream.image.BitmapImage;
+
 
 /**
  * Created by donp on 2/11/14.
@@ -18,8 +28,10 @@ public class TransmitFragment extends Fragment {
     private ImageView send_window;
     private Button sendButton;
     private static Handler ui = new Handler();
+    private final Transmit transmitter;
 
     public TransmitFragment() {
+      transmitter = new Transmit(350,350);
     }
 
     @Override
@@ -33,10 +45,48 @@ public class TransmitFragment extends Fragment {
         return rootView;
     }
 
+    /**
+     * Converts from QRlib BitmapImage to Android's Bitmap image typ
+     */
+    private Bitmap toBitmap(final BitmapImage matrix){
+        int height = matrix.getHeight();
+        int width = matrix.getWidth();
+        Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+        for (int x = 0; x < width; x++){
+            for (int y = 0; y < height; y++){
+                bmp.setPixel(x, y, matrix.get(x,y) ? Color.BLACK : Color.WHITE);
+            }
+        }
+        return bmp;
+    }
+
     @Override
     public void onResume(){
         super.onResume();
-        send_window.setImageDrawable(getResources().getDrawable(R.drawable.sample1));
+
+        Iterable<BitmapImage> qrCodes;
+        Log.d("qstream", "Trying to create QR code");
+        try {
+            // TODO Replace encoding of test string, 'foo', with user data
+            qrCodes = transmitter.encodeQRCodes(new byte[]{0x66, 0x6F, 0x6F});
+
+            // Debugging output that prints number of generated QR codes
+            int count = 0;
+            for(BitmapImage i : qrCodes) {
+                count++;
+            }
+            Log.d("qstream", "# codes returned: " + count);
+
+            Log.d("qstream", "Drawing QR code");
+            Iterator<BitmapImage> itr = qrCodes.iterator();
+            while (itr.hasNext()) {
+                Bitmap b = toBitmap(itr.next());
+                send_window.setImageDrawable(new BitmapDrawable(getResources(),b));
+                itr.remove();
+            }
+        } catch (TransmitException e) {
+            Log.e("qstream", e.getMessage());
+        }
     }
 
     @Override

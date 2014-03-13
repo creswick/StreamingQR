@@ -2,6 +2,9 @@ package com.galois.qrstream.qrpipe;
 
 import java.util.BitSet;
 
+/**
+ * Used to mark the progress of decoding stream of QR codes.
+ */
 public class DecodeState {
 	
 	private final BitSet data;

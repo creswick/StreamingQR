@@ -1,16 +1,13 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
+apply plugin: 'pmd'
 
 // Compile with and generate classes for Java 1.6
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
+// Library version
 version = '0.1'
-jar {
-    manifest {
-        attributes 'Implementation-Version': version
-    }
-}
 
 // Look for external dependencies in these repositories
 repositories {
@@ -22,11 +19,20 @@ repositories {
 dependencies {
     // ZXing core, i.e. the QR code library
     compile "com.google.zxing:core:2.3.0"
+
     // functions to export images
-    compile "com.google.zxing:javase:2.2"
+    testCompile "com.google.zxing:javase:2.2"
 
     // Junit requried to compile the unit tests
     testCompile group: 'junit', name: 'junit', version: '4.+'
+}
+
+jar {
+    manifest {
+        attributes 'Implementation-Version': version
+    }
+    // Add compilation dependencies in generated Jar
+    from { configurations.compile.collect {it.isDirectory() ? it : zipTree(it) } }
 }
 
 uploadArchives {
@@ -44,4 +50,12 @@ test {
     afterTest { descriptor, result ->
        logger.lifecycle("test result: " + result + ", " + descriptor)
     }
+}
+
+// Java source code analyzer configuration
+// Run 'gradle check' to invoke
+pmd {
+  // Available ruleSets: http://pmd.sourceforge.net/pmd-4.3.0/rules/index.html
+  ruleSets = ["basic", "braces", "sunsecure" ]
+
 }
