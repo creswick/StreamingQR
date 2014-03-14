@@ -1,7 +1,7 @@
 package com.galois.qrstream.qrpipe;
 
 import com.galois.qrstream.image.YuvImage;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.lang.InterruptedException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -59,7 +59,7 @@ public class Receive {
    * @param qrCodeImages The collection of YUV images to decode
    * @return The data decoded from collection of detected QR codes.
    */
-  public byte[] decodeQRCodes (ArrayBlockingQueue<YuvImage> qrCodeImages) {
+  public byte[] decodeQRCodes (BlockingQueue<YuvImage> qrCodeImages) {
     System.out.println("decodeQRcodes STARTED");
     progress.changeState(state);
     int count = 0;
