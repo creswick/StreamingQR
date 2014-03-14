@@ -27,7 +27,7 @@ import java.util.concurrent.ArrayBlockingQueue;
  */
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback, Constants {
 
-    private static Camera camera;
+    private Camera camera;
     private SurfaceView camera_window;
     private Button capture;
     private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(1);
@@ -91,13 +91,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
     public void surfaceDestroyed(SurfaceHolder holder) {
         camera.stopPreview();
         camera.release();
-    }
-
-    public static class StartPreview implements Runnable {
-        public void run() {
-            Log.d("qrstream", "** Start preview");
-            camera.startPreview();
-        }
     }
 
     public static class CaptureClick implements View.OnClickListener{
