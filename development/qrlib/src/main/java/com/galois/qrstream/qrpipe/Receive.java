@@ -29,20 +29,15 @@ import com.google.zxing.common.HybridBinarizer;
 public class Receive {
 
   /* Dimension of received images */
-  private int imgHeight;
-  private int imgWidth;
+  private final int imgHeight;
+  private final int imgWidth;
+
+  /* Track progress of decoding */
+  private DecodeState decodeState = new DecodeState();
 
   public Receive(int height, int width) {
     imgHeight = height;
     imgWidth = width;
-  }
-  
-  public int getHeight() {
-    return imgHeight;
-  }
-  
-  public int getWidth() {
-    return imgWidth;
   }
 
   /**
