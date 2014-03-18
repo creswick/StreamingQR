@@ -1,17 +1,22 @@
 package com.galois.qrstream.lib;
 
+import android.app.Activity;
 import android.app.Fragment;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.TextView;
 import android.view.ViewGroup;
 import android.widget.Button;
 
+import com.galois.qrstream.image.YuvImage;
+import com.galois.qrstream.qrpipe.IProgress;
 import com.galois.qrstream.qrpipe.Receive;
 
 import java.io.IOException;
@@ -20,17 +25,18 @@ import java.util.concurrent.ArrayBlockingQueue;
 /**
  * Created by donp on 2/11/14.
  */
-public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
+public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback, Constants {
 
-    private static Camera camera;
+    private Camera camera;
     private SurfaceView camera_window;
     private Button capture;
-    private static Handler ui;
+    private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(1);
     private Receive receiveQrpipe;
-    private ArrayBlockingQueue frameQueue;
+    private DecodeThread decodeThread;
+    private TextView statusLine;
+    private final Progress progress = new Progress();
 
     public ReceiveFragment() {
-        ui = new Handler();
     }
 
     @Override
@@ -39,6 +45,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
 
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
+        statusLine = (TextView)rootView.findViewById(R.id.receive_status);
         capture = (Button)rootView.findViewWithTag("capture");
         capture.setOnClickListener(new CaptureClick());
         return rootView;
@@ -52,13 +59,16 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
         camera.setPreviewCallback(previewCallback);
         camera_window.getHolder().addCallback(this);
+        DisplayUpdate displayUpdate = new DisplayUpdate(getActivity());
+        progress.setStateHandler(displayUpdate);
+        startPipe(params, progress);
     }
-
 
     @Override
     public void onPause(){
         super.onPause();
         camera.setPreviewCallback(null);
+        stopPipe();
     }
 
     @Override
@@ -83,17 +93,50 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera.release();
     }
 
-    public static class StartPreview implements Runnable {
-        public void run() {
-            Log.d("qrstream", "** Start preview");
-            camera.startPreview();
-        }
-    }
-
     public static class CaptureClick implements View.OnClickListener{
         @Override
         public void onClick(View v) {
             Log.d("qstream", "Capture Pushed");
+        }
+    }
+
+    public void startPipe(Camera.Parameters params, IProgress progress) {
+        if(decodeThread == null) {
+            Camera.Size previewSize = params.getPreviewSize();
+            receiveQrpipe = new Receive(previewSize.height,
+                                        previewSize.width,
+                                        progress);
+            decodeThread = new DecodeThread();
+            decodeThread.setReceiver(receiveQrpipe);
+            decodeThread.setQueue(frameQueue);
+            decodeThread.start();
+        } else {
+            Log.e(APP_TAG, "Error: DecodeThread already running");
+        }
+    }
+
+    public void stopPipe() {
+        // Threads can only be suggested to stop
+        decodeThread.cont = false;
+    }
+
+    public class DisplayUpdate extends Handler {
+        private final Activity activity;
+
+        public DisplayUpdate(Activity activity) {
+            this.activity = activity;
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            Log.d(APP_TAG, "DisplayUpdate.handleMessage");
+            final Bundle params = msg.getData();
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    statusLine.setText(params.getString("message"));
+                }
+            });
         }
     }
 }
