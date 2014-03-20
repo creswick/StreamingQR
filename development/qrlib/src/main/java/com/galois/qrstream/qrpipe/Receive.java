@@ -187,7 +187,6 @@ public class Receive {
       throw new ReceiveException(e.getMessage());
     }
   }
-  }
 
   /**
    * Convert luminance image to ZXing's BinaryBitmap type.
