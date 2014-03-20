@@ -1,7 +1,6 @@
 package com.galois.qrstream.qrpipe;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -126,8 +125,8 @@ public class Transmit {
               + " chunkedData.length = " + chunkedData.length + " maxPayload= "
               + getPayloadMaxBytes(ecLevel, v));
     }
-    BitMatrix bMat = bytesToQRCode(chunkedData);
-        //prependChunkId(chunkedData, chunkId, totalChunks));
+    byte[] prependedData = Utils.prependChunkId(chunkedData, chunkId, totalChunks);
+    BitMatrix bMat = bytesToQRCode(prependedData);
     return BitmapImage.createBitmapImage(bMat);
   }
 
@@ -150,44 +149,6 @@ public class Transmit {
     int numDataBytes = v.getTotalCodewords() - ecBlocks.getTotalECCodewords();
 
     return numDataBytes - numReservedBytes;
-  }
-
-  /**
-   * Injects chunk# and totalChunks into byte[] for encoding into QR code.
-   * The first {@code NUM_BYTES_PER_INT} bytes are the chunk# followed by
-   * {@code NUM_BYTES_PER_INT} bytes for the total # chunks.
-   * 
-   * Note:
-   * Four bytes may be too much space to reserve, but it was convenient
-   * to think about. We could probably just use 3 bytes for each int
-   * and let MAX_INTEGER=2^24-1 = 16,777,215.
-   * 
-   * If 4 bytes, then max bytes transferred in indices alone would
-   * equal 2,147,483,647 * 8 bytes = ~16GB.
-   * If QR code could transfer ~1200 bytes, then largest transfer we could handle
-   * is 2,147,483,647 * (1200 - 8 bytes) = ~2,384 GB.
-   * Number realistic max chunks likely to be = 16 GB file / (1200 - 8) bytes
-   *                                         ~= 14,412,642
-   * Number realistic bits we'd need = log2(14,412,642) ~= 24
-   */
-  protected byte[] prependChunkId(byte[] rawData, int chunk, int totalChunks) {
-    // Unable to prepend chunk number to rawData if receive invalid inputs
-    if (totalChunks < 0 || chunk < 0) {
-      throw new IllegalArgumentException("Number of chunks must be positive");
-    }
-
-    byte[] inputData = rawData == null ? new byte[0] : rawData.clone();
-    // Reserve first NUM_BYTES_PER_INT bytes of data for chunk id and
-    // another NUM_BYTES_PER_INT bytes of data for the totalChunks.
-    byte[] chunkId = Utils.intToBytes(chunk);
-    byte[] nChunks = Utils.intToBytes(totalChunks);
-    byte[] combined = new byte[inputData.length + chunkId.length + nChunks.length];
-
-    System.arraycopy(chunkId, 0, combined, 0, chunkId.length);
-    System.arraycopy(nChunks, 0, combined, chunkId.length, nChunks.length);
-    System.arraycopy(inputData, 0, combined, chunkId.length + nChunks.length, inputData.length);
-
-    return combined;
   }
 
   /**
