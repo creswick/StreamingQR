@@ -12,6 +12,9 @@ import com.galois.qrstream.qrpipe.State;
  * Created by donp on 3/5/14.
  */
 public class Progress implements IProgress {
+    public final static int INITIAL = 1;
+    public final static int INTERMEDIATE = 2;
+    public final static int FINAL = 3;
     Handler handler;
 
     public void setStateHandler(Handler handler){
@@ -24,12 +27,15 @@ public class Progress implements IProgress {
         switch(state.getState()) {
             case Initial:
                 changeMsg.putString("message", "Initial state");
+                changeMsg.putInt("state", INITIAL);
                 break;
             case Intermediate:
                 changeMsg.putString("message", "Intermediate state");
+                changeMsg.putInt("state", INTERMEDIATE);
                 break;
             case Final:
                 changeMsg.putString("message", "Final state");
+                changeMsg.putInt("state", FINAL);
                 break;
         }
         Message stateChange = new Message();

@@ -12,6 +12,7 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -28,13 +29,16 @@ import java.util.concurrent.ArrayBlockingQueue;
  */
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback, Constants {
 
-    private Camera camera;
     private SurfaceView camera_window;
+    private TextView statusLine;
+    private View rootView;
+    private LinearLayout ll;
+
+    private Camera camera;
     private Button capture;
     private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(1);
     private Receive receiveQrpipe;
     private DecodeThread decodeThread;
-    private TextView statusLine;
     private final Progress progress = new Progress();
 
     public ReceiveFragment() {
@@ -43,8 +47,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
-
+        rootView = inflater.inflate(R.layout.receive_fragment, container, false);
+        ll = (LinearLayout)rootView.findViewById(R.id.receive_layout);
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
         statusLine = (TextView)rootView.findViewById(R.id.receive_status);
         capture = (Button)rootView.findViewWithTag("capture");
@@ -158,12 +162,23 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         public void handleMessage(Message msg) {
             Log.d(APP_TAG, "DisplayUpdate.handleMessage");
             final Bundle params = msg.getData();
+            int state = params.getInt("state");
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     statusLine.setText(params.getString("message"));
                 }
             });
+
+            if(state == Progress.FINAL) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        stopPipe();
+                        ll.removeView(camera_window);
+                    }
+                });
+            }
         }
     }
 }
