@@ -13,9 +13,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import com.galois.qrstream.image.BitmapImage;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.client.j2se.ImageReader;
+import com.google.zxing.client.j2se.MatrixToImageConfig;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.common.HybridBinarizer;
 
@@ -130,6 +132,24 @@ public class UtilsTest {
       }
     }
     return img;
+  }
+
+  /**
+   * Testing utility that converts BitmapImage to BufferedImage type.
+   */
+  public static BufferedImage toBufferedImage(BitmapImage matrix) {
+    MatrixToImageConfig config = new MatrixToImageConfig();
+    int width = matrix.getWidth();
+    int height = matrix.getHeight();
+    BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY);
+    int onColor = config.getPixelOnColor();
+    int offColor = config.getPixelOffColor();
+    for (int x = 0; x < width; x++) {
+      for (int y = 0; y < height; y++) {
+        image.setRGB(x, y, matrix.get(x, y) ? onColor : offColor);
+      }
+    }
+    return image;
   }
 
   /**

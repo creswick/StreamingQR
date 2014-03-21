@@ -132,7 +132,7 @@ public class ReceiveTest {
     BitmapImage encodedQRImage = iter.next();
 
     // Convert them to images so we can run QR decoder on them
-    BufferedImage b = ReceiveTest.toBufferedImage(encodedQRImage);
+    BufferedImage b = UtilsTest.toBufferedImage(encodedQRImage);
     LuminanceSource lumSrc = new BufferedImageLuminanceSource(b);
     Result result = decodeAndCheckValidQR(lumSrc, null);
 
@@ -145,23 +145,6 @@ public class ReceiveTest {
     assertArrayEquals("Original input does not match decoded result", inputBytes,message);
   }
 
-  /**
-   * Convert BitmapImage to BufferedImage type.
-   */
-  private static BufferedImage toBufferedImage(BitmapImage matrix) {
-    MatrixToImageConfig config = new MatrixToImageConfig();
-    int width = matrix.getWidth();
-    int height = matrix.getHeight();
-    BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY);
-    int onColor = config.getPixelOnColor();
-    int offColor = config.getPixelOffColor();
-    for (int x = 0; x < width; x++) {
-      for (int y = 0; y < height; y++) {
-        image.setRGB(x, y, matrix.get(x, y) ? onColor : offColor);
-      }
-    }
-    return image;
-  }
 
   /**
    * Return byte array for ISO-8859-1 encoded string.
