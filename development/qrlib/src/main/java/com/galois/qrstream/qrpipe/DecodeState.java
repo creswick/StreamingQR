@@ -61,11 +61,6 @@ public class DecodeState {
 		}
 	}
 
-	//TODO: This was in master, but maybe not necessary?
-	public void set(int position) {
-		data.set(position);
-	}
-
 	/**
 	 * Get a deep copy of the underlying bitset.
 	 *
