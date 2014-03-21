@@ -235,10 +235,10 @@ public class Transmit {
    * @param desiredChunkSize the size of split that we want to break {@source length} into.
    */
   private int getTotalChunks(int length, int desiredChunkSize) {
-    if (length < 0 || desiredChunkSize < 0) {
-      throw new IllegalArgumentException("Input must be non-negative.");
+    if (length < 1 || desiredChunkSize < 1) {
+      throw new IllegalArgumentException("Input must be positive.");
     }
-    return (length + desiredChunkSize) / desiredChunkSize;
+    return ((int) Math.ceil((float)length/desiredChunkSize));
   }
 
 
