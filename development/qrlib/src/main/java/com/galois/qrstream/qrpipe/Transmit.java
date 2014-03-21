@@ -98,7 +98,6 @@ public class Transmit {
     }
     return qrCodes;
   }
-
   /**
    * Generates a QR code for the input bytes, {@code chunkedData}. It is
    * assumed that {@code chunkedData} is subset of larger input. This function
@@ -118,7 +117,7 @@ public class Transmit {
     if (chunkedData == null) {
       throw new NullPointerException("Cannot encode 'null' value as QR code.");
     }
-    if (chunkedData.length >= getPayloadMaxBytes(ecLevel, v)) {
+    if (chunkedData.length > getPayloadMaxBytes(ecLevel, v)) {
       throw new IllegalArgumentException(
           "Input data too large for QR version: " + v.getVersionNumber()
               + " and error correction level: " + ecLevel
