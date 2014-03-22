@@ -163,7 +163,7 @@ public class Receive {
     /* Hints */
     HashMap<DecodeHintType, Object> hints = new HashMap<DecodeHintType, Object>();
     hints.put(DecodeHintType.CHARACTER_SET, "ISO-8859-1");
-    // 
+
     Collection<BarcodeFormat> possibleFormats =
         new ArrayList<BarcodeFormat>(Collections.singletonList(BarcodeFormat.QR_CODE));
     hints.put(DecodeHintType.POSSIBLE_FORMATS, possibleFormats);

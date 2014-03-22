@@ -9,7 +9,6 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -17,6 +16,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.galois.qrstream.image.BitmapImage;
+import com.google.common.base.Charsets;
 import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
@@ -151,7 +151,7 @@ public class TransmitTest {
      *  Setup test string and make sure that we get
      *  back the expected byte[] given ISO-8859-1 encoding.
      */
-    byte[] utfStr = stringToBytes(origStr);
+    byte[] utfStr = origStr.getBytes(Charsets.ISO_8859_1);
     assertNotNull("Expected conversion to byte[] from String to be successful", utfStr);
     assertEquals(utfStr.length, expectedBytes.length);
     assertArrayEquals("", expectedBytes, utfStr);

@@ -1,13 +1,13 @@
 package com.galois.qrstream.qrpipe;
 
 import java.io.ByteArrayInputStream;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.galois.qrstream.image.BitmapImage;
+import com.google.common.base.Charsets;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
@@ -167,18 +167,14 @@ public class Transmit {
      * QR code. Max bytes for QR in binary/byte mode = 2,953 bytes using, QR
      * code version 40 and error-correction level L.
      */
-    String data;
-    try {
-      /* NOTE: There is no significant advantage to using Alphanumeric mode rather than
-       * Binary mode, in terms of the number of bits we can pack into a single QR code.
-       * Assuming QR version 40 and error correction level L.
-       *   A. Alphanumeric, max bits = 4296 max chars * 5.5 bits/char = 23,628.
-       *   B. Binary/byte,  max bits = 2953 max chars * 8 bits/char = 23,624.
-       */
-      data = new String(rawData, "ISO-8859-1");
-    } catch (UnsupportedEncodingException e) {
-      throw new AssertionError("ISO-8859-1 character set encoding not supported");
-    }
+    String data = new String(rawData, Charsets.ISO_8859_1);
+    /* NOTE: There is no significant advantage to using Alphanumeric mode rather than
+     * Binary mode, in terms of the number of bits we can pack into a single QR code.
+     * Assuming QR version 40 and error correction level L.
+     *   A. Alphanumeric, max bits = 4296 max chars * 5.5 bits/char = 23,628.
+     *   B. Binary/byte,  max bits = 2953 max chars * 8 bits/char = 23,624.
+     */
+
     /*
      * ZXing will determine the necessary QR code density given the number
      * of input bytes. If number of bytes is greater than max QR code version,

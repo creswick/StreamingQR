@@ -11,7 +11,6 @@ import static org.junit.Assert.fail;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
@@ -25,6 +24,7 @@ import org.junit.Test;
 
 import com.galois.qrstream.image.BitmapImage;
 import com.google.zxing.BarcodeFormat;
+import com.google.common.base.Charsets;
 import com.google.zxing.LuminanceSource;
 import com.google.zxing.Result;
 import com.google.zxing.ResultMetadataType;
@@ -43,12 +43,6 @@ public class ReceiveTest {
 
   @AfterClass
   public static void testCleanup() {}
-
-  @Ignore("Not ready yet") @Test
-  public void testDecodeQRCodes() {
-    // TODO: Ensure that we decoded sequence of QR codes correctly
-    fail("testDncodeQRCodes() not implemented yet.");
-  }
 
   /**
    * Check that single QR code that we expect to have sequence
@@ -111,14 +105,14 @@ public class ReceiveTest {
     assertEquals("Should only have 1 chunk" , 1, r.getTotalChunks(result));
     assertEquals("Unexpected chunkId" , 1, r.getChunkId(result));
     byte[] message = r.getMessageChunk(result);
-    String actualText = bytesToIso8859EncodedString(message);
+    String actualText = new String (message, Charsets.ISO_8859_1);
     assertEquals("Expect decoded result to match expected", expectedText, actualText);
   }
 
   @Test
   public void testEncodeThenDecode() throws IOException {
     Transmit t = new Transmit(350,350);
-    byte[] inputBytes = iso8859StringToBytes("foo");
+    byte[] inputBytes = "foo".getBytes(Charsets.ISO_8859_1);
 
     // Generate some QR codes from input string
     Iterable<BitmapImage> qrCodes = null;
@@ -145,30 +139,6 @@ public class ReceiveTest {
     assertArrayEquals("Original input does not match decoded result", inputBytes,message);
   }
 
-
-  /**
-   * Return byte array for ISO-8859-1 encoded string.
-   */
-  private byte[] iso8859StringToBytes(String str) {
-    byte[] expectedBytes = null;
-    try {
-      expectedBytes = str.getBytes("ISO-8859-1");
-    } catch (UnsupportedEncodingException e) {
-      fail("ISO-8859-1 character set encoding not supported");
-    }
-    assertNotNull("Cannot get byte[] for string, '" + str +"'",expectedBytes);
-    return expectedBytes;
-  }
-  private String bytesToIso8859EncodedString(byte[] input) {
-    String str = null;
-    try {
-      str = new String(input, "ISO-8859-1");
-    } catch (UnsupportedEncodingException e) {
-      fail("ISO-8859-1 character set encoding not supported");
-    }
-    assertNotNull(str);
-    return str;
-  }
   /**
    * Returns result of QR code decode whenever the file, {@code filename},
    * contains a detectable QR code. Causes tests to fail if no QR code
@@ -234,7 +204,7 @@ public class ReceiveTest {
   }
 
   /**
-   * Print the payload of the decoded QR code to stdout
+   * Print the payload of the decoded QR code to stdout.
    * @param result The {@code Result} of decoding image with QR code
    */
   private void printQrPayload(Result result) {
