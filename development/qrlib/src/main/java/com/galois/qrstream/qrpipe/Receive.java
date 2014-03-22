@@ -112,7 +112,7 @@ public class Receive {
    * Extracts the {@code chunkId} from the decoded QR code
    * indicating its position in data transmission.
    */
-  protected int getChunkId (final Result decodedQR) {
+  protected static int getChunkId (final Result decodedQR) {
     byte[] message = getRawData(decodedQR);
     return Utils.extractChunkId(message);
   }
@@ -121,7 +121,7 @@ public class Receive {
    * Extracts the total number of chunks in a sequence of
    * transmitted data from the decoded QR code.
    */
-  protected int getTotalChunks (final Result decodedQR) {
+  protected static int getTotalChunks (final Result decodedQR) {
     byte[] message = getRawData(decodedQR);
     return Utils.extractTotalNumberChunks(message);
   }
@@ -130,7 +130,7 @@ public class Receive {
    * Extracts the payload of a decoded QR code, ignoring any
    * sequence information from the transmission.
    */
-  protected byte[] getMessageChunk (final Result decodedQR) {
+  protected static byte[] getMessageChunk (final Result decodedQR) {
     byte[] message = getRawData(decodedQR);
     return Utils.extractPayload(message);
   }
@@ -139,7 +139,7 @@ public class Receive {
    * Extract raw bytes from decoded QR code.
    * @throws AssertionError if ZXing library returned more than one array
    */
-  protected byte[] getRawData(final Result decodedQR) {
+  protected static byte[] getRawData(final Result decodedQR) {
     byte[] rawBytes = new byte[0];
 
     @SuppressWarnings("unchecked")
@@ -180,9 +180,21 @@ public class Receive {
    * code from image {@source lumSrc}.
    */
   protected static Result decodeSingle(LuminanceSource lumSrc) throws ReceiveException {
+    return decodeSingle(lumSrc, Receive.getDecodeHints());
+  }
+
+  /**
+   * Detects and decode QR code from a luminance image.
+   * @param lumSrc The luminance image containing a QR code to decode.
+   * @param hints Hints to help the ZXing barcode reader find QR code easier
+   * @throws ReceiveException if there was problem detecting or decoding QR
+   * code from image {@source lumSrc}.
+   */
+  protected static Result decodeSingle(LuminanceSource lumSrc,
+                                       Map<DecodeHintType,?> hints) throws ReceiveException {
     BinaryBitmap bmap = toBinaryBitmap(lumSrc);
     try {
-      return new MultiFormatReader().decode(bmap, Receive.getDecodeHints());
+      return new MultiFormatReader().decode(bmap, hints);
     } catch (NotFoundException e) {
       throw new ReceiveException(e.getMessage());
     }

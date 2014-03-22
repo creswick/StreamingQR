@@ -9,7 +9,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -19,22 +18,15 @@ import java.util.List;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.galois.qrstream.image.BitmapImage;
-import com.google.zxing.BarcodeFormat;
 import com.google.common.base.Charsets;
 import com.google.zxing.LuminanceSource;
 import com.google.zxing.Result;
 import com.google.zxing.ResultMetadataType;
-import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.client.j2se.ImageReader;
-import com.google.zxing.client.j2se.MatrixToImageConfig;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
 
 public class ReceiveTest {
 
@@ -75,7 +67,7 @@ public class ReceiveTest {
     String filename = "fooScreenshot_noReservedBits.png";
     String expectedText   = "foo";
 
-    BufferedImage b = getResourceAndCheckNotNull(filename);
+    BufferedImage b = getImageResourceAndCheckNotNull(filename);
     LuminanceSource lumSrc = new BufferedImageLuminanceSource(b);
 
     assertNotNull("Unable to convert BufferedImage to LuminanceSrc", lumSrc);
@@ -99,12 +91,11 @@ public class ReceiveTest {
 
     // Decode the image
     Result result = decodeAndCheckValidQR(filename);
-    Receive r = new Receive(350,350, new ProgressPrettyPrinter());
 
     // Expect payload to match 'expectedText' and only one QR code in sequence
-    assertEquals("Should only have 1 chunk" , 1, r.getTotalChunks(result));
-    assertEquals("Unexpected chunkId" , 1, r.getChunkId(result));
-    byte[] message = r.getMessageChunk(result);
+    assertEquals("Should only have 1 chunk" , 1, Receive.getTotalChunks(result));
+    assertEquals("Unexpected chunkId" , 1, Receive.getChunkId(result));
+    byte[] message = Receive.getMessageChunk(result);
     String actualText = new String (message, Charsets.ISO_8859_1);
     assertEquals("Expect decoded result to match expected", expectedText, actualText);
   }
@@ -131,11 +122,9 @@ public class ReceiveTest {
     Result result = decodeAndCheckValidQR(lumSrc, null);
 
     // Expect this small input will generate and decode a single QR code.
-    Receive r = new Receive(350,350,new ProgressPrettyPrinter());
-
-    assertEquals("Should only have 1 chunk" , 1, r.getTotalChunks(result));
-    assertEquals("Unexpected chunkId" , 1, r.getChunkId(result));
-    byte[] message = r.getMessageChunk(result);
+    assertEquals("Should only have 1 chunk" , 1, Receive.getTotalChunks(result));
+    assertEquals("Unexpected chunkId" , 1, Receive.getChunkId(result));
+    byte[] message = Receive.getMessageChunk(result);
     assertArrayEquals("Original input does not match decoded result", inputBytes,message);
   }
 
@@ -173,7 +162,7 @@ public class ReceiveTest {
    * @param filename The image file that will be converted.
    */
   private LuminanceSource getLuminanceImgAndCheckNotNull(String filename) {
-    BufferedImage b = getResourceAndCheckNotNull(filename);
+    BufferedImage b = getImageResourceAndCheckNotNull(filename);
     LuminanceSource lumSrc = new BufferedImageLuminanceSource(b);
     assertNotNull("Unable to convert BufferedImage to LuminanceSrc", lumSrc);
     return lumSrc;
@@ -186,11 +175,11 @@ public class ReceiveTest {
    *
    * @param filename The image file that will be opened.
    */
-  private BufferedImage getResourceAndCheckNotNull(String filename) {
+  private BufferedImage getImageResourceAndCheckNotNull(String filename) {
     BufferedImage img = null;
 
     // Look for resource in classpath
-    URL resource = UtilsTest.class.getClassLoader().getResource(filename);
+    URL resource = ReceiveTest.class.getClassLoader().getResource(filename);
     assertNotNull("Expected resource to exist: " + filename, resource);
     try {
       img = ImageReader.readImage(resource.toURI());
@@ -218,24 +207,4 @@ public class ReceiveTest {
     }
   }
 
-  /*
-   * Implementation of IProgress interface needed for testing Receive class.
-   */
-  private class ProgressPrettyPrinter implements IProgress {
-
-    @Override
-    public void changeState(DecodeState state) {
-      // TODO Auto-generated method stub
-      switch(state.getState()) {
-      case Initial:
-        System.out.println("decode progress: Initial state"); break;
-      case Intermediate:
-        System.out.println("decode progress: Intermediate state"); break;
-      case Final:
-        System.out.println("decode progress: Final state"); break;
-      default:
-        System.out.println("decode progress: Unusual state"); break;
-      }
-    }
-  }
 }
