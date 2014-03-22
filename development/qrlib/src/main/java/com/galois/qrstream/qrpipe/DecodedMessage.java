@@ -42,16 +42,22 @@ public class DecodedMessage {
     if (receivedData == null) {
       receivedData = new HashMap<Integer, byte[]>(totalChunks);
       decodeState.setInitialCapacity(totalChunks);
-      if(DEBUG) System.out.println("saveMessageChunk: initialize to size " + totalChunks);
+      if(DEBUG) {
+        System.out.println("saveMessageChunk: initialize to size " + totalChunks);
+      }
     }
     // Save message part if we haven't seen it already.
     if (!receivedData.containsKey(chunkId)) {
       decodeState.markDataReceived(chunkId);
       receivedData.put(chunkId, msg.clone());
       decodeProgress.changeState(decodeState);
-      if(DEBUG) System.out.println("saveMessageChunk: updated state to " + decodeState.getState());
+      if(DEBUG) {
+        System.out.println("saveMessageChunk: updated state to " + decodeState.getState());
+      }
     }else{
-      if(DEBUG) System.out.println("saveMessageChunk: nothing to do - already recorded chunk");
+      if(DEBUG) {
+        System.out.println("saveMessageChunk: nothing to do - already recorded chunk");
+      }
     }
   }
 
@@ -70,7 +76,9 @@ public class DecodedMessage {
       receivedData.put(i, new byte[] {(byte)0xde,(byte)0xad,(byte)0xbe,(byte)0xef});
       decodeProgress.changeState(decodeState);
     } else {
-      if(DEBUG) System.out.println("Chunk " + i + " has already been saved.");
+      if(DEBUG) {
+        System.out.println("Chunk " + i + " has already been saved.");
+      }
     }
   }
 }
