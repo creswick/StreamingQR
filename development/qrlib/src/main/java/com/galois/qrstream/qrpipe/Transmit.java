@@ -45,17 +45,36 @@ public class Transmit {
    * @return The sequence of QR codes generated from input data.
    * @throws TransmitException if input {@code data} cannot be encoded as QR code.
    */
+  // TODO Step 2: change function to: public Iterable<BitmapImage> encodeQRCodes (Iterable<byte[]>)
   public Iterable<BitmapImage> encodeQRCodes(final byte[] data) throws TransmitException {
+    // TODO: Settle on appropriate density and error level for phones.
+    // Assume particular QR density and error correction level so that
+    // we can calculate the appropriate chunk size for the input data.
+    Version qrVersion = Version.getVersionForNumber(26);
+    ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
+    return encodeQRCodes(data, qrVersion, ecLevel);
+  }
+
+  /**
+   * Encodes array of bytes into a collection of QR codes. It will break input
+   * into chunks small enough for encoding into QR codes for the requested
+   * QR code density and error correction level.
+   *
+   * @param data The array of bytes to encode
+   * @param qrVersion The desired density of the resulting QR code (i.e. version 1-40).
+   * @param ecLevel Error correction level, can be either {@code L, M, Q, H}.
+   * @return The sequence of QR codes generated from input data.
+   * @throws TransmitException if input {@code data} cannot be encoded as QR code.
+   */
+  protected Iterable<BitmapImage> encodeQRCodes(byte[] data, Version qrVersion,
+      ErrorCorrectionLevel ecLevel) throws TransmitException {
+
     // The collection of qr codes containing encoded data
     List<BitmapImage> qrCodes = new ArrayList<BitmapImage>();
 
     if (data == null || data.length <= 0) {
       return qrCodes;
     }
-    // Assume particular QR density and error correction level so that
-    // we can calculate the appropriate chunk size for the input data.
-    Version qrVersion = Version.getVersionForNumber(40);
-    ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
 
     // Check that image dimensions specified are large enough
     // to display the QR code generated with the requested density.
