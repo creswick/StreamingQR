@@ -76,7 +76,7 @@ public class Receive {
     } catch (InterruptedException e) {
     }
     System.out.println("decodeQRcodes: ENDED");
-    return null;
+    return new byte[0];
   }
 
   /**
