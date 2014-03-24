@@ -27,7 +27,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 /**
  * Created by donp on 2/11/14.
  */
-public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback, Constants {
+public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
     private SurfaceView camera_window;
     private TextView statusLine;
@@ -142,7 +142,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
             decodeThread.setQueue(frameQueue);
             decodeThread.start();
         } else {
-            Log.e(APP_TAG, "Error: DecodeThread already running");
+            Log.e(Constants.APP_TAG, "Error: DecodeThread already running");
         }
     }
 
@@ -160,7 +160,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
 
         @Override
         public void handleMessage(Message msg) {
-            Log.d(APP_TAG, "DisplayUpdate.handleMessage");
+            Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage");
             final Bundle params = msg.getData();
             int state = params.getInt("state");
             activity.runOnUiThread(new Runnable() {

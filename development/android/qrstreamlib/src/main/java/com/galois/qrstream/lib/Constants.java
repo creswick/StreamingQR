@@ -3,6 +3,12 @@ package com.galois.qrstream.lib;
 /**
  * Created by donp on 3/3/14.
  */
-public interface Constants {
-    public final static String APP_TAG = "qrstream";
+public final class Constants {
+    public static final String APP_TAG = "qrstream";
+
+    // Do not allow class to be instantiated.
+    // Reference constants by Constants.APP_TAG
+    private Constants() {
+        throw new AssertionError("Unexpected instantiation of private Constants class.");
+    }
 }

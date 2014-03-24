@@ -10,7 +10,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 /**
  * Created by donp on 2/28/14.
  */
-public class DecodeThread extends Thread implements Constants {
+public class DecodeThread extends Thread {
     private Receive receiver;
     public volatile boolean cont = true;
     private ArrayBlockingQueue<YuvImage> queue;
@@ -23,6 +23,6 @@ public class DecodeThread extends Thread implements Constants {
     public void run(){
             byte[] message;
             message = receiver.decodeQRCodes(queue);
-            Log.d(APP_TAG, "DecodeThread heard " + message);
+            Log.d(Constants.APP_TAG, "DecodeThread heard " + message);
     }
 }
