@@ -33,15 +33,15 @@ import com.google.zxing.common.HybridBinarizer;
 public class Receive {
 
   /* Dimension of received images */
-  private final int imgHeight;
-  private final int imgWidth;
+  private final int height;
+  private final int width;
 
   /* Track progress of decoding */
   private final IProgress progress;
 
   public Receive(int height, int width, IProgress progress) {
-    imgHeight = height;
-    imgWidth = width;
+    this.height = height;
+    this.width = width;
     this.progress = progress;
   }
 
@@ -52,7 +52,6 @@ public class Receive {
    * @param qrCodeImages The collection of YUV images to decode
    * @return The data decoded from collection of detected QR codes.
    */
-  // TODO Step 2: public Iterable<byte[]> decodeQRCodes(BlockingQueue <YuvImage>)
   public byte[] decodeQRCodes (BlockingQueue<YuvImage> qrCodeImages) {
     System.out.println("decodeQRcodes: STARTED");
     /* Container for saving received data and tracking state */
@@ -90,7 +89,7 @@ public class Receive {
     // TODO: May need to change last parameter, reverseHorizontal,
     // depending on yuvData we get from Android.
     LuminanceSource src = new PlanarYUVLuminanceSource(yuvData,
-        imgWidth, imgHeight, 0, 0, imgWidth, imgHeight, false);
+        width, height, 0, 0, width, height, false);
     return decodeSingle(src);
   }
 
