@@ -3,6 +3,7 @@ package com.galois.qrstream;
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -28,10 +29,15 @@ public class MainActivity extends Activity {
         transmitFragment = new TransmitFragment();
 
         if (savedInstanceState == null) {
-            fragmentManager.beginTransaction()
-                    .add(R.id.container, receiveFragment)
-                    .commit();
+            Intent startingIntent = getIntent();
+            showFragment(receiveFragment);
         }
+    }
+
+    private void showFragment(Fragment fragment) {
+        fragmentManager.beginTransaction()
+                .replace(R.id.container, fragment)
+                .commit();
     }
 
     @Override
@@ -53,15 +59,11 @@ public class MainActivity extends Activity {
         }
 
         if (id == R.id.action_receive) {
-            fragmentManager.beginTransaction()
-                    .replace(R.id.container, receiveFragment)
-                    .commit();
+            showFragment(receiveFragment);
             return true;
         }
         if (id == R.id.action_transmit) {
-            fragmentManager.beginTransaction()
-                    .replace(R.id.container, transmitFragment)
-                    .commit();
+            showFragment(transmitFragment);
             return true;
         }
         return super.onOptionsItemSelected(item);
