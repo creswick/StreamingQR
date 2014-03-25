@@ -3,6 +3,7 @@ package com.galois.qrstream.lib;
 import android.app.Fragment;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,7 +24,7 @@ import com.galois.qrstream.image.BitmapImage;
 /**
  * Created by donp on 2/11/14.
  */
-public class TransmitFragment extends Fragment {
+public class TransmitFragment extends Fragment implements View.OnClickListener {
 
     private ImageView send_window;
     private Button sendButton;
@@ -40,7 +41,7 @@ public class TransmitFragment extends Fragment {
 
         send_window = (ImageView)rootView.findViewById(R.id.send_window);
         sendButton = (Button)rootView.findViewWithTag("send");
-        sendButton.setOnClickListener(new CaptureClick());
+        sendButton.setOnClickListener(this);
         return rootView;
     }
 
@@ -65,9 +66,13 @@ public class TransmitFragment extends Fragment {
 
         Iterable<BitmapImage> qrCodes;
         Log.d("qstream", "Trying to create QR code");
+    }
+
+    public void transmitData(byte[] bytes) {
+        Iterable<BitmapImage> qrCodes;
         try {
             // TODO Replace encoding of test string, 'foo', with user data
-            qrCodes = transmitter.encodeQRCodes(new byte[]{0x66, 0x6F, 0x6F});
+            qrCodes = transmitter.encodeQRCodes(bytes);
 
             // Debugging output that prints number of generated QR codes
             int count = 0;
@@ -86,6 +91,14 @@ public class TransmitFragment extends Fragment {
         } catch (TransmitException e) {
             Log.e("qstream", e.getMessage());
         }
+
+
+    }
+
+    @Override
+    public void onClick(View v) {
+        Log.d("qstream", "Begin transmission");
+        transmitData(new byte[]{0x66, 0x6F, 0x6F});
     }
 
     @Override
@@ -93,10 +106,4 @@ public class TransmitFragment extends Fragment {
         super.onPause();
     }
 
-    public static class CaptureClick implements View.OnClickListener{
-        @Override
-        public void onClick(View v) {
-            Log.d("qstream", "Send Pushed");
-        }
-    }
 }
