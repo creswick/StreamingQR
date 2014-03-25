@@ -5,12 +5,14 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.galois.qrstream.lib.Constants;
 import com.galois.qrstream.lib.ReceiveFragment;
 import com.galois.qrstream.lib.TransmitFragment;
 
@@ -30,7 +32,13 @@ public class MainActivity extends Activity {
 
         if (savedInstanceState == null) {
             Intent startingIntent = getIntent();
-            showFragment(receiveFragment);
+            Log.d(Constants.APP_TAG, "startingIntent  " + startingIntent.getAction() +
+                                     " " + startingIntent.getData());
+            if(startingIntent.getAction() == Intent.ACTION_SEND) {
+                showFragment(transmitFragment);
+            } else {
+                showFragment(receiveFragment);
+            }
         }
     }
 
