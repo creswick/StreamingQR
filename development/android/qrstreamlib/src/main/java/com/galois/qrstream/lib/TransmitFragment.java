@@ -13,8 +13,10 @@ import android.widget.ImageView;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
+import android.widget.TextView;
 
 import java.util.Iterator;
+import java.util.List;
 
 import com.galois.qrstream.qrpipe.Transmit;
 import com.galois.qrstream.qrpipe.TransmitException;
@@ -26,12 +28,17 @@ import com.galois.qrstream.image.BitmapImage;
  */
 public class TransmitFragment extends Fragment implements View.OnClickListener {
 
+    private TextView dataTitle;
     private ImageView send_window;
     private Button sendButton;
     private final Transmit transmitter;
+    private int progress = 0;
+    private List<Job> jobsList;
+    private Iterable<BitmapImage> qrCodes;
 
-    public TransmitFragment() {
-      transmitter = new Transmit(350,350);
+    public TransmitFragment(List<Job> jobsList) {
+        transmitter = new Transmit(350,350);
+        this.jobsList = jobsList;
     }
 
     @Override
@@ -40,6 +47,7 @@ public class TransmitFragment extends Fragment implements View.OnClickListener {
         View rootView = inflater.inflate(R.layout.transmit_fragment, container, false);
 
         send_window = (ImageView)rootView.findViewById(R.id.send_window);
+        dataTitle = (TextView)rootView.findViewById(R.id.data_title);
         sendButton = (Button)rootView.findViewWithTag("send");
         sendButton.setOnClickListener(this);
         return rootView;
@@ -63,12 +71,18 @@ public class TransmitFragment extends Fragment implements View.OnClickListener {
     @Override
     public void onResume(){
         super.onResume();
-
-        Iterable<BitmapImage> qrCodes;
-        Log.d("qstream", "Trying to create QR code");
+        sendNextJob();
     }
 
-    public void transmitData(byte[] bytes) {
+    public void sendNextJob() {
+        if(jobsList.size() > 0) {
+            Job job = jobsList.remove(0);
+            transmitData(job.getTitle(), job.getData());
+        }
+    }
+
+    public void transmitData(String title, byte[] bytes) {
+        updateUi(title);
         Iterable<BitmapImage> qrCodes;
         try {
             // TODO Replace encoding of test string, 'foo', with user data
@@ -91,14 +105,20 @@ public class TransmitFragment extends Fragment implements View.OnClickListener {
         } catch (TransmitException e) {
             Log.e("qstream", e.getMessage());
         }
+    }
 
-
+    public void updateUi(String title) {
+        sendButton.setText("Transmitting");
+        sendButton.setEnabled(false);
+        dataTitle.setText(title);
     }
 
     @Override
     public void onClick(View v) {
         Log.d("qstream", "Begin transmission");
-        transmitData(new byte[]{0x66, 0x6F, 0x6F});
+        Job job = new Job("Three Bytes", new byte[]{0x66, 0x6F, 0x6F});
+        jobsList.add(job);
+        sendNextJob();
     }
 
     @Override

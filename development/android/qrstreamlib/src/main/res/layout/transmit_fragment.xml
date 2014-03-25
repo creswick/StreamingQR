@@ -21,6 +21,15 @@
         android:layout_width="fill_parent"
         android:layout_height="200dp" />
 
+    <TextView
+        android:id="@+id/data_title"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:textSize="13pt"
+        android:textColor="#00ff00"
+        />
+
     <Button
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"

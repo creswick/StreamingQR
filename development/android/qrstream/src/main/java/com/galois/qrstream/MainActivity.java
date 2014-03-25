@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -13,28 +14,37 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.galois.qrstream.lib.Constants;
+import com.galois.qrstream.lib.Job;
 import com.galois.qrstream.lib.ReceiveFragment;
 import com.galois.qrstream.lib.TransmitFragment;
+
+import java.net.URL;
+import java.util.ArrayList;
 
 public class MainActivity extends Activity {
 
     private FragmentManager fragmentManager;
-    public Fragment receiveFragment; // accessed via unittest
-    public Fragment transmitFragment; // accessed via unittest
+    private ArrayList<Job> jobsList;
+    public ReceiveFragment receiveFragment; // accessed via unittest
+    public TransmitFragment transmitFragment; // accessed via unittest
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        jobsList = new ArrayList();
         fragmentManager = getFragmentManager();
         receiveFragment = new ReceiveFragment();
-        transmitFragment = new TransmitFragment();
+        transmitFragment = new TransmitFragment(jobsList);
 
         if (savedInstanceState == null) {
             Intent startingIntent = getIntent();
-            Log.d(Constants.APP_TAG, "startingIntent  " + startingIntent.getAction() +
-                                     " " + startingIntent.getData());
+            Log.d(Constants.APP_TAG, "startingIntent  " + startingIntent.getAction());
             if(startingIntent.getAction() == Intent.ACTION_SEND) {
+                Uri dataUrl = (Uri)startingIntent.getExtras().getParcelable(Intent.EXTRA_STREAM);
+                Job job = new Job(dataUrl.getPath(),
+                                  new byte[]{0x00, 0x01, 0x02});
+                jobsList.add(job);
                 showFragment(transmitFragment);
             } else {
                 showFragment(receiveFragment);
