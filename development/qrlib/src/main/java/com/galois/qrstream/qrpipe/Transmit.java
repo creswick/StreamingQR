@@ -50,7 +50,7 @@ public class Transmit {
     // TODO: Settle on appropriate density and error level for phones.
     // Assume particular QR density and error correction level so that
     // we can calculate the appropriate chunk size for the input data.
-    Version qrVersion = Version.getVersionForNumber(26);
+    Version qrVersion = Version.getVersionForNumber(1);
     ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
     return encodeQRCodes(data, qrVersion, ecLevel);
   }
@@ -255,7 +255,4 @@ public class Transmit {
     }
     return ((int) Math.ceil((float)length/desiredChunkSize));
   }
-
-
-
 }//public class Transmit
