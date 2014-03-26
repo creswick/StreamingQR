@@ -21,6 +21,11 @@ import com.galois.qrstream.lib.Job;
 import com.galois.qrstream.lib.ReceiveFragment;
 import com.galois.qrstream.lib.TransmitFragment;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 
@@ -45,8 +50,9 @@ public class MainActivity extends Activity {
             Log.d(Constants.APP_TAG, "startingIntent  " + startingIntent.getAction());
             if(startingIntent.getAction() == Intent.ACTION_SEND) {
                 Uri dataUrl = (Uri)startingIntent.getExtras().getParcelable(Intent.EXTRA_STREAM);
-                Job job = new Job(getRealPathFromURI(dataUrl),
-                                  new byte[]{0x00, 0x01, 0x02});
+                String fileName = getRealPathFromURI(dataUrl);
+                Job job = new Job(fileName,
+                                  readFile(fileName));
                 jobsList.add(job);
                 showFragment(transmitFragment);
             } else {
@@ -97,6 +103,20 @@ public class MainActivity extends Activity {
         int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
         cursor.moveToFirst();
         return cursor.getString(column_index);
+    }
+
+    private byte[] readFile(String fileName) {
+        File file = new File(fileName);
+        byte[] buf = new byte[(int) file.length()];
+        try {
+            FileInputStream fileStream = new FileInputStream(file);
+            fileStream.read(buf);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return buf;
     }
 
     /**

@@ -82,6 +82,7 @@ public class TransmitFragment extends Fragment implements View.OnClickListener {
     }
 
     public void transmitData(String title, byte[] bytes) {
+        Log.d("qrstream", "transmitData title="+title+" byte count="+bytes.length);
         updateUi(title);
         Iterable<BitmapImage> qrCodes;
         try {
