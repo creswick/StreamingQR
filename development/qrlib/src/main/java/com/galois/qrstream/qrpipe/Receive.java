@@ -1,8 +1,5 @@
 package com.galois.qrstream.qrpipe;
 
-import com.galois.qrstream.image.YuvImage;
-import java.util.concurrent.BlockingQueue;
-import java.lang.InterruptedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -10,6 +7,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import com.galois.qrstream.image.YuvImage;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.DecodeHintType;
@@ -27,6 +28,7 @@ import com.google.zxing.common.HybridBinarizer;
  *
  * We may find it necessary to add context to the transmission. For example,
  *  - resulting image dimension (px) (DONE)
+ *  - timeout (in milliseconds) for receiver to wait for incoming image data
  *  - density of QR code
  *  - others?
  */
@@ -36,12 +38,25 @@ public class Receive {
   private final int height;
   private final int width;
 
+  /* Number of milliseconds to wait before timeout */
+  private final int milliseconds;
+
   /* Track progress of decoding */
   private final IProgress progress;
 
-  public Receive(int height, int width, IProgress progress) {
+  /**
+   * Initializes receiver of QR code stream.
+   * @param height The height of the received images.
+   * @param width The width of the received images.
+   * @param milliseconds The number of milliseconds to wait for incoming image
+   * data before timing out.
+   * @param progress The object used in tracking the progress of the message
+   * transmission.
+   */
+  public Receive(int height, int width, int milliseconds, IProgress progress) {
     this.height = height;
     this.width = width;
+    this.milliseconds = milliseconds;
     this.progress = progress;
   }
 
@@ -51,32 +66,47 @@ public class Receive {
    *
    * @param qrCodeImages The collection of YUV images to decode
    * @return The data decoded from collection of detected QR codes.
+   * @throws ReceiveException If {@code qrCodeImages} failed to receive enough
+   * images to complete the data transmission.
    */
-  public byte[] decodeQRCodes (BlockingQueue<YuvImage> qrCodeImages) {
-    System.out.println("decodeQRcodes: STARTED");
-    /* Container for saving received data and tracking state */
+  public byte[] decodeQRCodes (BlockingQueue<YuvImage> qrCodeImages) throws ReceiveException {
+    System.out.println("decodeQRCodes: STARTED");
+    // The received data and track transmission status.
     DecodedMessage message = new DecodedMessage(progress);
-    int count = 0;
     try {
       while(true) {
-        count += 1;
-        // If we get exception during decoding, then we could not
-        // read QR code contained in image. Try next one.
-        YuvImage img = qrCodeImages.take();
+        // Wait for incoming image for number of specified `milliseconds`,
+        // if we receive one, try to read the QR code contained within it.
+        YuvImage img = qrCodeImages.poll(milliseconds,TimeUnit.MILLISECONDS);
+        if (img == null) {
+          // Communicate failed state to progress indicator.
+          message.setFailedDecoding();
+          throw new ReceiveException("Transmission failed before message could be read.");
+        }
         try {
           // TODO Try improving performance by spawning new thread run each image decoding
           Result res = decodeSingleQRCode(img.getYuvData());
-          saveMessageAndUpdateProgress(res, message);
-          System.out.println("decodeQRcodes: Decoded Frame "+count);
+          State s = saveMessageAndUpdateProgress(res, message);
+          System.out.println("decodeQRCodes: state after trying decoding =" + s);
+          if(s == State.Final) {
+            System.out.println("decodeQRCodes: Hit final state");
+            break;
+          }
         } catch (ReceiveException e) {
-          System.out.println("decodeQRcodes: Unable to read QR code in image, "+count);
+          // Unable to detect QR in this image, try next one.
           continue;
         }
       }
     } catch (InterruptedException e) {
+      // Okay for us to ignore but log them anyway.
+      System.out.print("decodeQRCodes: Encountered InterruptedException");
+      if (e.getMessage() != null) {
+        System.out.print(e.getMessage());
+      }
+      System.out.print('\n');
     }
-    System.out.println("decodeQRcodes: ENDED");
-    return new byte[0];
+    System.out.println("decodeQRCodes: ENDED");
+    return message.getEntireMessage();
   }
 
   /**
@@ -99,12 +129,13 @@ public class Receive {
    *
    * @param decodedQR The result of decoding QR code from an image
    * @param receivedData The data decoded from prior images.
+   * @return The {@code State} indicating whether the whole message has been received.
    */
-  protected void saveMessageAndUpdateProgress(Result decodedQR, DecodedMessage receivedData) {
+  protected State saveMessageAndUpdateProgress(Result decodedQR, DecodedMessage receivedData) {
     int chunkId = getChunkId(decodedQR);
     int totalChunks = getTotalChunks(decodedQR);
     byte[] payload = getMessageChunk(decodedQR);
-    receivedData.saveMessageChunk(chunkId, totalChunks, payload);
+    return receivedData.saveMessageChunk(chunkId, totalChunks, payload);
   }
 
   /**

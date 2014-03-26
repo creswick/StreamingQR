@@ -32,10 +32,10 @@ public class Preview implements Camera.PreviewCallback, Constants {
 
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
-        Log.d(APP_TAG, "previewFrame data "+data.length);
+        Log.v(APP_TAG, "previewFrame data "+data.length);
         YuvImage frame = new YuvImage(data, height, width);
         if(frames.offer(frame) == false) {
-            Log.e(APP_TAG, "Frame queue full!");
+            Log.v(APP_TAG, "Frame queue full!");
         }
     }
 }

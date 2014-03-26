@@ -4,6 +4,8 @@ import android.util.Log;
 
 import com.galois.qrstream.image.YuvImage;
 import com.galois.qrstream.qrpipe.Receive;
+import com.galois.qrstream.qrpipe.ReceiveException;
+import com.google.common.base.Charsets;
 
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -21,8 +23,16 @@ public class DecodeThread extends Thread implements Constants {
 
     @Override
     public void run(){
-            byte[] message;
+        byte[] message;
+        try {
             message = receiver.decodeQRCodes(queue);
-            Log.d(APP_TAG, "DecodeThread heard " + message);
+            Log.w(APP_TAG, "DecodeThread read message of length: " + message.length);
+            // We'll  need to read MIME type later, but for now, we
+            // assume we have text input.
+            String msg = new String(message, Charsets.ISO_8859_1);
+            Log.w(APP_TAG, "DecodeThread heard " + msg);
+        } catch(ReceiveException e) {
+            Log.e(APP_TAG, "DecodeThread failed to read message. " + e.getMessage());
+        }
     }
 }

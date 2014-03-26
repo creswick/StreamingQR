@@ -28,6 +28,9 @@ import java.util.concurrent.ArrayBlockingQueue;
  */
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback, Constants {
 
+    // Milliseconds that Receiver should wait before timing out of QR decoding call.
+    private static final int TRANSMISSION_TIMEOUT = 10000;
+
     private Camera camera;
     private SurfaceView camera_window;
     private Button capture;
@@ -132,6 +135,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
             Camera.Size previewSize = params.getPreviewSize();
             receiveQrpipe = new Receive(previewSize.height,
                                         previewSize.width,
+                                        TRANSMISSION_TIMEOUT,
                                         progress);
             decodeThread = new DecodeThread();
             decodeThread.setReceiver(receiveQrpipe);
