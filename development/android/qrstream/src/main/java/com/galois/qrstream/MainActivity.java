@@ -3,9 +3,12 @@ package com.galois.qrstream;
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.content.CursorLoader;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -42,7 +45,7 @@ public class MainActivity extends Activity {
             Log.d(Constants.APP_TAG, "startingIntent  " + startingIntent.getAction());
             if(startingIntent.getAction() == Intent.ACTION_SEND) {
                 Uri dataUrl = (Uri)startingIntent.getExtras().getParcelable(Intent.EXTRA_STREAM);
-                Job job = new Job(dataUrl.getPath(),
+                Job job = new Job(getRealPathFromURI(dataUrl),
                                   new byte[]{0x00, 0x01, 0x02});
                 jobsList.add(job);
                 showFragment(transmitFragment);
@@ -85,6 +88,15 @@ public class MainActivity extends Activity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private String getRealPathFromURI(Uri contentUri) {
+        String[] proj = { MediaStore.Images.Media.DATA };
+        CursorLoader loader = new CursorLoader(this, contentUri, proj, null, null, null);
+        Cursor cursor = loader.loadInBackground();
+        int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+        cursor.moveToFirst();
+        return cursor.getString(column_index);
     }
 
     /**
