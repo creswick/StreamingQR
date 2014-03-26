@@ -1,27 +1,26 @@
 package com.galois.qrstream.qrpipe;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Map.Entry;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * Stores message from sequence of decoded QR codes. Note, the initial
  * capacity is unknown until first QR code is read.
  */
 public class DecodedMessage {
-  /* Container for saving received data */
-  private Map<Integer, byte[]> receivedData;
+  // Container for saving received data.
+  // Using SortedMap so that message can be assembled in order.
+  private final SortedMap<Integer, byte[]> receivedData;
 
-  /* Track progress of decoding */
-  private final DecodeState decodeState;
+  // Track progress of decoding
   private final IProgress decodeProgress;
-
-  private static final boolean DEBUG = false;
+  private DecodeState decodeState;
 
   public DecodedMessage (IProgress progress) {
-    receivedData = null;
-    decodeState = new DecodeState();
+    // Initialize 'decodeState' upon decoding first QR code.
+    receivedData = new TreeMap<Integer, byte[]>();
     decodeProgress = progress;
-    decodeProgress.changeState(decodeState);
   }
 
   /**
@@ -37,28 +36,16 @@ public class DecodedMessage {
       throw new NullPointerException("Invalid input for msg.");
     }
     // Set up message container if this is the first QR code encountered.
-    // Could have initialized before knowing capacity but then
-    // it's likely map would need to be resized.
-    if (receivedData == null) {
-      receivedData = new HashMap<Integer, byte[]>(totalChunks);
-      decodeState.setInitialCapacity(totalChunks);
-      if(DEBUG) {
-        System.out.println("saveMessageChunk: initialize to size " + totalChunks);
-      }
+    if (decodeState == null) {
+      decodeState = new DecodeState(totalChunks);
+      receivedData.clear();
     }
     // Save message part if we haven't seen it already.
     if (!receivedData.containsKey(chunkId)) {
-      decodeState.markDataReceived(chunkId);
       receivedData.put(chunkId, msg.clone());
+      decodeState.markDataReceived(chunkId);
       decodeProgress.changeState(decodeState);
-      if(DEBUG) {
-        System.out.println("saveMessageChunk: updated state to " + decodeState.getState());
-      }
     }else{
-      if(DEBUG) {
-        System.out.println("saveMessageChunk: nothing to do - already recorded chunk");
-      }
     }
   }
-
 }
