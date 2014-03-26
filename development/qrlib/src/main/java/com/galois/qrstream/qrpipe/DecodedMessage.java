@@ -33,8 +33,8 @@ public class DecodedMessage {
   public void saveMessageChunk(int chunkId, int totalChunks, byte[] msg) {
     if (totalChunks < 1 || chunkId < 1) {
       throw new IllegalArgumentException("Expected positive chunk inputs.");
-    }else if (msg.length < 1) {
-      throw new IllegalArgumentException("Invalid message length.");
+    }else if (msg == null) {
+      throw new NullPointerException("Invalid input for msg.");
     }
     // Set up message container if this is the first QR code encountered.
     // Could have initialized before knowing capacity but then
@@ -61,24 +61,4 @@ public class DecodedMessage {
     }
   }
 
-  public void testProgressUpdate(int i) {
-    int pretendCapacity = 2;
-    if (i < 0 || i >= pretendCapacity) {
-      throw new IllegalArgumentException("Expected positive chunk inputs.");
-    }
-    if (receivedData == null) {
-      receivedData = new HashMap<Integer, byte[]>(pretendCapacity);
-      decodeState.setInitialCapacity(pretendCapacity);
-    }
-    // Save message part if we haven't seen it already.
-    if (!receivedData.containsKey(i)) {
-      decodeState.markDataReceived(i);
-      receivedData.put(i, new byte[] {(byte)0xde,(byte)0xad,(byte)0xbe,(byte)0xef});
-      decodeProgress.changeState(decodeState);
-    } else {
-      if(DEBUG) {
-        System.out.println("Chunk " + i + " has already been saved.");
-      }
-    }
-  }
 }
