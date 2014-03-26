@@ -11,8 +11,6 @@ import static org.junit.Assert.fail;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.Map;
 
 import javax.imageio.ImageIO;
@@ -23,7 +21,6 @@ import org.junit.Test;
 
 import com.galois.qrstream.image.BitmapImage;
 import com.google.common.base.Charsets;
-import com.google.common.io.Files;
 import com.google.zxing.DecodeHintType;
 import com.google.zxing.LuminanceSource;
 import com.google.zxing.Result;
@@ -75,7 +72,7 @@ public class TransmitTest {
 
     // Input for test
     String filename = "random2kfile";
-    byte[] expectedBytes = getTextResourceAndCheckNotNull(filename);
+    byte[] expectedBytes = UtilsTest.getTextResourceAndCheckNotNull(filename);
 
     testRoundTripWithPureBarcodeHint(expectedBytes);
     testRoundTripWithNoBarcodeHint(expectedBytes);
@@ -194,10 +191,11 @@ public class TransmitTest {
    */
   @Test
   public void testGetMaxDataEncoding() {
-    int[] expectedMaxForLevelL = new int[] { 17, 32, 53, 78, 106, 134, 154,
-        192, 230, 271, 321, 367, 425, 458, 520, 586, 644, 718, 792, 858, 929,
-        1003, 1091, 1171, 1273, 1367, 1465, 1528, 1628, 1732, 1840, 1952, 2068,
-        2188, 2303, 2431, 2563, 2699, 2809, 2953 };
+    int[] expectedMaxForLevelL = new int[] {
+        17, 32, 53, 78, 106, 134, 154, 192, 230, 271,
+        321, 367, 425, 458, 520, 586, 644, 718, 792, 858,
+        929, 1003, 1091, 1171, 1273, 1367, 1465, 1528, 1628, 1732,
+        1840, 1952, 2068, 2188, 2303, 2431, 2563, 2699, 2809, 2953 };
     int[] expectedMaxForLevelH = new int[] { 7, 14, 24, 34, 44, 58, 64, 84, 98,
         119, 137, 155, 177, 194, 220, 250, 280, 310, 338, 382, 403, 439, 461,
         511, 535, 593, 625, 658, 698, 742, 790, 842, 898, 958, 983, 1051, 1093,
@@ -284,29 +282,6 @@ public class TransmitTest {
     assertNotNull("Expected to find QR code in image", qrUnequal);
     assertEquals ("QRcode from 'foo' must match", qrExpected, qrActual);
     assertNotEquals ("QRcode from 'foo' should not match QRcode from string, 'any string you want'", qrUnequal, qrActual);
-  }
-
-  /**
-   * Returns bytes read from requested resource file.
-   * @param filename Name of file in resources directory.
-   * @return The byte array read from the {@source filename}.
-   */
-  private byte[] getTextResourceAndCheckNotNull(String filename) {
-    byte[] result = null;
-
-    // Look for resource in classpath
-    URL resource = TransmitTest.class.getClassLoader().getResource(filename);
-    assertNotNull("Expected resource to exist: " + filename, resource);
-
-    try {
-      result = Files.toByteArray(new File(resource.toURI()));
-    } catch (URISyntaxException e) {
-      fail("Malformed URL: " + resource.toString());
-    } catch (IOException e) {
-      fail("Cannot read resource file, " + filename + "." + e.getMessage());
-    }
-    assertNotNull(result);
-    return result;
   }
 
   /**
