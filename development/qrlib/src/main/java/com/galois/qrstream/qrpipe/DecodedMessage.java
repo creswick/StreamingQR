@@ -82,7 +82,9 @@ public class DecodedMessage {
       receivedData.put(chunkId, msg.clone());
       decodeState.markDataReceived(chunkId);
       decodeProgress.changeState(decodeState);
+      System.out.println("saveMessageChunk: Saving chunk " + chunkId + " of " + totalChunks);
     }else{
+      System.out.println("saveMessageChunk: Already saved chunk " + chunkId + " of " + totalChunks);
     }
     return decodeState.getState();
   }
