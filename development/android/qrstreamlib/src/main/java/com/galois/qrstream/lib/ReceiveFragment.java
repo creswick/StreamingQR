@@ -96,6 +96,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         camera.stopPreview();
+        camera.setPreviewCallback(null);
         camera.release();
     }
 
