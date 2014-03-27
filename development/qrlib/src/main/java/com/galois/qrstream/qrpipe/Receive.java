@@ -1,7 +1,6 @@
 package com.galois.qrstream.qrpipe;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -71,11 +70,22 @@ public class Receive {
     System.out.println("decodeQRCodes: STARTED");
     // The received data and track transmission status.
     DecodedMessage message = new DecodedMessage(progress);
-    try {
-      while(true) {
+    while(true) {
         // Wait for incoming image for number of specified `milliseconds`,
         // if we receive one, try to read the QR code contained within it.
-        YuvImage img = qrCodeImages.poll(milliseconds,TimeUnit.MILLISECONDS);
+        YuvImage img = null;
+        try {
+          img = qrCodeImages.poll(milliseconds,TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+          // Interrupted while waiting for image.
+          // Log interruption for now and try waiting for another image.
+          System.out.print("decodeQRCodes: Encountered InterruptedException");
+          if (e.getMessage() != null) {
+            System.out.print(e.getMessage());
+          }
+          System.out.print('\n');
+          continue;
+        }
         if (img == null) {
           // Communicate failed state to progress indicator.
           message.setFailedDecoding();
@@ -94,14 +104,6 @@ public class Receive {
           // Unable to detect QR in this image, try next one.
           continue;
         }
-      }
-    } catch (InterruptedException e) {
-      // Okay for us to ignore but log them anyway.
-      System.out.print("decodeQRCodes: Encountered InterruptedException");
-      if (e.getMessage() != null) {
-        System.out.print(e.getMessage());
-      }
-      System.out.print('\n');
     }
     System.out.println("decodeQRCodes: ENDED");
     return message.getEntireMessage();

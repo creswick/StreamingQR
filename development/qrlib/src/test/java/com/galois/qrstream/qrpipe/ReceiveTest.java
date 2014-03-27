@@ -52,7 +52,7 @@ public class ReceiveTest {
    * @throws ReceiveException
    */
   @Test
-  public void testYUVGenereation() throws ReceiveException {
+  public void testYUVGeneration() throws ReceiveException {
     String filename   = "fooScreenshot_withReservedBits.png";
 
     // decode a QR code to get an oracle:
