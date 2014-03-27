@@ -136,6 +136,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             Camera.Size previewSize = params.getPreviewSize();
             receiveQrpipe = new Receive(previewSize.height,
                                         previewSize.width,
+                                        5000,
                                         progress);
             decodeThread = new DecodeThread();
             decodeThread.setReceiver(receiveQrpipe);

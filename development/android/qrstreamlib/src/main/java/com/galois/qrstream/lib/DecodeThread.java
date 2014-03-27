@@ -4,6 +4,7 @@ import android.util.Log;
 
 import com.galois.qrstream.image.YuvImage;
 import com.galois.qrstream.qrpipe.Receive;
+import com.galois.qrstream.qrpipe.ReceiveException;
 
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -21,8 +22,12 @@ public class DecodeThread extends Thread {
 
     @Override
     public void run(){
-            byte[] message;
+        byte[] message;
+        try {
             message = receiver.decodeQRCodes(queue);
             Log.d(Constants.APP_TAG, "DecodeThread heard " + message);
+        } catch(ReceiveException e) {
+
+        }
     }
 }
