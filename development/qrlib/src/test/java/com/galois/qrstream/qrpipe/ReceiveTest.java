@@ -91,12 +91,12 @@ public class ReceiveTest {
 
     // Decode the image
     Result result = decodeAndCheckValidQR(filename);
+    PartialMessage m = PartialMessage.createFromResult(result);
 
     // Expect payload to match 'expectedText' and only one QR code in sequence
-    assertEquals("Should only have 1 chunk" , 1, Receive.getTotalChunks(result));
-    assertEquals("Unexpected chunkId" , 1, Receive.getChunkId(result));
-    byte[] message = Receive.getMessageChunk(result);
-    String actualText = new String (message, Charsets.ISO_8859_1);
+    assertEquals("Should only have 1 chunk" , 1, m.getTotalChunks());
+    assertEquals("Unexpected chunkId" , 1, m.getChunkId());
+    String actualText = new String (m.getPayload(), Charsets.ISO_8859_1);
     assertEquals("Expect decoded result to match expected", expectedText, actualText);
   }
 
@@ -120,12 +120,13 @@ public class ReceiveTest {
     BufferedImage b = UtilsTest.toBufferedImage(encodedQRImage);
     LuminanceSource lumSrc = new BufferedImageLuminanceSource(b);
     Result result = decodeAndCheckValidQR(lumSrc, null);
+    PartialMessage m = PartialMessage.createFromResult(result);
 
     // Expect this small input will generate and decode a single QR code.
-    assertEquals("Should only have 1 chunk" , 1, Receive.getTotalChunks(result));
-    assertEquals("Unexpected chunkId" , 1, Receive.getChunkId(result));
-    byte[] message = Receive.getMessageChunk(result);
-    assertArrayEquals("Original input does not match decoded result", inputBytes,message);
+    assertEquals("Should only have 1 chunk" , 1, m.getTotalChunks());
+    assertEquals("Unexpected chunkId" , 1, m.getChunkId());
+    assertArrayEquals("Original input does not match decoded result",
+        inputBytes,m.getPayload());
   }
 
   /**

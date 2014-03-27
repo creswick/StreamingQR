@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -19,7 +18,6 @@ import com.google.zxing.MultiFormatReader;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.Result;
-import com.google.zxing.ResultMetadataType;
 import com.google.zxing.common.HybridBinarizer;
 
 /**
@@ -116,8 +114,6 @@ public class Receive {
    * @throws ReceiveException If no QR code has been detected or decoding failed.
    */
   protected Result decodeSingleQRCode(byte[] yuvData) throws ReceiveException {
-    // TODO: May need to change last parameter, reverseHorizontal,
-    // depending on yuvData we get from Android.
     LuminanceSource src = new PlanarYUVLuminanceSource(yuvData,
         width, height, 0, 0, width, height, false);
     return decodeSingle(src);
@@ -132,57 +128,8 @@ public class Receive {
    * @return The {@code State} indicating whether the whole message has been received.
    */
   protected State saveMessageAndUpdateProgress(Result decodedQR, DecodedMessage receivedData) {
-    int chunkId = getChunkId(decodedQR);
-    int totalChunks = getTotalChunks(decodedQR);
-    byte[] payload = getMessageChunk(decodedQR);
-    return receivedData.saveMessageChunk(chunkId, totalChunks, payload);
-  }
-
-  /**
-   * Extracts the {@code chunkId} from the decoded QR code
-   * indicating its position in data transmission.
-   */
-  protected static int getChunkId (final Result decodedQR) {
-    byte[] message = getRawData(decodedQR);
-    return Utils.extractChunkId(message);
-  }
-
-  /**
-   * Extracts the total number of chunks in a sequence of
-   * transmitted data from the decoded QR code.
-   */
-  protected static int getTotalChunks (final Result decodedQR) {
-    byte[] message = getRawData(decodedQR);
-    return Utils.extractTotalNumberChunks(message);
-  }
-
-  /**
-   * Extracts the payload of a decoded QR code, ignoring any
-   * sequence information from the transmission.
-   */
-  protected static byte[] getMessageChunk (final Result decodedQR) {
-    byte[] message = getRawData(decodedQR);
-    return Utils.extractPayload(message);
-  }
-
-  /**
-   * Extract raw bytes from decoded QR code.
-   * @throws AssertionError if ZXing library returned more than one array
-   */
-  protected static byte[] getRawData(final Result decodedQR) {
-    byte[] rawBytes = new byte[0];
-
-    @SuppressWarnings("unchecked")
-    List<byte[]> dataSegments = (List<byte[]>) decodedQR.getResultMetadata().get(ResultMetadataType.BYTE_SEGMENTS);
-    if (!dataSegments.isEmpty()) {
-      // I'm not sure why dataSegments would have more than one entry.
-      if (dataSegments.size() > 1) {
-        System.out.println("Decoded result has "+dataSegments.size()+" elements. We expected just one.");
-        throw new AssertionError();
-      }
-      rawBytes = dataSegments.get(0);
-    }
-    return rawBytes;
+    PartialMessage messagePart = PartialMessage.createFromResult(decodedQR);
+    return receivedData.saveMessageChunk(messagePart);
   }
 
   /**

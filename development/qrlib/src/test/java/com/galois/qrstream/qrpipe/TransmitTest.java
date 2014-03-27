@@ -159,7 +159,7 @@ public class TransmitTest {
       byte[] fromChunk = new byte[0];
       try {
         Result result = Receive.decodeSingle(lumSrc, hints);
-        fromChunk = Receive.getMessageChunk(result);
+        fromChunk = PartialMessage.createFromResult(result).getPayload();
       } catch (ReceiveException e) {
         try {
           detectionErrors++;

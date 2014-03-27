@@ -1,0 +1,83 @@
+package com.galois.qrstream.qrpipe;
+
+import java.util.List;
+
+import com.google.zxing.Result;
+import com.google.zxing.ResultMetadataType;
+
+/**
+ * Stores data from a single decoded QR code that's part of a larger sequence of QR codes.
+ */
+public class PartialMessage {
+  private final int chunkId;
+  private final int totalChunks;
+  private final byte[] payload;
+
+  /**
+   * Initialize partial message with its data and sequence information.
+   * @param chunkId Unique number identifying this chunk of data within a sequence.
+   * @param totalChunks The number of chunks in a sequence of transmitted data.
+   * @param payload The partial message contains within the QR code.
+   */
+  private PartialMessage(int chunkId, int totalChunks, byte[] payload) {
+    if (chunkId < 1 || totalChunks < 1) {
+      throw new IllegalArgumentException("Expected message to have positive chunk inputs.");
+    }else if (payload == null) {
+      throw new NullPointerException("Invalid input for msg.");
+    }
+    this.chunkId = chunkId;
+    this.totalChunks = totalChunks;
+    this.payload = payload.clone();
+  }
+
+  public int getTotalChunks() {
+    return totalChunks;
+  }
+
+  public int getChunkId() {
+    return chunkId;
+  }
+
+  public byte[] getPayload() {
+    return payload.clone();
+  }
+
+  /**
+   * Extracts information about the message within the decoded QR code
+   * and initialize a new {@code PartialMessage} with that information.
+   * It retrieves, its position in data transmission ({@code chunkId}),
+   * the total number of chunks in a sequence of transmitted data
+   * ({@code totalChunks}), and the partial message contained within
+   * the QR {@code payload}.
+   * @param decodedQR The result from decoding a QR code within an image.
+   */
+  public static PartialMessage createFromResult (Result decodedQR) {
+
+    byte[] message = getRawData(decodedQR);
+
+    int chunkId = Utils.extractChunkId(message);
+    int totalChunks = Utils.extractTotalNumberChunks(message);
+    byte[] payload = Utils.extractPayload(message);
+    return new PartialMessage(chunkId,totalChunks,payload);
+  }
+
+  /**
+   * Extract raw bytes from decoded QR code.
+   * @throws AssertionError if ZXing library returned more than one array
+   */
+  protected static byte[] getRawData(final Result decodedQR) {
+    byte[] rawBytes = new byte[0];
+
+    @SuppressWarnings("unchecked")
+    List<byte[]> dataSegments = (List<byte[]>) decodedQR.getResultMetadata().get(ResultMetadataType.BYTE_SEGMENTS);
+    if (!dataSegments.isEmpty()) {
+      // I'm not sure why dataSegments would have more than one entry.
+      if (dataSegments.size() > 1) {
+        System.err.println("Decoded result has "+dataSegments.size()+" elements. We expected just one.");
+        throw new AssertionError();
+      }
+      rawBytes = dataSegments.get(0);
+    }
+    return rawBytes;
+  }
+}

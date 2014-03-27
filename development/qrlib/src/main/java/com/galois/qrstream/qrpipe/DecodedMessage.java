@@ -14,7 +14,7 @@ import com.google.common.io.ByteStreams;
 public class DecodedMessage {
   // Container for saving received data.
   // Using SortedMap so that message can be assembled in order.
-  private final SortedMap<Integer, byte[]> receivedData;
+  private final SortedMap<Integer, PartialMessage> receivedData;
 
   // Track progress of decoding
   private final IProgress decodeProgress;
@@ -22,7 +22,7 @@ public class DecodedMessage {
 
   public DecodedMessage (IProgress progress) {
     // Initialize 'decodeState' upon decoding first QR code.
-    receivedData = new TreeMap<Integer, byte[]>();
+    receivedData = new TreeMap<Integer, PartialMessage>();
     decodeProgress = progress;
   }
 
@@ -37,8 +37,8 @@ public class DecodedMessage {
 
     // Assemble message in order, we assume key are sorted
     ByteArrayDataOutput bstream = ByteStreams.newDataOutput();
-    for(Entry<Integer, byte[]> entry : receivedData.entrySet()) {
-      bstream.write(entry.getValue());
+    for(Entry<Integer, PartialMessage> entry : receivedData.entrySet()) {
+      bstream.write(entry.getValue().getPayload());
     }
     return bstream.toByteArray();
   }
@@ -66,25 +66,21 @@ public class DecodedMessage {
    * the first QR code encountered.
    * @return The {@code State} indicating whether the whole message has been received.
    */
-  public State saveMessageChunk(int chunkId, int totalChunks, byte[] msg) {
-    if (totalChunks < 1 || chunkId < 1) {
-      throw new IllegalArgumentException("Expected positive chunk inputs.");
-    }else if (msg == null) {
-      throw new NullPointerException("Invalid input for msg.");
-    }
+  public State saveMessageChunk(PartialMessage msgPart) {
+
     // Set up message container if this is the first QR code encountered.
     if (decodeState == null) {
-      decodeState = new DecodeState(totalChunks);
+      decodeState = new DecodeState(msgPart.getTotalChunks());
       receivedData.clear();
     }
     // Save message part if we haven't seen it already.
-    if (!receivedData.containsKey(chunkId)) {
-      receivedData.put(chunkId, msg.clone());
-      decodeState.markDataReceived(chunkId);
+    if (!receivedData.containsKey(msgPart.getChunkId())) {
+      receivedData.put(msgPart.getChunkId(), msgPart);
+      decodeState.markDataReceived(msgPart.getChunkId());
       decodeProgress.changeState(decodeState);
-      System.out.println("saveMessageChunk: Saving chunk " + chunkId + " of " + totalChunks);
+      System.out.println("saveMessageChunk: Saving chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
     }else{
-      System.out.println("saveMessageChunk: Already saved chunk " + chunkId + " of " + totalChunks);
+      System.out.println("saveMessageChunk: Already saved chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
     }
     return decodeState.getState();
   }
