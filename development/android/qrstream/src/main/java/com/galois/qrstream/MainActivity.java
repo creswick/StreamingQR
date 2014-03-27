@@ -28,6 +28,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class MainActivity extends Activity {
 
@@ -49,10 +50,7 @@ public class MainActivity extends Activity {
             Intent startingIntent = getIntent();
             Log.d(Constants.APP_TAG, "startingIntent  " + startingIntent.getAction());
             if(startingIntent.getAction() == Intent.ACTION_SEND) {
-                Uri dataUrl = (Uri)startingIntent.getExtras().getParcelable(Intent.EXTRA_STREAM);
-                String fileName = getRealPathFromURI(dataUrl);
-                Job job = new Job(fileName,
-                                  readFile(fileName));
+                Job job = buildJobFromIntent(startingIntent);
                 jobsList.add(job);
                 showFragment(transmitFragment);
             } else {
@@ -117,6 +115,26 @@ public class MainActivity extends Activity {
             e.printStackTrace();
         }
         return buf;
+    }
+
+    private Job buildJobFromIntent(Intent intent) {
+        String type = intent.getType();
+        Bundle extras = intent.getExtras();
+        Log.d("qrstream", "** received type "+type);
+
+        String name = "";
+        byte[] bytes = null;
+
+        if(type.equals("image/*")) {
+            Uri dataUrl = (Uri) intent.getExtras().getParcelable(Intent.EXTRA_STREAM);
+            name = getRealPathFromURI(dataUrl);
+            bytes = readFile(name);
+        } else if(type.equals("text/plain")) {
+            String body = extras.getString(Intent.EXTRA_SUBJECT) +
+                          extras.getString(Intent.EXTRA_TEXT);
+            bytes = body.getBytes();
+        }
+        return new Job(name, bytes);
     }
 
     /**
