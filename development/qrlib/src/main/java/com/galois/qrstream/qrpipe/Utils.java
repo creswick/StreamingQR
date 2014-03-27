@@ -116,12 +116,12 @@ public class Utils {
    * Injects chunk# and totalChunks into byte[] for encoding into QR code.
    * The first {@code NUM_BYTES_PER_INT} bytes are the chunk# followed by
    * {@code NUM_BYTES_PER_INT} bytes for the total # chunks.
-   * 
+   *
    * Note:
    * Four bytes may be too much space to reserve, but it was convenient
    * to think about. We could probably just use 3 bytes for each int
    * and let MAX_INTEGER=2^24-1 = 16,777,215.
-   * 
+   *
    * If 4 bytes, then max bytes transferred in indices alone would
    * equal 2,147,483,647 * 8 bytes = ~16GB.
    * If QR code could transfer ~1200 bytes, then largest transfer we could handle
@@ -159,7 +159,7 @@ public class Utils {
    * than the bytes reserved for the chunkId and the total number of chunks.
    */
   public static int extractChunkId(final byte[] rawData) throws IllegalArgumentException {
-    if (rawData.length < getNumberOfReservedBytes()) {
+    if (rawData == null || rawData.length < getNumberOfReservedBytes()) {
       throw new IllegalArgumentException("Input data is too small");
     }
     byte[] chunkId = new byte[MAX_INT_SIZE];
@@ -176,7 +176,7 @@ public class Utils {
    * than the bytes reserved for the chunkId and the total number of chunks.
    */
   public static int extractTotalNumberChunks(final byte[] rawData) throws IllegalArgumentException {
-    if (rawData.length < getNumberOfReservedBytes()) {
+    if (rawData == null || rawData.length < getNumberOfReservedBytes()) {
       throw new IllegalArgumentException("Input data is too small");
     }
     byte[] totalChunks = new byte[MAX_INT_SIZE];
@@ -185,7 +185,7 @@ public class Utils {
   }
 
   public static byte[] extractPayload(final byte[] rawData) {
-    if (rawData.length <= getNumberOfReservedBytes()) {
+    if (rawData == null || rawData.length <= getNumberOfReservedBytes()) {
       throw new IllegalArgumentException("Input data is too small");
     }
     byte[] payload = new byte[rawData.length - getNumberOfReservedBytes()];

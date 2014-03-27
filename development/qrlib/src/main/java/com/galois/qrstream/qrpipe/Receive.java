@@ -100,8 +100,11 @@ public class Receive {
             System.out.println("decodeQRCodes: Hit final state");
             break;
           }
-        } catch (ReceiveException e) {
+        } catch (NotFoundException e) {
           // Unable to detect QR in this image, try next one.
+          continue;
+        } catch (ReceiveException e) {
+          // Encountered invalid QR code during parsing, try next image.
           continue;
         }
     }
@@ -115,7 +118,7 @@ public class Receive {
    * @return The detected QR code {@code Result} type.
    * @throws ReceiveException If no QR code has been detected or decoding failed.
    */
-  protected Result decodeSingleQRCode(byte[] yuvData) throws ReceiveException {
+  protected Result decodeSingleQRCode(byte[] yuvData) throws NotFoundException {
     LuminanceSource src = new PlanarYUVLuminanceSource(yuvData,
         width, height, 0, 0, width, height, false);
     return decodeSingle(src);
@@ -128,8 +131,10 @@ public class Receive {
    * @param decodedQR The result of decoding QR code from an image
    * @param receivedData The data decoded from prior images.
    * @return The {@code State} indicating whether the whole message has been received.
+   * @throws ReceiveException if the decoded QR code has an invalid format
    */
-  protected State saveMessageAndUpdateProgress(Result decodedQR, DecodedMessage receivedData) {
+  protected State saveMessageAndUpdateProgress(Result decodedQR, DecodedMessage receivedData)
+      throws ReceiveException {
     PartialMessage messagePart = PartialMessage.createFromResult(decodedQR);
     return receivedData.saveMessageChunk(messagePart);
   }
@@ -155,10 +160,10 @@ public class Receive {
   /**
    * Detects and decode QR code from a luminance image.
    * @param lumSrc The luminance image containing a QR code to decode.
-   * @throws ReceiveException if there was problem detecting or decoding QR
+   * @throws NotFoundException if there was problem detecting or decoding QR
    * code from image {@source lumSrc}.
    */
-  protected static Result decodeSingle(LuminanceSource lumSrc) throws ReceiveException {
+  protected static Result decodeSingle(LuminanceSource lumSrc) throws NotFoundException {
     return decodeSingle(lumSrc, Receive.getDecodeHints());
   }
 
@@ -166,17 +171,13 @@ public class Receive {
    * Detects and decode QR code from a luminance image.
    * @param lumSrc The luminance image containing a QR code to decode.
    * @param hints Hints to help the ZXing barcode reader find QR code easier
-   * @throws ReceiveException if there was problem detecting or decoding QR
+   * @throws NotFoundException if there was problem detecting or decoding QR
    * code from image {@source lumSrc}.
    */
   protected static Result decodeSingle(LuminanceSource lumSrc,
-                                       Map<DecodeHintType,?> hints) throws ReceiveException {
+                                       Map<DecodeHintType,?> hints) throws NotFoundException {
     BinaryBitmap bmap = toBinaryBitmap(lumSrc);
-    try {
-      return new MultiFormatReader().decode(bmap, hints);
-    } catch (NotFoundException e) {
-      throw new ReceiveException(e.getMessage());
-    }
+    return new MultiFormatReader().decode(bmap, hints);
   }
 
   /**

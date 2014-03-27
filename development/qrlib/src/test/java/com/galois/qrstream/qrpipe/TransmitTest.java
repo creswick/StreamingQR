@@ -23,6 +23,7 @@ import com.galois.qrstream.image.BitmapImage;
 import com.google.common.base.Charsets;
 import com.google.zxing.DecodeHintType;
 import com.google.zxing.LuminanceSource;
+import com.google.zxing.NotFoundException;
 import com.google.zxing.Result;
 import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
@@ -51,7 +52,7 @@ public class TransmitTest {
     ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
 
     byte[] noByteData = new byte[0];
-    
+
     Iterable<BitmapImage> qrCodes =
         encodeQRAndCheckNotNull(noByteData, qrVersion, ecLevel);
 
@@ -64,8 +65,8 @@ public class TransmitTest {
 
   /**
    * Ensure that we encoded sequence of QR codes correctly
-   * @throws IOException 
-   * @throws WriterException 
+   * @throws IOException
+   * @throws WriterException
    */
   @Test
   public void testEncodeQRCodes() throws TransmitException, IOException {
@@ -132,7 +133,7 @@ public class TransmitTest {
    * @param ecLevel The error correction level
    * @param hints The hints to the ZXing barcode reader to ease decoding.
    * @param expectedBytes The input to perform roundtrip check on.
-   * @throws TransmitException 
+   * @throws TransmitException
    */
   private int testRoundTrip(Version qrVersion, ErrorCorrectionLevel ecLevel,
       Map<DecodeHintType, Object> hints, byte[] expectedBytes) throws TransmitException {
@@ -160,7 +161,7 @@ public class TransmitTest {
       try {
         Result result = Receive.decodeSingle(lumSrc, hints);
         fromChunk = PartialMessage.createFromResult(result).getPayload();
-      } catch (ReceiveException e) {
+      } catch (NotFoundException e) {
         try {
           detectionErrors++;
           System.out.print("Failed to read QR code (Version: "+
@@ -169,6 +170,8 @@ public class TransmitTest {
         } catch (IOException e1) {
           fail("Unable to write QR code to temporary file.");
         }
+      } catch (ReceiveException e) {
+        fail("QR code is not formatted for QRLib.");
       }
       if (detectionErrors == 0) {
         assertTrue("Should have received some data but got none", fromChunk.length > 0);
@@ -216,7 +219,7 @@ public class TransmitTest {
   }
 
   /**
-   * Helper function that compares maximum QR code payload to 
+   * Helper function that compares maximum QR code payload to
    * maximums listed in the QR standard, ISO/IEC 18004:2006.
    */
   private void compareMaxPayload(int[] expectedMaxForLevel, ErrorCorrectionLevel ecLevel) {
@@ -289,7 +292,7 @@ public class TransmitTest {
    * fails if there was some error in the initialization.
    * @param ecLevel The error correction level of the QR code
    * @param qrVersion The density of the QR code.
-   * @throws WriterException if QR encoding fails to encode {@code data}. 
+   * @throws WriterException if QR encoding fails to encode {@code data}.
    */
   private Iterable<BitmapImage> encodeQRAndCheckNotNull(
       byte[] data, Version qrVersion, ErrorCorrectionLevel ecLevel)

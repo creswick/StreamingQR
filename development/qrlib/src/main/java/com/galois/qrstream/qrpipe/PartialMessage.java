@@ -50,14 +50,30 @@ public class PartialMessage {
    * ({@code totalChunks}), and the partial message contained within
    * the QR {@code payload}.
    * @param decodedQR The result from decoding a QR code within an image.
+   * @throws ReceiveException If the decoded QR code has an invalid format.
    */
-  public static PartialMessage createFromResult (Result decodedQR) {
+  public static PartialMessage createFromResult (Result decodedQR) throws ReceiveException {
+    final int chunkId;
+    final int totalChunks;
+    final byte[] payload;
 
     byte[] message = getRawData(decodedQR);
+    if (message == null || message.length < Utils.getNumberOfReservedBytes()) {
+      throw new ReceiveException("QR code is missing sequence data.");
+    }
 
-    int chunkId = Utils.extractChunkId(message);
-    int totalChunks = Utils.extractTotalNumberChunks(message);
-    byte[] payload = Utils.extractPayload(message);
+    try {
+      chunkId = Utils.extractChunkId(message);
+      totalChunks = Utils.extractTotalNumberChunks(message);
+      payload = Utils.extractPayload(message);
+    }catch (IllegalArgumentException e) {
+      throw new ReceiveException("QR code is illformed." + e.getMessage());
+    }
+    if (chunkId > totalChunks) {
+      throw new ReceiveException("QR code is illformed, chunkId="+chunkId
+          + " > totalChunks=" + totalChunks);
+    }
+
     return new PartialMessage(chunkId,totalChunks,payload);
   }
 

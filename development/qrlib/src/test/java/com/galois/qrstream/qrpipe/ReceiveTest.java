@@ -26,6 +26,7 @@ import com.galois.qrstream.image.BitmapImage;
 import com.galois.qrstream.image.YuvImage;
 import com.google.common.base.Charsets;
 import com.google.zxing.LuminanceSource;
+import com.google.zxing.NotFoundException;
 import com.google.zxing.Result;
 import com.google.zxing.ResultMetadataType;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
@@ -136,7 +137,7 @@ public class ReceiveTest {
     try {
       Result result = Receive.decodeSingle(lumSrc);
       assertEquals("Expect decoded result to match expected", expectedText, result.getText());
-    } catch (ReceiveException e) {
+    } catch (NotFoundException e) {
       fail("Unable to find QR in image, "+filename + ". " + e.getMessage());
     }
   }
@@ -153,9 +154,15 @@ public class ReceiveTest {
 
     // Decode the image
     Result result = decodeAndCheckValidQR(filename);
-    PartialMessage m = PartialMessage.createFromResult(result);
+    PartialMessage m = null;
+    try {
+      m = PartialMessage.createFromResult(result);
+    } catch (ReceiveException e) {
+      fail("QR code is not formatted for QRLib.");
+    }
 
     // Expect payload to match 'expectedText' and only one QR code in sequence
+    assertNotNull("Message should parse", m);
     assertEquals("Should only have 1 chunk" , 1, m.getTotalChunks());
     assertEquals("Unexpected chunkId" , 1, m.getChunkId());
     String actualText = new String (m.getPayload(), Charsets.ISO_8859_1);
@@ -182,9 +189,15 @@ public class ReceiveTest {
     BufferedImage b = UtilsTest.toBufferedImage(encodedQRImage);
     LuminanceSource lumSrc = new BufferedImageLuminanceSource(b);
     Result result = decodeAndCheckValidQR(lumSrc, null);
-    PartialMessage m = PartialMessage.createFromResult(result);
+    PartialMessage m = null;
+    try {
+      m = PartialMessage.createFromResult(result);
+    } catch (ReceiveException e) {
+      fail("QR code is not formatted for QRLib.");
+    }
 
     // Expect this small input will generate and decode a single QR code.
+    assertNotNull("Message should parse", m);
     assertEquals("Should only have 1 chunk" , 1, m.getTotalChunks());
     assertEquals("Unexpected chunkId" , 1, m.getChunkId());
     assertArrayEquals("Original input does not match decoded result",
@@ -208,7 +221,7 @@ public class ReceiveTest {
     try {
       result = Receive.decodeSingle(img);
       assertNotNull("QR result should not be null", result);
-    } catch (ReceiveException e) {
+    } catch (NotFoundException e) {
       if (filename != null) {
         fail("Unable to find QR in image, " + filename +". "+ e.getMessage());
       }else{
