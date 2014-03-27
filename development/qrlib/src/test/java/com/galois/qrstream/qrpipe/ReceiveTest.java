@@ -37,6 +37,7 @@ public class ReceiveTest {
    * Simple IProgress implementation that does nothing with it's arguments.
    */
   private static final IProgress NULL_MONITOR = new IProgress() {
+    @Override
     public void changeState(DecodeState state) {
     }};
 
@@ -45,10 +46,10 @@ public class ReceiveTest {
 
   @AfterClass
   public static void testCleanup() {}
-  
+
   /**
    * Limited test to see if the YUV generator works.
-   * @throws ReceiveException 
+   * @throws ReceiveException
    */
   @Test
   public void testYUVGenereation() throws ReceiveException {
@@ -61,42 +62,42 @@ public class ReceiveTest {
     BufferedImage image = getImageResourceAndCheckNotNull(filename);
     byte[] yuvData = YuvUtilities.toYUV(image);
     YuvImage yuvImage = new YuvImage(yuvData, image.getWidth(), image.getHeight());
-    
+
     // Use receive to decode this qr code:
     Receive receive = new Receive(image.getHeight(), image.getWidth(), 100, NULL_MONITOR);
-    
+
     BlockingQueue<YuvImage> queue = new ArrayBlockingQueue<YuvImage>(1);
     queue.add(yuvImage);
-    
+
     byte[] actual = receive.decodeQRCodes(queue);
     byte[] expected = PartialMessage.createFromResult(result).getPayload();
-    
+
     assertArrayEquals("Yuv data generated different results", expected, actual);
   }
-  
+
   /**
-   * Check that Recieve.decodeQRCodes(...) can time out and throw an exception 
+   * Check that Recieve.decodeQRCodes(...) can time out and throw an exception
    * if no more data arrives.  This test fails if no exception is thrown within
    * 400ms.
-   * 
+   *
    * @throws ReceiveException
    */
   @Test(timeout=400, expected=ReceiveException.class)
   public void testDecodeQRThrowsOnEmptyQueue() throws ReceiveException {
     // The receiver should wait 100ms for a new frame:
     int timeout = 100;
-    
+
     // dummy image data:
     YuvImage filler = new YuvImage(new byte[640 * 480], 640, 480);
 
     Receive receiver = new Receive(640, 480, timeout, NULL_MONITOR);
-    
+
     BlockingQueue<YuvImage> queue = new ArrayBlockingQueue<YuvImage>(2);
     queue.add(filler);
 
     receiver.decodeQRCodes(queue);
   }
-  
+
   /**
    * Check that single QR code that we expect to have sequence
    * information inserted into its payload really does have it.
@@ -194,7 +195,7 @@ public class ReceiveTest {
    * Returns result of QR code decode whenever the file, {@code filename},
    * contains a detectable QR code. Causes tests to fail if no QR code
    * could be detected.
-   * 
+   *
    * @param filename path to image file
    */
   private Result decodeAndCheckValidQR(String filename) {

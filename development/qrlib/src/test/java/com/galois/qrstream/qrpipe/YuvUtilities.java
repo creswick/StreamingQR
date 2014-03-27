@@ -17,8 +17,6 @@ public class YuvUtilities {
     int width = bi.getWidth();
     int height = bi.getHeight();
 
-    
-    
     byte[] frame = new byte[(int) (width * height * PENGALI)];
 
     boolean s = false;

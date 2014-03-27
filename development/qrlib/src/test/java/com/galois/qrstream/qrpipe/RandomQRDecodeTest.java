@@ -33,22 +33,23 @@ public class RandomQRDecodeTest {
    * The number of qr codes to create:
    */
   private static final int COUNT = 10;
-  
+
   /**
    * Null-op progress monitor.
    */
   public static final IProgress NULL_PROGRESS = new IProgress() {
+    @Override
     public void changeState(DecodeState state) {
     }};
 
   private static int nextNatural(Random r) {
     return Math.abs(r.nextInt());
   }
-    
+
   @Parameters(name = "{0}")
   public static Collection<Object[]> setup() {
     List<Object[]> qrcodes = Lists.newArrayList();
-    
+
     long seed = System.currentTimeMillis();
     Random rand = new Random(seed);
     for(int i = 0; i < COUNT; i++ ){
@@ -56,7 +57,7 @@ public class RandomQRDecodeTest {
       rand.nextBytes(bytes);
       int height = 500; //nextNatural(rand) % 1024;
       int width = 500; //nextNatural(rand) % 1024;
-      
+
       Transmit t = new Transmit(height, width);
       BitMatrix bmap;
 
@@ -65,19 +66,19 @@ public class RandomQRDecodeTest {
       } catch (TransmitException e) {
         continue;
       }
-      
+
       BufferedImage newCode = MatrixToImageWriter.toBufferedImage(bmap);
-      
+
       qrcodes.add(new Object[] { "seed: "+ seed + ": "+i
                                , newCode
-                               , bytes 
+                               , bytes
                                , height
                                , width
       });
     }
     return qrcodes;
   }
-  
+
   private final String name;
   private final BufferedImage qrcode;
   private final byte[] oracle;
@@ -93,13 +94,13 @@ public class RandomQRDecodeTest {
     this.width = width;
     this.height = height;
   }
-  
+
   @Test
   public void testDecodeRandomQR() throws ReceiveException, IOException {
     byte[] actual;
     try {
       Receive r = new Receive(height, width, 500, NULL_PROGRESS);
-      
+
       BlockingQueue<YuvImage> queue = new ArrayBlockingQueue<YuvImage>(2);
       queue.add(new YuvImage(YuvUtilities.toYUV(qrcode), width, height));
       actual = r.decodeQRCodes(queue);
@@ -107,9 +108,9 @@ public class RandomQRDecodeTest {
     } finally {
       File outputFile =  File.createTempFile("QR-code", ".png");
       ImageIO.write(qrcode, "png", outputFile);
-      
+
       fail("Decode failed due to exception; qr code saved to: "+outputFile);
     }
   }
-  
+
 }
