@@ -1,9 +1,5 @@
 package com.galois.qrstream.qrpipe;
 
-
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
-
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FilenameFilter;
@@ -58,6 +54,20 @@ public class QRDecodeRegressionTest {
   public void testDecode() throws IOException, ReceiveException {
     BufferedImage bi = ImageIO.read(file);
 
+    // If this does not throw an exception, everything is fine:
+    decodeImage(bi);
+  }
+  
+  /**
+   * Decode a qr code from a buffered image.
+   * 
+   * Catches transmission failure exceptions, and returns null.
+   * 
+   * @param bi The buffered image to decode.
+   * @return
+   * @throws ReceiveException
+   */
+  public static byte[] decodeImage(BufferedImage bi) throws ReceiveException {
     int width = bi.getWidth();
     int height = bi.getHeight();
 
@@ -67,20 +77,22 @@ public class QRDecodeRegressionTest {
     BlockingQueue<YuvImage> queue = new ArrayBlockingQueue<YuvImage>(2);
     queue.add(img);
 
-    Receive receive = new Receive(height, width, 200,
+    Receive receive = new Receive(height, width, 100,
         RandomQRDecodeTest.NULL_PROGRESS);
 
+    byte[] result = null;
     try {
-      byte[] result = receive.decodeQRCodes(queue);
-      // just to be sure we got a result:
-      assertNotNull("result was null for some reason.", result);
+      result = receive.decodeQRCodes(queue);
     } catch (ReceiveException e) {
+      System.out.println(e.getMessage());
       // this should only happen if receive was expecting more than one QR code:
-
-      if (! e.getMessage().startsWith("Transmission failed")) {
-        e.printStackTrace();
-        fail("Wrong Receive Exception: "+e);
+      if (e.getMessage().startsWith("Transmission failed")) {
+        //e.printStackTrace();
+      } else {
+        throw e;
       }
     }
+    
+    return result;
   }
 }
