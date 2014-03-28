@@ -20,6 +20,7 @@ import android.widget.Button;
 import com.galois.qrstream.image.YuvImage;
 import com.galois.qrstream.qrpipe.IProgress;
 import com.galois.qrstream.qrpipe.Receive;
+import com.galois.qrstream.qrpipe.State;
 
 import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -161,7 +162,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         public void handleMessage(Message msg) {
             Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage");
             final Bundle params = msg.getData();
-            int state = params.getInt("state");
+            State state = (State)params.getSerializable("state");
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -169,7 +170,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                 }
             });
 
-            if(state == Progress.FINAL) {
+            if(state == State.Final) {
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {

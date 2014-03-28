@@ -24,21 +24,10 @@ public class Progress implements IProgress {
     @Override
     public void changeState(DecodeState state) {
         Bundle changeMsg = new Bundle();
-        switch(state.getState()) {
-            case Initial:
-                changeMsg.putString("message", "Initial state");
-                changeMsg.putInt("state", INITIAL);
-                break;
-            case Intermediate:
-                changeMsg.putString("message", "Intermediate state");
-                changeMsg.putInt("state", INTERMEDIATE);
-                break;
-            case Final:
-                changeMsg.putString("message", "Final state");
-                changeMsg.putInt("state", FINAL);
-                break;
-        }
-        Message stateChange = new Message();
+        changeMsg.putString("message", state.toString());
+        changeMsg.putSerializable("state", state.getState());
+
+        Message stateChange = Message.obtain();
         stateChange.setData(changeMsg);
         handler.dispatchMessage(stateChange);
     }
