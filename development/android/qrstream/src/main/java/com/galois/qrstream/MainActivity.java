@@ -34,8 +34,8 @@ public class MainActivity extends Activity {
 
     private FragmentManager fragmentManager;
     private ArrayList<Job> jobsList;
-    public ReceiveFragment receiveFragment; // accessed via unittest
-    public TransmitFragment transmitFragment; // accessed via unittest
+    protected ReceiveFragment receiveFragment; // accessed via unittest
+    protected TransmitFragment transmitFragment; // accessed via unittest
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

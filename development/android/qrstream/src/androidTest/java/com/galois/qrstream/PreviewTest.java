@@ -1,4 +1,4 @@
-package com.galois.qrstream.test;
+package com.galois.qrstream;
 
 import android.test.InstrumentationTestCase;
 
