@@ -3,12 +3,15 @@ package com.galois.qrstream;
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.content.ContentResolver;
 import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.res.AssetFileDescriptor;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -21,11 +24,13 @@ import com.galois.qrstream.lib.Job;
 import com.galois.qrstream.lib.ReceiveFragment;
 import com.galois.qrstream.lib.TransmitFragment;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -95,27 +100,35 @@ public class MainActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    private String getRealPathFromURI(Uri contentUri) {
-        String[] proj = { MediaStore.Images.Media.DATA };
-        CursorLoader loader = new CursorLoader(this, contentUri, proj, null, null, null);
-        Cursor cursor = loader.loadInBackground();
-        int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-        cursor.moveToFirst();
-        return cursor.getString(column_index);
+    private String getNameFromURI(Uri uri) {
+        String name;
+        Cursor metadata = getContentResolver().query(uri,
+                                                     new String[] {OpenableColumns.DISPLAY_NAME},
+                                                     null, null, null);
+        if(metadata != null && metadata.moveToFirst()) {
+            name = metadata.getString(0);
+        } else {
+            name = uri.getLastPathSegment();
+        }
+        return name;
     }
 
-    private byte[] readFile(String fileName) {
-        File file = new File(fileName);
-        byte[] buf = new byte[(int) file.length()];
+    private byte[] readFileUri(Uri uri) {
+        ContentResolver contentResolver = getContentResolver();
         try {
-            FileInputStream fileStream = new FileInputStream(file);
-            fileStream.read(buf);
+            AssetFileDescriptor fd = contentResolver.openAssetFileDescriptor(uri, "r");
+            long fileLength = fd.getLength();
+            Log.d("qrstream","fd length "+fileLength);
+            DataInputStream istream = new DataInputStream(contentResolver.openInputStream(uri));
+            byte[] buf = new byte[(int)fileLength];
+            istream.readFully(buf);
+            return buf;
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return buf;
+        return null;
     }
 
     private Job buildJobFromIntent(Intent intent) {
@@ -126,14 +139,19 @@ public class MainActivity extends Activity {
         String name = "";
         byte[] bytes = null;
 
-        if(type.equals("image/*")) {
-            Uri dataUrl = (Uri) intent.getExtras().getParcelable(Intent.EXTRA_STREAM);
-            name = getRealPathFromURI(dataUrl);
-            bytes = readFile(name);
-        } else if(type.equals("text/plain")) {
-            String body = extras.getString(Intent.EXTRA_SUBJECT) +
-                          extras.getString(Intent.EXTRA_TEXT);
-            bytes = body.getBytes();
+        Uri dataUrl = (Uri) intent.getExtras().getParcelable(Intent.EXTRA_STREAM);
+        if(dataUrl != null) {
+            if (dataUrl.getScheme().equals("content")) {
+                name = getNameFromURI(dataUrl);
+                bytes = readFileUri(dataUrl);
+            }
+        } else {
+            // fall back to content in extras (mime type dependent)
+            if(type.equals("text/plain")) {
+                String body = extras.getString(Intent.EXTRA_SUBJECT) +
+                              extras.getString(Intent.EXTRA_TEXT);
+                bytes = body.getBytes();
+            }
         }
         return new Job(name, bytes);
     }
