@@ -29,11 +29,12 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 public class MainActivity extends Activity {
 
     private FragmentManager fragmentManager;
-    private ArrayList<Job> jobsList;
+    private List<Job> jobsList;
     protected ReceiveFragment receiveFragment; // accessed via unittest
     protected TransmitFragment transmitFragment; // accessed via unittest
 
@@ -41,7 +42,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        jobsList = new ArrayList();
+        jobsList = (List)new ArrayList();
         fragmentManager = getFragmentManager();
         receiveFragment = new ReceiveFragment();
         transmitFragment = new TransmitFragment(jobsList);
