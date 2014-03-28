@@ -139,9 +139,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                                         previewSize.width,
                                         5000,
                                         progress);
-            decodeThread = new DecodeThread();
-            decodeThread.setReceiver(receiveQrpipe);
-            decodeThread.setQueue(frameQueue);
+            decodeThread = new DecodeThread(receiveQrpipe, frameQueue);
             decodeThread.start();
         } else {
             Log.e(Constants.APP_TAG, "Error: DecodeThread already running");
@@ -149,8 +147,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     }
 
     public void stopPipe() {
-        // Threads can only be suggested to stop
-        decodeThread.cont = false;
+        // todo: notify the qr code receiver to stop
     }
 
     public class DisplayUpdate extends Handler {
