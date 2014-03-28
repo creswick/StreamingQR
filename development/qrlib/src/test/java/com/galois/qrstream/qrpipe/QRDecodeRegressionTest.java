@@ -86,9 +86,7 @@ public class QRDecodeRegressionTest {
     } catch (ReceiveException e) {
       System.out.println(e.getMessage());
       // this should only happen if receive was expecting more than one QR code:
-      if (e.getMessage().startsWith("Transmission failed")) {
-        //e.printStackTrace();
-      } else {
+      if (!e.getMessage().startsWith("Transmission failed")) {
         throw e;
       }
     }
