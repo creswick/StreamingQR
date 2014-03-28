@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        jobsList = (List)new ArrayList();
+        jobsList = new ArrayList<Job>();
         fragmentManager = getFragmentManager();
         receiveFragment = new ReceiveFragment();
         transmitFragment = new TransmitFragment(jobsList);
@@ -113,22 +113,15 @@ public class MainActivity extends Activity {
         return name;
     }
 
-    private byte[] readFileUri(Uri uri) {
+    private byte[] readFileUri(Uri uri) throws IOException {
         ContentResolver contentResolver = getContentResolver();
-        try {
-            AssetFileDescriptor fd = contentResolver.openAssetFileDescriptor(uri, "r");
-            long fileLength = fd.getLength();
-            Log.d("qrstream","fd length "+fileLength);
-            DataInputStream istream = new DataInputStream(contentResolver.openInputStream(uri));
-            byte[] buf = new byte[(int)fileLength];
-            istream.readFully(buf);
-            return buf;
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
+        AssetFileDescriptor fd = contentResolver.openAssetFileDescriptor(uri, "r");
+        long fileLength = fd.getLength();
+        Log.d("qrstream","fd length "+fileLength);
+        DataInputStream istream = new DataInputStream(contentResolver.openInputStream(uri));
+        byte[] buf = new byte[(int)fileLength];
+        istream.readFully(buf);
+        return buf;
     }
 
     private Job buildJobFromIntent(Intent intent) {
@@ -142,8 +135,13 @@ public class MainActivity extends Activity {
         Uri dataUrl = (Uri) intent.getExtras().getParcelable(Intent.EXTRA_STREAM);
         if(dataUrl != null) {
             if (dataUrl.getScheme().equals("content")) {
-                name = getNameFromURI(dataUrl);
-                bytes = readFileUri(dataUrl);
+                try {
+                    name = getNameFromURI(dataUrl);
+                    bytes = readFileUri(dataUrl);
+                } catch (IOException e) {
+                    // todo: Handle IO error
+                    e.printStackTrace();
+                }
             }
         } else {
             // fall back to content in extras (mime type dependent)
