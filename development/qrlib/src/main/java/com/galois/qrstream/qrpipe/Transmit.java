@@ -1,13 +1,13 @@
 package com.galois.qrstream.qrpipe;
 
 import java.io.ByteArrayInputStream;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
 
 import com.galois.qrstream.image.BitmapImage;
 import com.google.common.base.Charsets;
+import com.google.common.collect.Lists;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
@@ -66,14 +66,12 @@ public class Transmit {
    * @return The sequence of QR codes generated from input data.
    * @throws TransmitException if input {@code data} cannot be encoded as QR code.
    */
-  protected Iterable<BitmapImage> encodeQRCodes(byte[] data, Version qrVersion,
-      ErrorCorrectionLevel ecLevel) throws TransmitException {
-
-    // The collection of qr codes containing encoded data
-    List<BitmapImage> qrCodes = new ArrayList<BitmapImage>();
+  protected Iterable<BitmapImage> encodeQRCodes(final byte[] data,
+      final Version qrVersion,
+      final ErrorCorrectionLevel ecLevel) throws TransmitException {
 
     if (data == null || data.length <= 0) {
-      return qrCodes;
+      return Lists.newArrayList();
     }
 
     // Check that image dimensions specified are large enough
@@ -81,24 +79,65 @@ public class Transmit {
     if (Math.min(imgWidth, imgHeight) < qrVersion.getDimensionForVersion()) {
       throw new TransmitException("Requested image dimensions too small for "
           + "QR version " + qrVersion.getVersionNumber()
-          + "Expected at least "+qrVersion.getDimensionForVersion()
-          +", but got ("+imgWidth+","+imgHeight+").");
+          + "Expected at least " + qrVersion.getDimensionForVersion()
+          + ", but got (" + imgWidth + "," + imgHeight + ").");
+    }
+    
+    return new Iterable<BitmapImage>() {
+      @Override
+      public Iterator<BitmapImage> iterator() {
+        return new ImgIterator(data, qrVersion, ecLevel);
+      }
+    };
+  }
+  
+  /**
+   * Iterator to generate QR code bitmaps on demand.
+   * @author creswick
+   *
+   */
+  private class ImgIterator implements Iterator<BitmapImage> {
+
+    private final Version qrVersion;
+    private final ErrorCorrectionLevel ecLevel;
+    
+    private final int maxChunkSize;
+    private final int totalChunks;
+    
+    /**
+     * The current chunk id, 1-indexed. (The first chunk has chunkId = 1.)
+     */
+    private int chunkId;
+    private ByteArrayInputStream byteInputStream;
+
+    public ImgIterator(byte[] data, Version qrVersion,
+        ErrorCorrectionLevel ecLevel) {
+      this.qrVersion = qrVersion;
+      this.ecLevel = ecLevel;
+      
+      maxChunkSize = getPayloadMaxBytes(ecLevel, qrVersion);
+      totalChunks = getTotalChunks(data.length, maxChunkSize);
+      chunkId = 0;
+      
+      byteInputStream = new ByteArrayInputStream(data);
     }
 
-    int maxChunkSize = getPayloadMaxBytes(ecLevel, qrVersion);
-    int totalChunks = getTotalChunks(data.length, maxChunkSize);
-    int chunkId = 0;
+    @Override
+    public boolean hasNext() {
+      return chunkId != totalChunks;
+    }
 
-    ByteArrayInputStream input = new ByteArrayInputStream(data);
-    int bytesRemaining;
-    while ((bytesRemaining = input.available()) > 0) {
+    @Override
+    public BitmapImage next() {
+      int bytesRemaining = byteInputStream.available();
+
       byte[] dataChunk = null;
       if (bytesRemaining <= maxChunkSize) {
         dataChunk = new byte[bytesRemaining];
       } else {
         dataChunk = new byte[maxChunkSize];
       }
-      int bytesRead = input.read(dataChunk, 0, dataChunk.length);
+      int bytesRead = byteInputStream.read(dataChunk, 0, dataChunk.length);
       if (bytesRead < 0) {
         throw new AssertionError(
             "Data reportedly available to read but read returned end of input.");
@@ -107,16 +146,18 @@ public class Transmit {
             + dataChunk.length + " bytes when there are " + bytesRemaining
             + " bytes available.");
       }
-      chunkId += 1;
-      qrCodes.add(encodeQRCode(dataChunk, chunkId, totalChunks,
-                               qrVersion, ecLevel));
+
+      chunkId++;
+      return encodeQRCode(dataChunk, chunkId, totalChunks, qrVersion, ecLevel);
     }
-    if (chunkId != totalChunks) {
-      throw new TransmitException("Failed to encode as many chunks as we "
-          + "expected. Expected " + totalChunks + " but got " + chunkId);
+
+    @Override
+    public void remove() {
+      throw new UnsupportedOperationException("Removing QR codes is not supported.");
     }
-    return qrCodes;
+
   }
+
   /**
    * Generates a QR code for the input bytes, {@code chunkedData}. It is
    * assumed that {@code chunkedData} is subset of larger input. This function
@@ -129,10 +170,9 @@ public class Transmit {
    * @param v The desired density of the resulting QR code (i.e. version 1-40).
    * @param ecLevel Error correction level, can be either {@code L, M, Q, H}.
    * @return
-   * @throws TransmitException
    */
   protected BitmapImage encodeQRCode(byte[] chunkedData, int chunkId, int totalChunks,
-                                     Version v, ErrorCorrectionLevel ecLevel) throws TransmitException {
+                                     Version v, ErrorCorrectionLevel ecLevel) {
     if (chunkedData == null) {
       throw new NullPointerException("Cannot encode 'null' value as QR code.");
     }
@@ -180,7 +220,7 @@ public class Transmit {
    *     encoding mode to 'Byte encoding' and turn the String back to turn to byte[].
    * @param rawData the binary data to encode into a single QR code image.
    */
-  protected BitMatrix bytesToQRCode(byte[] rawData) throws TransmitException {
+  protected BitMatrix bytesToQRCode(byte[] rawData) {
     /*
      * Max QR code density is function of error correction level and version of
      * QR code. Max bytes for QR in binary/byte mode = 2,953 bytes using, QR
@@ -200,18 +240,25 @@ public class Transmit {
      * ZXing will throw WriterException("Data too big").
      */
     QRCodeWriter writer = new QRCodeWriter();
-    BitMatrix bMat = null;
     try {
-      bMat = writer.encode(data, BarcodeFormat.QR_CODE, imgWidth, imgHeight,
-                                  getEncodeHints());
+      // note: writer.encode cannot return a null value, as written. (It would throw a NPE.)
+      BitMatrix bMat = writer.encode(data, BarcodeFormat.QR_CODE,
+          imgWidth, imgHeight, getEncodeHints());
+      return bMat;
     } catch (WriterException e) {
-      throw new TransmitException(e.getMessage());
+      //throw new TransmitException(e.getMessage());
+      // After looking through the ZXing source, I *think* this can only happen
+      // due to:
+      //  - sending too much data for the QR code (which we check)
+      //  - setting a BarcodeFormat != QR_CODE
+      //  - ZXing programmer error; WriterExceptions are used in the zxing source
+      //    like assert(...).
+      //
+      // Given all that, I think it's safe to wrap this exception up as an
+      // unchecked exception, and re-throw it.  If this happens, it will almost
+      // certainly show up in the test suite, and it will let use Iterators.
+      throw new IllegalArgumentException(e.getMessage(), e);
     }
-    // Sanity check the output before exiting
-    if (bMat == null) {
-      throw new TransmitException("QR writer returned null bit matrix.");
-    }
-    return bMat;
   }
 
   /**
@@ -255,4 +302,5 @@ public class Transmit {
     }
     return ((int) Math.ceil((float)length/desiredChunkSize));
   }
+
 }//public class Transmit
