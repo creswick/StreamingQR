@@ -1,13 +1,12 @@
 package com.galois.qrstream.qrpipe;
 
-import com.galois.qrstream.image.YuvImage;
-import java.util.concurrent.BlockingQueue;
-import java.lang.InterruptedException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import com.galois.qrstream.image.YuvImage;
 import com.google.zxing.BarcodeFormat;
@@ -26,30 +25,36 @@ import com.google.zxing.common.HybridBinarizer;
  *
  * We may find it necessary to add context to the transmission. For example,
  *  - resulting image dimension (px) (DONE)
+ *  - timeout (in milliseconds) for receiver to wait for incoming image data
  *  - density of QR code
  *  - others?
  */
 public class Receive {
 
   /* Dimension of received images */
-  private int imgHeight;
-  private int imgWidth;
-  private IProgress progress;
-  private DecodeState state;
+  private final int height;
+  private final int width;
 
-  public Receive(int height, int width, IProgress progress) {
-    imgHeight = height;
-    imgWidth = width;
+  /* Number of milliseconds to wait before timeout */
+  private final int milliseconds;
+
+  /* Track progress of decoding */
+  private final IProgress progress;
+
+  /**
+   * Initializes receiver of QR code stream.
+   * @param height The height of the received images.
+   * @param width The width of the received images.
+   * @param milliseconds The number of milliseconds to wait for incoming image
+   * data before timing out.
+   * @param progress The object used in tracking the progress of the message
+   * transmission.
+   */
+  public Receive(int height, int width, int milliseconds, IProgress progress) {
+    this.height = height;
+    this.width = width;
+    this.milliseconds = milliseconds;
     this.progress = progress;
-    this.state = new DecodeState(2);
-  }
-  
-  public int getHeight() {
-    return imgHeight;
-  }
-  
-  public int getWidth() {
-    return imgWidth;
   }
 
   /**
@@ -58,40 +63,80 @@ public class Receive {
    *
    * @param qrCodeImages The collection of YUV images to decode
    * @return The data decoded from collection of detected QR codes.
+   * @throws ReceiveException If {@code qrCodeImages} failed to receive enough
+   * images to complete the data transmission.
    */
-  public byte[] decodeQRCodes (BlockingQueue<YuvImage> qrCodeImages) {
-    System.out.println("decodeQRcodes STARTED");
-    progress.changeState(state);
-    int count = 0;
-    try {
-      while(true) {
-        count += 1;
-        qrCodeImages.take();
-        System.out.println("decodeQRcodes Frame Taken "+count);
-        if(count == 200) {
-          state.set(0);
-          progress.changeState(state);
+  public byte[] decodeQRCodes (BlockingQueue<YuvImage> qrCodeImages) throws ReceiveException {
+    System.out.println("decodeQRCodes: STARTED");
+    // The received data and track transmission status.
+    DecodedMessage message = new DecodedMessage(progress);
+    while(true) {
+        // Wait for incoming image for number of specified `milliseconds`,
+        // if we receive one, try to read the QR code contained within it.
+        YuvImage img = null;
+        try {
+          img = qrCodeImages.poll(milliseconds,TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+          // Interrupted while waiting for image.
+          // Log interruption for now and try waiting for another image.
+          System.out.print("decodeQRCodes: Encountered InterruptedException");
+          if (e.getMessage() != null) {
+            System.out.print(e.getMessage());
+          }
+          System.out.print('\n');
+          continue;
         }
-      }
-    } catch (InterruptedException e) {
+        if (img == null) {
+          // Communicate failed state to progress indicator.
+          message.setFailedDecoding();
+          throw new ReceiveException("Transmission failed before message could be read.");
+        }
+        try {
+          // TODO Try improving performance by spawning new thread run each image decoding
+          Result res = decodeSingleQRCode(img.getYuvData());
+          State s = saveMessageAndUpdateProgress(res, message);
+          System.out.println("decodeQRCodes: state after trying decoding =" + s);
+          if(s == State.Final) {
+            System.out.println("decodeQRCodes: Hit final state");
+            break;
+          }
+        } catch (NotFoundException e) {
+          // Unable to detect QR in this image, try next one.
+          continue;
+        } catch (ReceiveException e) {
+          // Encountered invalid QR code during parsing, try next image.
+          continue;
+        }
     }
-    //throw new UnsupportedOperationException("Function not yet implemented.");
-    // TODO Be sure to remove elements from Iterable collection after processing
-    // TODO Step 2: Use Iterable interface, change definition to
-    //      public Iterable<byte[]> decodeQRCodes(Iterable<YuvImage>)
-    System.out.println("decodeQRcodes ENDED");
-    return null;
+    System.out.println("decodeQRCodes: ENDED");
+    return message.getEntireMessage();
   }
 
-  // TODO Keep track of total frames decoded thus far with DecodeState.
-  // Android will use this know when they've received all of the messages.
+  /**
+   * Detect and decode QR code from an image.
+   * @param yuvData The YUV image data containing a single QR code.
+   * @return The detected QR code {@code Result} type.
+   * @throws ReceiveException If no QR code has been detected or decoding failed.
+   */
+  protected Result decodeSingleQRCode(byte[] yuvData) throws NotFoundException {
+    LuminanceSource src = new PlanarYUVLuminanceSource(yuvData,
+        width, height, 0, 0, width, height, false);
+    return decodeSingle(src);
+  }
 
-  // TODO Possibly add conversion between YUV image to Bitmap image
-  // types (only for testing)
-
-  
-  protected byte[] decodeQRCode(byte[] yuvData) {
-    return null;
+  /**
+   * Identify the chunk of data decoded from the QR code and
+   * add its message to the collection of already received chunks.
+   *
+   * @param decodedQR The result of decoding QR code from an image
+   * @param receivedData The data decoded from prior images.
+   * @return The {@code State} indicating whether the whole message has been received.
+   * @throws ReceiveException if the decoded QR code has an invalid format
+   */
+  protected State saveMessageAndUpdateProgress(Result decodedQR, DecodedMessage receivedData)
+      throws ReceiveException {
+    PartialMessage messagePart = PartialMessage.createFromResult(decodedQR);
+    return receivedData.saveMessageChunk(messagePart);
   }
 
   /**
@@ -102,10 +147,11 @@ public class Receive {
     /* Hints */
     HashMap<DecodeHintType, Object> hints = new HashMap<DecodeHintType, Object>();
     hints.put(DecodeHintType.CHARACTER_SET, "ISO-8859-1");
-    // 
+
     Collection<BarcodeFormat> possibleFormats =
         new ArrayList<BarcodeFormat>(Collections.singletonList(BarcodeFormat.QR_CODE));
     hints.put(DecodeHintType.POSSIBLE_FORMATS, possibleFormats);
+    //TODO: if running to slow then try removing this hint.
     hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
 
     return hints;
@@ -117,9 +163,21 @@ public class Receive {
    * @throws NotFoundException if there was problem detecting or decoding QR
    * code from image {@source lumSrc}.
    */
-  public static Result decode(LuminanceSource lumSrc) throws NotFoundException {
+  protected static Result decodeSingle(LuminanceSource lumSrc) throws NotFoundException {
+    return decodeSingle(lumSrc, Receive.getDecodeHints());
+  }
+
+  /**
+   * Detects and decode QR code from a luminance image.
+   * @param lumSrc The luminance image containing a QR code to decode.
+   * @param hints Hints to help the ZXing barcode reader find QR code easier
+   * @throws NotFoundException if there was problem detecting or decoding QR
+   * code from image {@source lumSrc}.
+   */
+  protected static Result decodeSingle(LuminanceSource lumSrc,
+                                       Map<DecodeHintType,?> hints) throws NotFoundException {
     BinaryBitmap bmap = toBinaryBitmap(lumSrc);
-    return new MultiFormatReader().decode(bmap, Receive.getDecodeHints());
+    return new MultiFormatReader().decode(bmap, hints);
   }
 
   /**

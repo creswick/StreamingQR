@@ -111,4 +111,87 @@ public class Utils {
   public static int getNumberOfReservedBytes() {
     return NUM_RESERVED_INTS * NUM_BYTES_PER_INT;
   }
+
+  /**
+   * Injects chunk# and totalChunks into byte[] for encoding into QR code.
+   * The first {@code NUM_BYTES_PER_INT} bytes are the chunk# followed by
+   * {@code NUM_BYTES_PER_INT} bytes for the total # chunks.
+   *
+   * Note:
+   * Four bytes may be too much space to reserve, but it was convenient
+   * to think about. We could probably just use 3 bytes for each int
+   * and let MAX_INTEGER=2^24-1 = 16,777,215.
+   *
+   * If 4 bytes, then max bytes transferred in indices alone would
+   * equal 2,147,483,647 * 8 bytes = ~16GB.
+   * If QR code could transfer ~1200 bytes, then largest transfer we could handle
+   * is 2,147,483,647 * (1200 - 8 bytes) = ~2,384 GB.
+   * Number realistic max chunks likely to be = 16 GB file / (1200 - 8) bytes
+   *                                         ~= 14,412,642
+   * Number realistic bits we'd need = log2(14,412,642) ~= 24
+   */
+  public static byte[] prependChunkId(final byte[] rawData, int chunk, int totalChunks) {
+    // Unable to prepend chunk number to rawData if receive invalid inputs
+    if (totalChunks < 0 || chunk < 0) {
+      throw new IllegalArgumentException("Number of chunks must be positive");
+    }
+
+    byte[] inputData = rawData == null ? new byte[0] : rawData.clone();
+    // Reserve first NUM_BYTES_PER_INT bytes of data for chunk id and
+    // another NUM_BYTES_PER_INT bytes of data for the totalChunks.
+    byte[] chunkId = intToBytes(chunk);
+    byte[] nChunks = intToBytes(totalChunks);
+    byte[] combined = new byte[inputData.length + chunkId.length + nChunks.length];
+
+    System.arraycopy(chunkId, 0, combined, 0, chunkId.length);
+    System.arraycopy(nChunks, 0, combined, chunkId.length, nChunks.length);
+    System.arraycopy(inputData, 0, combined, chunkId.length + nChunks.length, inputData.length);
+    return combined;
+  }
+
+  /**
+   * Returns the chunk id identifying the segment of data within an original
+   * message that this {@code rawData} belongs to. Data is assumed to be at the
+   * front of the input.
+   *
+   * @param rawData The input that we want to extract chunk id from.
+   * @throws IllegalArgumentException if the length of {@code rawData} is less
+   * than the bytes reserved for the chunkId and the total number of chunks.
+   */
+  public static int extractChunkId(final byte[] rawData) throws IllegalArgumentException {
+    if (rawData == null || rawData.length < getNumberOfReservedBytes()) {
+      throw new IllegalArgumentException("Input data is too small");
+    }
+    byte[] chunkId = new byte[MAX_INT_SIZE];
+    System.arraycopy(rawData, 0, chunkId, 0, MAX_INT_SIZE);
+    return bytesToInt(chunkId);
+  }
+
+  /**
+   * Returns the total number of chunks that this portion of message was
+   * originally broken into. Data is assumed to be at the front of the input.
+   *
+   * @param rawData The segment of input message containing the chunk total.
+   * @throws IllegalArgumentException if the length of {@code rawData} is less
+   * than the bytes reserved for the chunkId and the total number of chunks.
+   */
+  public static int extractTotalNumberChunks(final byte[] rawData) throws IllegalArgumentException {
+    if (rawData == null || rawData.length < getNumberOfReservedBytes()) {
+      throw new IllegalArgumentException("Input data is too small");
+    }
+    byte[] totalChunks = new byte[MAX_INT_SIZE];
+    System.arraycopy(rawData, MAX_INT_SIZE, totalChunks, 0, MAX_INT_SIZE);
+    return bytesToInt(totalChunks);
+  }
+
+  public static byte[] extractPayload(final byte[] rawData) {
+    if (rawData == null || rawData.length <= getNumberOfReservedBytes()) {
+      throw new IllegalArgumentException("Input data is too small");
+    }
+    byte[] payload = new byte[rawData.length - getNumberOfReservedBytes()];
+    System.arraycopy(rawData, getNumberOfReservedBytes(),
+                     payload, 0, payload.length);
+    return payload;
+  }
+
 }

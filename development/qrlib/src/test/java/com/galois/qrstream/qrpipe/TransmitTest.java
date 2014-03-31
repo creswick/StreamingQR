@@ -5,20 +5,28 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.util.Map;
+
+import javax.imageio.ImageIO;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.galois.qrstream.image.BitmapImage;
+import com.google.common.base.Charsets;
+import com.google.zxing.DecodeHintType;
+import com.google.zxing.LuminanceSource;
+import com.google.zxing.NotFoundException;
+import com.google.zxing.Result;
 import com.google.zxing.WriterException;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.google.zxing.qrcode.decoder.Version;
@@ -39,9 +47,14 @@ public class TransmitTest {
    */
   @Test
   public void testEncodeQRCodesNoData() throws TransmitException {
+    // Setup encoding parameters
+    Version qrVersion = Version.getVersionForNumber(1);
+    ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
+
     byte[] noByteData = new byte[0];
-    
-    Iterable<BitmapImage> qrCodes = encodeQRAndCheckNotNull(noByteData);
+
+    Iterable<BitmapImage> qrCodes =
+        encodeQRAndCheckNotNull(noByteData, qrVersion, ecLevel);
 
     int size = 0;
     for(@SuppressWarnings("unused") BitmapImage c : qrCodes) {
@@ -51,42 +64,128 @@ public class TransmitTest {
   }
 
   /**
-   * TODO Ensure that we encoded sequence of QR codes correctly
-   * @throws WriterException 
+   * Ensure that we encoded sequence of QR codes correctly
+   * @throws IOException
+   * @throws WriterException
    */
-  @Ignore("ignore until we add prepending of chunkId back into encode call") @Test
-  public void testEncodeQRCodes() throws TransmitException {
-    // The string to encode as a QR code
-    String origStr = "foo";
-    // The bytes corresponding to origStr
-    byte[] expectedBytes = null;
-    try {
-      expectedBytes = origStr.getBytes("ISO-8859-1");
-    } catch (UnsupportedEncodingException e) {
-      fail("ISO-8859-1 character set encoding not supported");
-    }
+  @Test
+  public void testEncodeQRCodes() throws TransmitException, IOException {
 
-    //The expected QR code
-    BitMatrix qrExpected = null;
-    try {
-      qrExpected = UtilsTest.readQRImage("photo.png");
-    } catch (IOException e) {
-      fail(e.getMessage());
-    }
-    assertNotNull(qrExpected);
+    // Input for test
+    String filename = "random2kfile";
+    byte[] expectedBytes = UtilsTest.getTextResourceAndCheckNotNull(filename);
 
-    Iterable<BitmapImage> qrCodes = encodeQRAndCheckNotNull(expectedBytes);
+    testRoundTripWithPureBarcodeHint(expectedBytes);
+    testRoundTripWithNoBarcodeHint(expectedBytes);
+  }
+
+  /**
+   * Check that ZXing will round trip the input bytes when we send
+   * the hint that resulting encoded image contains only a pure QR code.
+   * @param expectedBytes the input byte array
+   * @throws TransmitException
+   */
+  private void testRoundTripWithPureBarcodeHint(byte[] expectedBytes) throws TransmitException {
+    // ZXing can incorrectly identify black blobs in image as finder
+    // square and render it invalid code: https://code.google.com/p/zxing/issues/detail?id=1262
+    // The suggestion was to tell ZXing when you just have QR code in image and nothing else.
+    Map<DecodeHintType, Object> hints = Receive.getDecodeHints();
+    hints.put(DecodeHintType.PURE_BARCODE, Boolean.TRUE);
+
+    ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
+    int errorsDetectingQRCodes=0;
+    for (int i=1; i<=40; i++) {
+      Version qrVersion = Version.getVersionForNumber(i);
+      errorsDetectingQRCodes += testRoundTrip(qrVersion, ecLevel, hints, expectedBytes);
+    }
+    assertEquals("Expect no problems detecting generated QR codes", 0, errorsDetectingQRCodes);
+  }
+
+  /**
+   * Check that ZXing will round trip the input bytes when we do not send
+   * the hint that resulting encoded image contains only a pure QR code.
+   * @param expectedBytes the input byte array
+   * @throws TransmitException
+   */
+  private void testRoundTripWithNoBarcodeHint(byte[] expectedBytes) throws TransmitException {
+    // ZXing can incorrectly identify black blobs in image as finder
+    // square and render it invalid code: https://code.google.com/p/zxing/issues/detail?id=1262
+    // The suggestion was to tell ZXing when you just have QR code in image and nothing else.
+    Map<DecodeHintType, Object> hints = Receive.getDecodeHints();
+
+    ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
+    int errorsDetectingQRCodes=0;
+    for (int i=26; i<=40; i++) {
+      Version qrVersion = Version.getVersionForNumber(i);
+      errorsDetectingQRCodes += testRoundTrip(qrVersion, ecLevel, hints, expectedBytes);
+    }
+    assertEquals("Expect no problems detecting generated QR codes", 0, errorsDetectingQRCodes);
+  }
+
+  /**
+   * Check that some input, {@code expectedBytes}, can be encoded a sequence
+   * of QR codes and then decoded and assembled into original data.
+   * Note: This returns the number of QR codes that ZXing failed to detect
+   *       at this QR density. That way calling function can iterate over all
+   *       possible QR code versions before reporting failure.
+   *       Test will fail when decoding fails.
+   * @param qrVersion The density the QR codes should be
+   * @param ecLevel The error correction level
+   * @param hints The hints to the ZXing barcode reader to ease decoding.
+   * @param expectedBytes The input to perform roundtrip check on.
+   * @throws TransmitException
+   */
+  private int testRoundTrip(Version qrVersion, ErrorCorrectionLevel ecLevel,
+      Map<DecodeHintType, Object> hints, byte[] expectedBytes) throws TransmitException {
+
+    // File prefix used for debugging failed QR detection
+    String prefix="testRoundTrip_"+qrVersion.getVersionNumber()+"_"+ecLevel;
+    if(hints.containsKey(DecodeHintType.PURE_BARCODE)) {
+      prefix += "_PURE_BARCODE";
+    }
+    // Collect bytes that we decode, final result must match expectedBytes
+    byte[] resultBytes = new byte[expectedBytes.length];
+
+    // Count of failed QR code detections within sequence.
+    int detectionErrors = 0;
+
+    Iterable<BitmapImage> qrCodes = encodeQRAndCheckNotNull(expectedBytes, qrVersion, ecLevel);
     int size = 0;
-    for(@SuppressWarnings("unused") BitmapImage c : qrCodes) {
-       size++;
+    int resultLength = 0;
+    for(BitmapImage c : qrCodes) {
+      size++;
+      BufferedImage b = UtilsTest.toBufferedImage(c);
+      LuminanceSource lumSrc = new BufferedImageLuminanceSource(b);
+
+      byte[] fromChunk = new byte[0];
+      try {
+        Result result = Receive.decodeSingle(lumSrc, hints);
+        fromChunk = PartialMessage.createFromResult(result).getPayload();
+      } catch (NotFoundException e) {
+        try {
+          detectionErrors++;
+          System.out.print("Failed to read QR code (Version: "+
+                           qrVersion+" chunk, "+size+"): ");
+          System.out.println(bitmapImageToFile(c,size,prefix));
+        } catch (IOException e1) {
+          fail("Unable to write QR code to temporary file.");
+        }
+      } catch (ReceiveException e) {
+        fail("QR code is not formatted for QRLib.");
+      }
+      if (detectionErrors == 0) {
+        assertTrue("Should have received some data but got none", fromChunk.length > 0);
+        assertTrue("result length cannot be greater than original",
+            (resultLength + fromChunk.length) <= expectedBytes.length);
+        System.arraycopy(fromChunk, 0, resultBytes, resultLength, fromChunk.length);
+        resultLength += fromChunk.length;
+      }
     }
-    assertEquals("Expected one QR code", 1, size);
-    BitmapImage qrActual = qrCodes.iterator().next();
-    
-    System.out.println("qrExpected: w: "+qrExpected.getWidth() + " h: "+qrExpected.getHeight());
-    System.out.println("qrActual: w: "+qrActual.getWidth() + " h: "+qrActual.getHeight());
-    assertArrayEquals ("BitmapImages equal?",
-        BitmapImage.createBitmapImage(qrExpected).getData(), qrActual.getData());
+    if (detectionErrors == 0) {
+      assertArrayEquals("Decoded result should be same as original msg",
+        expectedBytes, resultBytes);
+    }
+    return detectionErrors;
   }
 
   /**
@@ -95,10 +194,11 @@ public class TransmitTest {
    */
   @Test
   public void testGetMaxDataEncoding() {
-    int[] expectedMaxForLevelL = new int[] { 17, 32, 53, 78, 106, 134, 154,
-        192, 230, 271, 321, 367, 425, 458, 520, 586, 644, 718, 792, 858, 929,
-        1003, 1091, 1171, 1273, 1367, 1465, 1528, 1628, 1732, 1840, 1952, 2068,
-        2188, 2303, 2431, 2563, 2699, 2809, 2953 };
+    int[] expectedMaxForLevelL = new int[] {
+        17, 32, 53, 78, 106, 134, 154, 192, 230, 271,
+        321, 367, 425, 458, 520, 586, 644, 718, 792, 858,
+        929, 1003, 1091, 1171, 1273, 1367, 1465, 1528, 1628, 1732,
+        1840, 1952, 2068, 2188, 2303, 2431, 2563, 2699, 2809, 2953 };
     int[] expectedMaxForLevelH = new int[] { 7, 14, 24, 34, 44, 58, 64, 84, 98,
         119, 137, 155, 177, 194, 220, 250, 280, 310, 338, 382, 403, 439, 461,
         511, 535, 593, 625, 658, 698, 742, 790, 842, 898, 958, 983, 1051, 1093,
@@ -119,7 +219,7 @@ public class TransmitTest {
   }
 
   /**
-   * Helper function that compares maximum QR code payload to 
+   * Helper function that compares maximum QR code payload to
    * maximums listed in the QR standard, ISO/IEC 18004:2006.
    */
   private void compareMaxPayload(int[] expectedMaxForLevel, ErrorCorrectionLevel ecLevel) {
@@ -151,7 +251,7 @@ public class TransmitTest {
      *  Setup test string and make sure that we get
      *  back the expected byte[] given ISO-8859-1 encoding.
      */
-    byte[] utfStr = stringToBytes(origStr);
+    byte[] utfStr = origStr.getBytes(Charsets.ISO_8859_1);
     assertNotNull("Expected conversion to byte[] from String to be successful", utfStr);
     assertEquals(utfStr.length, expectedBytes.length);
     assertArrayEquals("", expectedBytes, utfStr);
@@ -188,52 +288,25 @@ public class TransmitTest {
   }
 
   /**
-   * Encodes this {@code String} into a sequence of bytes using the
-   * ISO-8859-1 charset, storing the result into a new byte array.
-   *
-   * @param origStr The string to encode with ISO-8859-1 charset
-   * @return The resulting byte array
-   * @throws AssertionError
-   */
-  private byte[] stringToBytes(String origStr) throws AssertionError {
-    byte[] utfStr = new byte[0];
-    try {
-      utfStr = origStr.getBytes("ISO-8859-1");
-    } catch (UnsupportedEncodingException e) {
-      // ISO-8859-1 is supported, it would be unusual for ZXing library to fail here.
-      throw new AssertionError("ISO-8859-1 character set encoding not supported");
-    }
-    return utfStr;
-  }
-
-  /**
    * Sets up a collection of QR codes generated from the input data. It
    * fails if there was some error in the initialization.
-   * @throws WriterException if QR encoding fails to encode {@code data}. 
+   * @param ecLevel The error correction level of the QR code
+   * @param qrVersion The density of the QR code.
+   * @throws WriterException if QR encoding fails to encode {@code data}.
    */
-  private Iterable<BitmapImage> encodeQRAndCheckNotNull(byte[] data) throws TransmitException{
-    Iterable<BitmapImage> qrCodes = transmitter.encodeQRCodes(data);
+  private Iterable<BitmapImage> encodeQRAndCheckNotNull(
+      byte[] data, Version qrVersion, ErrorCorrectionLevel ecLevel)
+          throws TransmitException {
+    Iterable<BitmapImage> qrCodes = transmitter.encodeQRCodes(data, qrVersion, ecLevel);
     assertNotNull("Expect encoding will be successful", qrCodes);
     return qrCodes;
   }
-  
-  /**
-   * Output a QR BitMatrix to png file in temporary directory for debugging
-   * purposes. For example, a call to bitMatrixToTmpFile(m,12,"foo") will create
-   * a temporary file, /tmp/foo_12.png.
-   * 
-   * @param m The bit matrix that will be written to file.
-   * @param sequence Identifies the chunk of data that this QR code encodes.
-   * @param filePrefix Name that identifies the output file.
-   * @return The absolute path of the created temporary file.
-   */
-  // Example usage: Output file just to check QR scanner can read it
-  // System.out.println("wrote tmp file, " + bitMatrixToTmpFile(qrActual,1,filePrefix));
-  private String bitMatrixToTmpFile(BitMatrix m, int sequence,
-                                    String filePrefix) throws IOException {
-    String imgType = "png";
-    File tmp = File.createTempFile(filePrefix + "_" + sequence, "." + imgType);
-    MatrixToImageWriter.writeToFile(m, imgType, tmp);
+
+  protected static String bitmapImageToFile(BitmapImage bitmap, int sequence,
+                                   String filePrefix) throws IOException {
+
+    File tmp = File.createTempFile(filePrefix + "_" + sequence +"_", ".png");
+    ImageIO.write(UtilsTest.toBufferedImage(bitmap), "png", tmp);
 
     return tmp.getAbsolutePath();
   }

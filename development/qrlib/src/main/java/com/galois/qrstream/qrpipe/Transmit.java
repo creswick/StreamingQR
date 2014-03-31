@@ -1,14 +1,13 @@
 package com.galois.qrstream.qrpipe;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.galois.qrstream.image.BitmapImage;
+import com.google.common.base.Charsets;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
@@ -46,17 +45,36 @@ public class Transmit {
    * @return The sequence of QR codes generated from input data.
    * @throws TransmitException if input {@code data} cannot be encoded as QR code.
    */
+  // TODO Step 2: change function to: public Iterable<BitmapImage> encodeQRCodes (Iterable<byte[]>)
   public Iterable<BitmapImage> encodeQRCodes(final byte[] data) throws TransmitException {
+    // TODO: Settle on appropriate density and error level for phones.
+    // Assume particular QR density and error correction level so that
+    // we can calculate the appropriate chunk size for the input data.
+    Version qrVersion = Version.getVersionForNumber(1);
+    ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
+    return encodeQRCodes(data, qrVersion, ecLevel);
+  }
+
+  /**
+   * Encodes array of bytes into a collection of QR codes. It will break input
+   * into chunks small enough for encoding into QR codes for the requested
+   * QR code density and error correction level.
+   *
+   * @param data The array of bytes to encode
+   * @param qrVersion The desired density of the resulting QR code (i.e. version 1-40).
+   * @param ecLevel Error correction level, can be either {@code L, M, Q, H}.
+   * @return The sequence of QR codes generated from input data.
+   * @throws TransmitException if input {@code data} cannot be encoded as QR code.
+   */
+  protected Iterable<BitmapImage> encodeQRCodes(byte[] data, Version qrVersion,
+      ErrorCorrectionLevel ecLevel) throws TransmitException {
+
     // The collection of qr codes containing encoded data
     List<BitmapImage> qrCodes = new ArrayList<BitmapImage>();
 
     if (data == null || data.length <= 0) {
       return qrCodes;
     }
-    // Assume particular QR density and error correction level so that
-    // we can calculate the appropriate chunk size for the input data.
-    Version qrVersion = Version.getVersionForNumber(40);
-    ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
 
     // Check that image dimensions specified are large enough
     // to display the QR code generated with the requested density.
@@ -99,7 +117,6 @@ public class Transmit {
     }
     return qrCodes;
   }
-
   /**
    * Generates a QR code for the input bytes, {@code chunkedData}. It is
    * assumed that {@code chunkedData} is subset of larger input. This function
@@ -119,15 +136,15 @@ public class Transmit {
     if (chunkedData == null) {
       throw new NullPointerException("Cannot encode 'null' value as QR code.");
     }
-    if (chunkedData.length >= getPayloadMaxBytes(ecLevel, v)) {
+    if (chunkedData.length > getPayloadMaxBytes(ecLevel, v)) {
       throw new IllegalArgumentException(
           "Input data too large for QR version: " + v.getVersionNumber()
               + " and error correction level: " + ecLevel
               + " chunkedData.length = " + chunkedData.length + " maxPayload= "
               + getPayloadMaxBytes(ecLevel, v));
     }
-    BitMatrix bMat = bytesToQRCode(chunkedData);
-        //prependChunkId(chunkedData, chunkId, totalChunks));
+    byte[] prependedData = Utils.prependChunkId(chunkedData, chunkId, totalChunks);
+    BitMatrix bMat = bytesToQRCode(prependedData);
     return BitmapImage.createBitmapImage(bMat);
   }
 
@@ -153,44 +170,6 @@ public class Transmit {
   }
 
   /**
-   * Injects chunk# and totalChunks into byte[] for encoding into QR code.
-   * The first {@code NUM_BYTES_PER_INT} bytes are the chunk# followed by
-   * {@code NUM_BYTES_PER_INT} bytes for the total # chunks.
-   * 
-   * Note:
-   * Four bytes may be too much space to reserve, but it was convenient
-   * to think about. We could probably just use 3 bytes for each int
-   * and let MAX_INTEGER=2^24-1 = 16,777,215.
-   * 
-   * If 4 bytes, then max bytes transferred in indices alone would
-   * equal 2,147,483,647 * 8 bytes = ~16GB.
-   * If QR code could transfer ~1200 bytes, then largest transfer we could handle
-   * is 2,147,483,647 * (1200 - 8 bytes) = ~2,384 GB.
-   * Number realistic max chunks likely to be = 16 GB file / (1200 - 8) bytes
-   *                                         ~= 14,412,642
-   * Number realistic bits we'd need = log2(14,412,642) ~= 24
-   */
-  protected byte[] prependChunkId(byte[] rawData, int chunk, int totalChunks) {
-    // Unable to prepend chunk number to rawData if receive invalid inputs
-    if (totalChunks < 0 || chunk < 0) {
-      throw new IllegalArgumentException("Number of chunks must be positive");
-    }
-
-    byte[] inputData = rawData == null ? new byte[0] : rawData.clone();
-    // Reserve first NUM_BYTES_PER_INT bytes of data for chunk id and
-    // another NUM_BYTES_PER_INT bytes of data for the totalChunks.
-    byte[] chunkId = Utils.intToBytes(chunk);
-    byte[] nChunks = Utils.intToBytes(totalChunks);
-    byte[] combined = new byte[inputData.length + chunkId.length + nChunks.length];
-
-    System.arraycopy(chunkId, 0, combined, 0, chunkId.length);
-    System.arraycopy(nChunks, 0, combined, chunkId.length, nChunks.length);
-    System.arraycopy(inputData, 0, combined, chunkId.length + nChunks.length, inputData.length);
-
-    return combined;
-  }
-
-  /**
    * Generates a QR code given a set of input bytes. This function
    * assumes that any injection of a sequence number has already occurred.
    *
@@ -207,18 +186,14 @@ public class Transmit {
      * QR code. Max bytes for QR in binary/byte mode = 2,953 bytes using, QR
      * code version 40 and error-correction level L.
      */
-    String data;
-    try {
-      /* NOTE: There is no significant advantage to using Alphanumeric mode rather than
-       * Binary mode, in terms of the number of bits we can pack into a single QR code.
-       * Assuming QR version 40 and error correction level L.
-       *   A. Alphanumeric, max bits = 4296 max chars * 5.5 bits/char = 23,628.
-       *   B. Binary/byte,  max bits = 2953 max chars * 8 bits/char = 23,624.
-       */
-      data = new String(rawData, "ISO-8859-1");
-    } catch (UnsupportedEncodingException e) {
-      throw new AssertionError("ISO-8859-1 character set encoding not supported");
-    }
+    String data = new String(rawData, Charsets.ISO_8859_1);
+    /* NOTE: There is no significant advantage to using Alphanumeric mode rather than
+     * Binary mode, in terms of the number of bits we can pack into a single QR code.
+     * Assuming QR version 40 and error correction level L.
+     *   A. Alphanumeric, max bits = 4296 max chars * 5.5 bits/char = 23,628.
+     *   B. Binary/byte,  max bits = 2953 max chars * 8 bits/char = 23,624.
+     */
+
     /*
      * ZXing will determine the necessary QR code density given the number
      * of input bytes. If number of bytes is greater than max QR code version,
@@ -275,12 +250,9 @@ public class Transmit {
    * @param desiredChunkSize the size of split that we want to break {@source length} into.
    */
   private int getTotalChunks(int length, int desiredChunkSize) {
-    if (length < 0 || desiredChunkSize < 0) {
-      throw new IllegalArgumentException("Input must be non-negative.");
+    if (length < 1 || desiredChunkSize < 1) {
+      throw new IllegalArgumentException("Input must be positive.");
     }
-    return (length + desiredChunkSize) / desiredChunkSize;
+    return ((int) Math.ceil((float)length/desiredChunkSize));
   }
-
-
-
 }//public class Transmit

@@ -20,6 +20,9 @@ dependencies {
     // ZXing core, i.e. the QR code library
     compile "com.google.zxing:core:2.3.0"
 
+    // Guava library
+    compile group: 'com.google.guava', name: 'guava', version: '16.+'
+
     // functions to export images
     testCompile "com.google.zxing:javase:2.2"
 

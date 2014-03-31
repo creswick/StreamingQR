@@ -2,8 +2,11 @@ package com.galois.qrstream.qrpipe;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -13,9 +16,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import com.galois.qrstream.image.BitmapImage;
+import com.google.common.io.Files;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.client.j2se.ImageReader;
+import com.google.zxing.client.j2se.MatrixToImageConfig;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.common.HybridBinarizer;
 
@@ -130,6 +136,47 @@ public class UtilsTest {
       }
     }
     return img;
+  }
+
+  /**
+   * Returns bytes read from requested resource file.
+   * @param filename Name of file in resources directory.
+   * @return The byte array read from the {@source filename}.
+   */
+  protected static byte[] getTextResourceAndCheckNotNull(String filename) {
+    byte[] result = null;
+
+    // Look for resource in classpath
+    URL resource = TransmitTest.class.getClassLoader().getResource(filename);
+    assertNotNull("Expected resource to exist: " + filename, resource);
+
+    try {
+      result = Files.toByteArray(new File(resource.toURI()));
+    } catch (URISyntaxException e) {
+      fail("Malformed URL: " + resource.toString());
+    } catch (IOException e) {
+      fail("Cannot read resource file, " + filename + "." + e.getMessage());
+    }
+    assertNotNull(result);
+    return result;
+  }
+
+  /**
+   * Testing utility that converts BitmapImage to BufferedImage type.
+   */
+  protected static BufferedImage toBufferedImage(BitmapImage matrix) {
+    MatrixToImageConfig config = new MatrixToImageConfig();
+    int width = matrix.getWidth();
+    int height = matrix.getHeight();
+    BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY);
+    int onColor = config.getPixelOnColor();
+    int offColor = config.getPixelOffColor();
+    for (int x = 0; x < width; x++) {
+      for (int y = 0; y < height; y++) {
+        image.setRGB(x, y, matrix.get(x, y) ? onColor : offColor);
+      }
+    }
+    return image;
   }
 
   /**
