@@ -42,6 +42,17 @@ public class TransmitFragment extends Fragment {
     private Iterator<BitmapImage> qrCodeIter;
     private int count = 0;
 
+    // Updates frame of QR code at regular interval
+    private final static int MS_BETWEEN_FRAMES = 1000;
+    private Handler handleFrameUpdate = new Handler();
+    private Runnable runThroughFrames = new Runnable() {
+        @Override
+        public void run() {
+            nextFrame();
+            handleFrameUpdate.postDelayed(this,MS_BETWEEN_FRAMES);
+        }
+    };
+
     public TransmitFragment(List<Job> jobsList) {
         transmitter = new Transmit(350,350);
         this.jobsList = jobsList;
@@ -90,7 +101,6 @@ public class TransmitFragment extends Fragment {
     }
 
     public void updateUi(String title) {
-        sendButton.setText("Next frame");
         dataTitle.setText(title);
     }
 
@@ -117,7 +127,15 @@ public class TransmitFragment extends Fragment {
     public class CaptureClick implements View.OnClickListener {
         @Override
         public void onClick(View v) {
-            nextFrame();
+            if("Send".equalsIgnoreCase(sendButton.getText().toString())) {
+                if (qrCodeIter != null) {
+                    sendButton.setText("Pause");
+                    handleFrameUpdate.post(runThroughFrames);
+                }
+            } else {
+                sendButton.setText("Send");
+                handleFrameUpdate.removeCallbacks(runThroughFrames);
+            }
         }
     }
 
