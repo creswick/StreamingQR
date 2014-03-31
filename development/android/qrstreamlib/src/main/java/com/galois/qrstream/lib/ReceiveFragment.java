@@ -12,6 +12,7 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -19,6 +20,7 @@ import android.widget.Button;
 import com.galois.qrstream.image.YuvImage;
 import com.galois.qrstream.qrpipe.IProgress;
 import com.galois.qrstream.qrpipe.Receive;
+import com.galois.qrstream.qrpipe.State;
 
 import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -26,18 +28,18 @@ import java.util.concurrent.ArrayBlockingQueue;
 /**
  * Created by donp on 2/11/14.
  */
-public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback, Constants {
+public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
-    // Milliseconds that Receiver should wait before timing out of QR decoding call.
-    private static final int TRANSMISSION_TIMEOUT = 10000;
+    private SurfaceView camera_window;
+    private TextView statusLine;
+    private View rootView;
+    private LinearLayout ll;
 
     private Camera camera;
-    private SurfaceView camera_window;
     private Button capture;
     private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(1);
     private Receive receiveQrpipe;
     private DecodeThread decodeThread;
-    private TextView statusLine;
     private final Progress progress = new Progress();
 
     public ReceiveFragment() {
@@ -46,8 +48,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
-
+        rootView = inflater.inflate(R.layout.receive_fragment, container, false);
+        ll = (LinearLayout)rootView.findViewById(R.id.receive_layout);
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
         statusLine = (TextView)rootView.findViewById(R.id.receive_status);
         capture = (Button)rootView.findViewWithTag("capture");
@@ -95,6 +97,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         camera.stopPreview();
+        camera.setPreviewCallback(null);
         camera.release();
     }
 
@@ -135,20 +138,17 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
             Camera.Size previewSize = params.getPreviewSize();
             receiveQrpipe = new Receive(previewSize.height,
                                         previewSize.width,
-                                        TRANSMISSION_TIMEOUT,
+                                        Constants.RECEIVE_TIMEOUT_MS,
                                         progress);
-            decodeThread = new DecodeThread();
-            decodeThread.setReceiver(receiveQrpipe);
-            decodeThread.setQueue(frameQueue);
+            decodeThread = new DecodeThread(receiveQrpipe, frameQueue);
             decodeThread.start();
         } else {
-            Log.e(APP_TAG, "Error: DecodeThread already running");
+            Log.e(Constants.APP_TAG, "Error: DecodeThread already running");
         }
     }
 
     public void stopPipe() {
-        // Threads can only be suggested to stop
-        decodeThread.cont = false;
+        // todo: notify the qr code receiver to stop
     }
 
     public class DisplayUpdate extends Handler {
@@ -160,14 +160,25 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
 
         @Override
         public void handleMessage(Message msg) {
-            Log.d(APP_TAG, "DisplayUpdate.handleMessage");
+            Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage");
             final Bundle params = msg.getData();
+            State state = (State)params.getSerializable("state");
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     statusLine.setText(params.getString("message"));
                 }
             });
+
+            if(state == State.Final) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        stopPipe();
+                        ll.removeView(camera_window);
+                    }
+                });
+            }
         }
     }
 }

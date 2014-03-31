@@ -3,35 +3,72 @@ package com.galois.qrstream;
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.content.ContentResolver;
+import android.content.CursorLoader;
+import android.content.Intent;
+import android.content.res.AssetFileDescriptor;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
+import android.provider.OpenableColumns;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.galois.qrstream.lib.Constants;
+import com.galois.qrstream.lib.Job;
 import com.galois.qrstream.lib.ReceiveFragment;
 import com.galois.qrstream.lib.TransmitFragment;
+
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class MainActivity extends Activity {
 
     private FragmentManager fragmentManager;
-    public Fragment receiveFragment; // accessed via unittest
-    public Fragment transmitFragment; // accessed via unittest
+    private List<Job> jobsList;
+    protected ReceiveFragment receiveFragment; // accessed via unittest
+    protected TransmitFragment transmitFragment; // accessed via unittest
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        jobsList = new ArrayList<Job>();
         fragmentManager = getFragmentManager();
         receiveFragment = new ReceiveFragment();
-        transmitFragment = new TransmitFragment();
+        transmitFragment = new TransmitFragment(jobsList);
 
         if (savedInstanceState == null) {
-            fragmentManager.beginTransaction()
-                    .add(R.id.container, receiveFragment)
-                    .commit();
+            Intent startingIntent = getIntent();
+            Log.d(Constants.APP_TAG, "startingIntent  " + startingIntent.getAction());
+            if(startingIntent.getAction() == Intent.ACTION_SEND) {
+                Job job = buildJobFromIntent(startingIntent);
+                jobsList.add(job);
+                showFragment(transmitFragment);
+            } else {
+                showFragment(receiveFragment);
+            }
         }
+    }
+
+    private void showFragment(Fragment fragment) {
+        fragmentManager.beginTransaction()
+                .replace(R.id.container, fragment)
+                .commit();
     }
 
     @Override
@@ -53,18 +90,68 @@ public class MainActivity extends Activity {
         }
 
         if (id == R.id.action_receive) {
-            fragmentManager.beginTransaction()
-                    .replace(R.id.container, receiveFragment)
-                    .commit();
+            showFragment(receiveFragment);
             return true;
         }
         if (id == R.id.action_transmit) {
-            fragmentManager.beginTransaction()
-                    .replace(R.id.container, transmitFragment)
-                    .commit();
+            showFragment(transmitFragment);
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private String getNameFromURI(Uri uri) {
+        String name;
+        Cursor metadata = getContentResolver().query(uri,
+                                                     new String[] {OpenableColumns.DISPLAY_NAME},
+                                                     null, null, null);
+        if(metadata != null && metadata.moveToFirst()) {
+            name = metadata.getString(0);
+        } else {
+            name = uri.getLastPathSegment();
+        }
+        return name;
+    }
+
+    private byte[] readFileUri(Uri uri) throws IOException {
+        ContentResolver contentResolver = getContentResolver();
+        AssetFileDescriptor fd = contentResolver.openAssetFileDescriptor(uri, "r");
+        long fileLength = fd.getLength();
+        Log.d("qrstream","fd length "+fileLength);
+        DataInputStream istream = new DataInputStream(contentResolver.openInputStream(uri));
+        byte[] buf = new byte[(int)fileLength];
+        istream.readFully(buf);
+        return buf;
+    }
+
+    private Job buildJobFromIntent(Intent intent) {
+        String type = intent.getType();
+        Bundle extras = intent.getExtras();
+        Log.d("qrstream", "** received type "+type);
+
+        String name = "";
+        byte[] bytes = null;
+
+        Uri dataUrl = (Uri) intent.getExtras().getParcelable(Intent.EXTRA_STREAM);
+        if(dataUrl != null) {
+            if (dataUrl.getScheme().equals("content")) {
+                try {
+                    name = getNameFromURI(dataUrl);
+                    bytes = readFileUri(dataUrl);
+                } catch (IOException e) {
+                    // todo: Handle IO error
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            // fall back to content in extras (mime type dependent)
+            if(type.equals("text/plain")) {
+                String body = extras.getString(Intent.EXTRA_SUBJECT) +
+                              extras.getString(Intent.EXTRA_TEXT);
+                bytes = body.getBytes();
+            }
+        }
+        return new Job(name, bytes);
     }
 
     /**

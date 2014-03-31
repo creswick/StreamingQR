@@ -11,7 +11,7 @@ import java.util.Queue;
 /**
  * Created by donp on 2/13/14.
  */
-public class Preview implements Camera.PreviewCallback, Constants {
+public class Preview implements Camera.PreviewCallback {
     private Queue frames;
     private int height;
     private int width;
@@ -32,10 +32,10 @@ public class Preview implements Camera.PreviewCallback, Constants {
 
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
-        Log.v(APP_TAG, "previewFrame data "+data.length);
+        Log.d(Constants.APP_TAG, "previewFrame data "+data.length);
         YuvImage frame = new YuvImage(data, height, width);
         if(frames.offer(frame) == false) {
-            Log.v(APP_TAG, "Frame queue full!");
+            Log.e(Constants.APP_TAG, "Frame queue full!");
         }
     }
 }
