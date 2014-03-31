@@ -33,18 +33,19 @@ public class TransmitFragment extends Fragment {
     private TextView dataTitle;
     private ImageView send_window;
     private Button sendButton;
-    private final Transmit transmitter;
+    private Transmit transmitter;
     private int progress = 0;
-    private List<Job> jobsList;
+    private Job job;
 
     // Allows us to step through QR code transmission
     private Iterable<BitmapImage> qrCodes;
     private Iterator<BitmapImage> qrCodeIter;
     private int count = 0;
 
-    public TransmitFragment(List<Job> jobsList) {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         transmitter = new Transmit(350,350);
-        this.jobsList = jobsList;
     }
 
     @Override
@@ -62,15 +63,12 @@ public class TransmitFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        sendNextJob();
-    }
-
-     public void sendNextJob() {
-         if(jobsList.size() > 0) {
-             Job job = jobsList.remove(0);
-             transmitData(job.getTitle(), job.getData());
-             nextFrame();
-         }
+        Bundle bundle = getArguments();
+        if(bundle != null) {
+            job = (Job) bundle.getSerializable("job");
+            transmitData(job.getTitle(), job.getData());
+            nextFrame();
+        }
     }
 
     public void transmitData(String title, byte[] bytes) {

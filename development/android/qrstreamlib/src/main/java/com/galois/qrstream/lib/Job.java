@@ -1,9 +1,11 @@
 package com.galois.qrstream.lib;
 
+import java.io.Serializable;
+
 /**
  * Created by donp on 3/25/14.
  */
-public class Job {
+public class Job implements Serializable {
     private String title;
     private byte[] data;
 

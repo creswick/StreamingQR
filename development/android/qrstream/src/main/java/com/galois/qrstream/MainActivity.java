@@ -49,15 +49,18 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         jobsList = new ArrayList<Job>();
         fragmentManager = getFragmentManager();
+        transmitFragment = new TransmitFragment();
         receiveFragment = new ReceiveFragment();
-        transmitFragment = new TransmitFragment(jobsList);
 
         if (savedInstanceState == null) {
             Intent startingIntent = getIntent();
             Log.d(Constants.APP_TAG, "startingIntent  " + startingIntent.getAction());
             if(startingIntent.getAction() == Intent.ACTION_SEND) {
                 Job job = buildJobFromIntent(startingIntent);
-                jobsList.add(job);
+                transmitFragment = new TransmitFragment();
+                Bundle bundle = new Bundle();
+                bundle.putSerializable("job", job);
+                transmitFragment.setArguments(bundle);
                 showFragment(transmitFragment);
             } else {
                 showFragment(receiveFragment);
