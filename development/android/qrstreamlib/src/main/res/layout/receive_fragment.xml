@@ -4,7 +4,7 @@
     android:id="@+id/receive_layout"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="520dp"
+    android:layout_height="match_parent"
     android:layout_gravity="center_vertical"
     >
 
@@ -29,8 +29,10 @@
     <SurfaceView
         android:id="@+id/camera_window"
         android:gravity="center_horizontal"
-        android:layout_width="200dp"
-        android:layout_height="200dp" />
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_weight="0.9"
+        />
 
     <Button
         android:layout_width="fill_parent"
