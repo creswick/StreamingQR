@@ -145,12 +145,15 @@ public class TransmitFragment extends Fragment {
     private Bitmap toBitmap(final BitmapImage matrix) {
         int height = matrix.getHeight();
         int width = matrix.getWidth();
-        Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                bmp.setPixel(x, y, matrix.get(x, y) ? Color.BLACK : Color.WHITE);
+        int[] pixels = new int[width * height];
+        for (int y = 0; y < height; y++) {
+            int offset = y * width;
+            for (int x = 0; x < width; x++) {
+                pixels[offset + x] = matrix.get(x,y) ? Color.BLACK : Color.WHITE;
             }
         }
+        Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+        bmp.setPixels(pixels, 0, width, 0, 0, width, height);
         return bmp;
     }
 
