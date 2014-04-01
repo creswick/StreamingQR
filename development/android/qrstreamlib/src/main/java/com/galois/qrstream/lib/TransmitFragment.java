@@ -34,7 +34,6 @@ public class TransmitFragment extends Fragment {
     private ImageView send_window;
     private Button sendButton;
     private Transmit transmitter;
-    private int progress = 0;
     private Job job;
 
     // Allows us to step through QR code transmission
@@ -71,7 +70,7 @@ public class TransmitFragment extends Fragment {
         }
     }
 
-    public void transmitData(String title, byte[] bytes) {
+    private void transmitData(String title, byte[] bytes) {
         Log.d("qrstream", "transmitData title="+title+" byte count="+bytes.length);
         updateUi(title);
         Log.i(Constants.APP_TAG, "Trying to create and transmit QR codes");
@@ -87,7 +86,7 @@ public class TransmitFragment extends Fragment {
         }
     }
 
-    public void updateUi(String title) {
+    private void updateUi(String title) {
         sendButton.setText("Next frame");
         dataTitle.setText(title);
     }
