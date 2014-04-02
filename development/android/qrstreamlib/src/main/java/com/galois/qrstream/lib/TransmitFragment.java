@@ -13,6 +13,7 @@ import android.widget.ImageView;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.util.Iterator;
@@ -51,7 +52,8 @@ public class TransmitFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.transmit_fragment, container, false);
-
+        LinearLayout ll = (LinearLayout)rootView.findViewById(R.id.transmit_layout);
+        ll.setKeepScreenOn(true);
         send_window = (ImageView)rootView.findViewById(R.id.send_window);
         dataTitle = (TextView)rootView.findViewById(R.id.data_title);
         sendButton = (Button)rootView.findViewWithTag("send");

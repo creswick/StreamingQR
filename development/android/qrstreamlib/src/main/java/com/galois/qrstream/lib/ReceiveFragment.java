@@ -50,6 +50,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                              Bundle savedInstanceState) {
         rootView = inflater.inflate(R.layout.receive_fragment, container, false);
         ll = (LinearLayout)rootView.findViewById(R.id.receive_layout);
+        ll.setKeepScreenOn(true);
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
         statusLine = (TextView)rootView.findViewById(R.id.receive_status);
         capture = (Button)rootView.findViewWithTag("capture");
