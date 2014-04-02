@@ -1,5 +1,6 @@
 package com.galois.qrstream.qrpipe;
 
+import java.text.NumberFormat;
 import java.util.BitSet;
 
 /**
@@ -46,6 +47,18 @@ public class DecodeState {
 		} else {
 			return State.Intermediate;
 		}
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder s = new StringBuilder(getState().toString());
+		int nFramesReceived = data.cardinality();
+		double complete = (double) nFramesReceived / this.capacity;
+		if(nFramesReceived > 0) {
+		  s.append(", " + nFramesReceived +" of " + this.capacity + ": ");
+			s.append(NumberFormat.getPercentInstance().format(complete));
+		}
+		return s.toString();
 	}
 
 	/**
