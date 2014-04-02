@@ -36,7 +36,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class MainActivity extends Activity {
+public class MainActivity extends CommonActivity {
 
     private FragmentManager fragmentManager;
     protected ReceiveFragment receiveFragment; // accessed via unittest
