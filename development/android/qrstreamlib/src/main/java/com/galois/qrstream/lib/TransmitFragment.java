@@ -8,11 +8,13 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.util.Iterator;
@@ -44,7 +46,6 @@ public class TransmitFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        transmitter = new Transmit(350,350);
     }
 
     @Override
@@ -52,16 +53,28 @@ public class TransmitFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.transmit_fragment, container, false);
 
+        LinearLayout ll = (LinearLayout)rootView.findViewById(R.id.transmit_layout);
+        ll.setKeepScreenOn(true);
+
         send_window = (ImageView)rootView.findViewById(R.id.send_window);
+        send_window.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(View v, int left, int top, int right, int bottom,
+                                       int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                Log.d(Constants.APP_TAG, "Transmitter created for width "+
+                        send_window.getWidth()+" height "+send_window.getHeight());
+                transmitter = new Transmit(send_window.getWidth(), send_window.getHeight());
+                sendJob();
+            }
+        });
+
         dataTitle = (TextView)rootView.findViewById(R.id.data_title);
         sendButton = (Button)rootView.findViewWithTag("send");
         sendButton.setOnClickListener(new CaptureClick());
         return rootView;
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
+    private void sendJob() {
         Bundle bundle = getArguments();
         if(bundle != null) {
             job = (Job) bundle.getSerializable("job");
@@ -70,8 +83,13 @@ public class TransmitFragment extends Fragment {
         }
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+    }
+
     private void transmitData(String title, byte[] bytes) {
-        Log.d("qrstream", "transmitData title="+title+" byte count="+bytes.length);
+        Log.d("qrstream", "transmitData title=" + title + " byte count=" + bytes.length);
         updateUi(title);
         Log.i(Constants.APP_TAG, "Trying to create and transmit QR codes");
         try {
