@@ -82,7 +82,7 @@ public class Transmit {
           + "Expected at least " + qrVersion.getDimensionForVersion()
           + ", but got (" + imgWidth + "," + imgHeight + ").");
     }
-    
+
     return new Iterable<BitmapImage>() {
       @Override
       public Iterator<BitmapImage> iterator() {
@@ -90,7 +90,7 @@ public class Transmit {
       }
     };
   }
-  
+
   /**
    * Iterator to generate QR code bitmaps on demand.
    * @author creswick
@@ -100,10 +100,10 @@ public class Transmit {
 
     private final Version qrVersion;
     private final ErrorCorrectionLevel ecLevel;
-    
+
     private final int maxChunkSize;
     private final int totalChunks;
-    
+
     /**
      * The current chunk id, 1-indexed. (The first chunk has chunkId = 1.)
      */
@@ -114,12 +114,11 @@ public class Transmit {
         ErrorCorrectionLevel ecLevel) {
       this.qrVersion = qrVersion;
       this.ecLevel = ecLevel;
-      
+
       maxChunkSize = getPayloadMaxBytes(ecLevel, qrVersion);
       totalChunks = getTotalChunks(data.length, maxChunkSize);
       chunkId = 0;
-      
-      byteInputStream = new ByteArrayInputStream(data);
+      byteInputStream = new ByteArrayInputStream(data.clone());
     }
 
     @Override
