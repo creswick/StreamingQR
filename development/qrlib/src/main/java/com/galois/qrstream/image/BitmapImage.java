@@ -9,7 +9,8 @@ import com.google.zxing.common.BitMatrix;
  * since Android does not have BufferedImage in its Java implementation.
  */
 public class BitmapImage {
-  private final byte[] data;
+
+  private final BitMatrix m;
   private final int w;
   private final int h;
 
@@ -20,21 +21,14 @@ public class BitmapImage {
   public static BitmapImage createBitmapImage (BitMatrix mat) {
     int w = mat.getWidth();
     int h = mat.getHeight();
-    BitmapImage img = new BitmapImage(w, h);
-    for (int x = 0; x < w; x++) {
-      for (int y = 0; y < h; y++) {
-        if (mat.get(x, y)) {
-          img.set(x, y);
-        }
-      }
-    }
-    return img;
+    System.err.println("createBitmap: w="+w + " h="+ h);
+    return new BitmapImage(w,h,mat);
   }
 
-  private BitmapImage(int width, int height) {
+  private BitmapImage(int width, int height, BitMatrix bitMatrix) {
     w = width;
     h = height;
-    data = new byte[w * h];
+    m = bitMatrix;
   }
 
   public int getWidth() {
@@ -43,10 +37,6 @@ public class BitmapImage {
 
   public int getHeight() {
     return h;
-  }
-
-  public byte[] getData() {
-    return data.clone();
   }
 
   /**
@@ -59,21 +49,6 @@ public class BitmapImage {
     if (x < 0 || y < 0 || x > w || y > h) {
       throw new IllegalArgumentException("Trying to get bit that is out of bounds.");
     }
-    int offset = x + y * w;
-    return (data[offset] != 0);
-  }
-
-  /**
-   * Sets the given bit to true, where true means black.
-   *
-   * @param x The horizontal component (i.e. which column)
-   * @param y The vertical component (i.e. which row)
-   */
-  private void set(int x, int y) throws IllegalArgumentException {
-    if (x < 0 || y < 0 || x > w || y > h) {
-      throw new IllegalArgumentException("Trying to set bit that is out of bounds.");
-    }
-    int offset = x + y * w;
-    data[offset] = 0x01;
+    return m.get(x, y);
   }
 }
