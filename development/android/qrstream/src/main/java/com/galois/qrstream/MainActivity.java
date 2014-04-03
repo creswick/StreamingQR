@@ -36,10 +36,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class MainActivity extends Activity {
+public class MainActivity extends CommonActivity {
 
     private FragmentManager fragmentManager;
-    private List<Job> jobsList;
     protected ReceiveFragment receiveFragment; // accessed via unittest
     protected TransmitFragment transmitFragment; // accessed via unittest
 
@@ -47,17 +46,18 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        jobsList = new ArrayList<Job>();
         fragmentManager = getFragmentManager();
+        transmitFragment = new TransmitFragment();
         receiveFragment = new ReceiveFragment();
-        transmitFragment = new TransmitFragment(jobsList);
 
         if (savedInstanceState == null) {
             Intent startingIntent = getIntent();
             Log.d(Constants.APP_TAG, "startingIntent  " + startingIntent.getAction());
             if(startingIntent.getAction() == Intent.ACTION_SEND) {
                 Job job = buildJobFromIntent(startingIntent);
-                jobsList.add(job);
+                Bundle bundle = new Bundle();
+                bundle.putSerializable("job", job);
+                transmitFragment.setArguments(bundle);
                 showFragment(transmitFragment);
             } else {
                 showFragment(receiveFragment);
