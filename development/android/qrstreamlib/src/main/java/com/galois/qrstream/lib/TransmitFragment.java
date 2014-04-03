@@ -42,7 +42,7 @@ public class TransmitFragment extends Fragment {
     private int count = 0;
 
     // Updates frame of QR code at regular interval
-    private final static int MS_BETWEEN_FRAMES = 1000;
+    private final static int MS_BETWEEN_FRAMES = 800;
     private Handler handleFrameUpdate = new Handler();
     private Runnable runThroughFrames = new Runnable() {
         @Override
@@ -86,8 +86,6 @@ public class TransmitFragment extends Fragment {
         updateUi(title);
         Log.i(Constants.APP_TAG, "Trying to create and transmit QR codes");
         try {
-            // TODO Replace encoding of test strings with user data
-            //qrCodes = encodeRandomTestData();
             qrCodes = transmitter.encodeQRCodes(bytes);
             qrCodeIter = qrCodes.iterator();
             count = 0;
@@ -98,8 +96,22 @@ public class TransmitFragment extends Fragment {
     }
 
     private void updateUi(String title) {
-        sendButton.setText("Next frame");
         dataTitle.setText(title);
+    }
+
+    // Update the title with the QR chunkId being displayed.
+    // Imagine it will be most useful for debugging.
+    private void updateUI(int chunkId ) {
+        String title = dataTitle.getText().toString();
+        String chunkStr = ", chunk: ";
+        int index = title.indexOf(chunkStr);
+        String newTitle;
+        if (index >= 0) {
+            newTitle = title.substring(0, index) + chunkStr + chunkId;
+        }else{
+            newTitle = title + chunkStr + chunkId;
+        }
+        updateUi(newTitle);
     }
 
     private void nextFrame() {
@@ -107,6 +119,7 @@ public class TransmitFragment extends Fragment {
             if (qrCodeIter.hasNext()) {
                 count++;
                 Log.w(Constants.APP_TAG, "Drawing QR Code: " + count);
+                updateUI(count);
                 Bitmap b = toBitmap(qrCodeIter.next());
                 send_window.setImageDrawable(new BitmapDrawable(getResources(), b));
             } else {
@@ -126,6 +139,12 @@ public class TransmitFragment extends Fragment {
         @Override
         public void onClick(View v) {
             if("Send".equalsIgnoreCase(sendButton.getText().toString())) {
+                // If not invoked via "ShareAs" API, then send an random
+                // alphanumeric string, to test the transmission.
+                if (qrCodeIter == null) {
+                    String input = RandomStringUtils.randomAlphanumeric(20);
+                    transmitData(input, input.getBytes(Charsets.ISO_8859_1));
+                }
                 if (qrCodeIter != null) {
                     sendButton.setText("Pause");
                     handleFrameUpdate.post(runThroughFrames);
@@ -139,6 +158,9 @@ public class TransmitFragment extends Fragment {
 
     /**
      * Converts from QRlib BitmapImage to Android's Bitmap image type
+     * Note: This conversion consumes the majority of the runtime
+     * when width and height are large.
+     * TODO: Move this out of main UI thread?
      */
     private Bitmap toBitmap(final BitmapImage matrix) {
         int height = matrix.getHeight();
@@ -153,22 +175,5 @@ public class TransmitFragment extends Fragment {
         Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
         bmp.setPixels(pixels, 0, width, 0, 0, width, height);
         return bmp;
-    }
-
-    /**
-     * Make more dynamic test string using Apache commons random string generator
-     */
-    private Iterable<BitmapImage> encodeRandomTestData() throws TransmitException {
-        String input = RandomStringUtils.randomAlphanumeric(20);
-        Log.w(Constants.APP_TAG, "About to encode: " + input);
-        qrCodes = transmitter.encodeQRCodes(input.getBytes(Charsets.ISO_8859_1));
-
-        // Debugging output that prints number of generated QR codes
-        int qrCount = 0;
-        for (BitmapImage i : qrCodes) {
-            qrCount++;
-        }
-        Log.w(Constants.APP_TAG, "# codes generated: " + qrCount);
-        return qrCodes;
     }
 }

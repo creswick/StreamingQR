@@ -21,7 +21,6 @@ public class BitmapImage {
   public static BitmapImage createBitmapImage (BitMatrix mat) {
     int w = mat.getWidth();
     int h = mat.getHeight();
-    System.err.println("createBitmap: w="+w + " h="+ h);
     return new BitmapImage(w,h,mat);
   }
 
