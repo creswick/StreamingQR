@@ -3,7 +3,6 @@ package com.galois.qrstream.lib;
 import android.app.Fragment;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,7 +15,6 @@ import android.graphics.drawable.BitmapDrawable;
 import android.widget.TextView;
 
 import java.util.Iterator;
-import java.util.List;
 
 import com.galois.qrstream.qrpipe.Transmit;
 import com.galois.qrstream.qrpipe.TransmitException;
@@ -42,13 +40,12 @@ public class TransmitFragment extends Fragment {
     private int count = 0;
 
     // Updates frame of QR code at regular interval
-    private final static int MS_BETWEEN_FRAMES = 800;
-    private Handler handleFrameUpdate = new Handler();
-    private Runnable runThroughFrames = new Runnable() {
+    private final Handler handleFrameUpdate = new Handler();
+    private final Runnable runThroughFrames = new Runnable() {
         @Override
         public void run() {
             nextFrame();
-            handleFrameUpdate.postDelayed(this,MS_BETWEEN_FRAMES);
+            handleFrameUpdate.postDelayed(this,Constants.TRANSMIT_INTERVAL_MS);
         }
     };
 
@@ -82,14 +79,14 @@ public class TransmitFragment extends Fragment {
     }
 
     private void transmitData(String title, byte[] bytes) {
-        Log.d("qrstream", "transmitData title="+title+" byte count="+bytes.length);
-        updateUi(title);
         Log.i(Constants.APP_TAG, "Trying to create and transmit QR codes");
+        Log.i(Constants.APP_TAG, "transmitData title=" + title + " byte count=" + bytes.length);
+        updateUi(title);
         try {
             qrCodes = transmitter.encodeQRCodes(bytes);
             qrCodeIter = qrCodes.iterator();
             count = 0;
-            Log.i(Constants.APP_TAG, "Successful creation of QR codes");
+            Log.i(Constants.APP_TAG, "transmitData(), Successful creation of QR codes");
         } catch (TransmitException e) {
             Log.e(Constants.APP_TAG, e.getMessage());
         }
@@ -103,7 +100,7 @@ public class TransmitFragment extends Fragment {
     // Imagine it will be most useful for debugging.
     private void updateUI(int chunkId ) {
         String title = dataTitle.getText().toString();
-        String chunkStr = ", chunk: ";
+        String chunkStr = getString(R.string.transmit_chunkTxt);
         int index = title.indexOf(chunkStr);
         String newTitle;
         if (index >= 0) {
@@ -118,7 +115,7 @@ public class TransmitFragment extends Fragment {
         if (qrCodeIter != null) {
             if (qrCodeIter.hasNext()) {
                 count++;
-                Log.w(Constants.APP_TAG, "Drawing QR Code: " + count);
+                Log.i(Constants.APP_TAG, "Drawing QR Code: " + count);
                 updateUI(count);
                 Bitmap b = toBitmap(qrCodeIter.next());
                 send_window.setImageDrawable(new BitmapDrawable(getResources(), b));
@@ -126,6 +123,7 @@ public class TransmitFragment extends Fragment {
                 // Reset so we can transmit again
                 qrCodeIter = qrCodes.iterator();
                 count = 0;
+                nextFrame();
             }
         }
     }
@@ -135,10 +133,11 @@ public class TransmitFragment extends Fragment {
         super.onPause();
     }
 
-    public class CaptureClick implements View.OnClickListener {
+    private class CaptureClick implements View.OnClickListener {
         @Override
         public void onClick(View v) {
-            if("Send".equalsIgnoreCase(sendButton.getText().toString())) {
+            String buttonTxt = sendButton.getText().toString();
+            if(getString(R.string.transmit_sendButtonTxt).equalsIgnoreCase(buttonTxt)) {
                 // If not invoked via "ShareAs" API, then send an random
                 // alphanumeric string, to test the transmission.
                 if (qrCodeIter == null) {
@@ -146,11 +145,11 @@ public class TransmitFragment extends Fragment {
                     transmitData(input, input.getBytes(Charsets.ISO_8859_1));
                 }
                 if (qrCodeIter != null) {
-                    sendButton.setText("Pause");
+                    sendButton.setText(getString(R.string.transmit_pauseButtonTxt));
                     handleFrameUpdate.post(runThroughFrames);
                 }
             } else {
-                sendButton.setText("Send");
+                sendButton.setText(getString(R.string.transmit_sendButtonTxt));
                 handleFrameUpdate.removeCallbacks(runThroughFrames);
             }
         }

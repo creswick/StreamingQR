@@ -2,4 +2,7 @@
     <string name="app_name">My Module</string>
     <string name="transmit_title">Transmit Mode</string>
     <string name="receive_title">Receive Mode</string>
+    <string name="transmit_sendButtonTxt">Send</string>
+    <string name="transmit_pauseButtonTxt">Pause</string>
+    <string name="transmit_chunkTxt">, chunk:</string>
 </resources>
