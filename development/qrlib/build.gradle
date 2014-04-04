@@ -9,6 +9,10 @@ targetCompatibility = 1.6
 // Library version
 version = '0.1'
 
+// Set heap size for the test JVM(s) equal to
+// standard max heap for android phone
+maxHeapSize = "16m"
+
 // Look for external dependencies in these repositories
 repositories {
     mavenCentral()
