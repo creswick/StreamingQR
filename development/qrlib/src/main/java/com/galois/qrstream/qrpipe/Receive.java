@@ -67,7 +67,6 @@ public class Receive {
    * images to complete the data transmission.
    */
   public byte[] decodeQRCodes (BlockingQueue<YuvImage> qrCodeImages) throws ReceiveException {
-    System.out.println("decodeQRCodes: STARTED");
     // The received data and track transmission status.
     DecodedMessage message = new DecodedMessage(progress);
     while(true) {
@@ -95,7 +94,6 @@ public class Receive {
           // TODO Try improving performance by spawning new thread run each image decoding
           Result res = decodeSingleQRCode(img.getYuvData());
           State s = saveMessageAndUpdateProgress(res, message);
-          System.out.println("decodeQRCodes: state after trying decoding =" + s);
           if(s == State.Final) {
             System.out.println("decodeQRCodes: Hit final state");
             break;
@@ -108,7 +106,6 @@ public class Receive {
           continue;
         }
     }
-    System.out.println("decodeQRCodes: ENDED");
     return message.getEntireMessage();
   }
 

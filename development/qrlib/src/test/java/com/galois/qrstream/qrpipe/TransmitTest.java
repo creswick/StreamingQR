@@ -261,11 +261,7 @@ public class TransmitTest {
      */
     String filePrefix = "qr_" + origStr;
     BitMatrix qrActual = null;
-    try {
-      qrActual = transmitter.bytesToQRCode(utfStr);
-    } catch (TransmitException e) {
-      fail("Failed to generate QR code: " + e.getMessage());
-    }
+    qrActual = transmitter.bytesToQRCode(utfStr);
     assertNotNull("Expected QR encoding of string,"+origStr+", to be successful", qrActual);
 
     /*

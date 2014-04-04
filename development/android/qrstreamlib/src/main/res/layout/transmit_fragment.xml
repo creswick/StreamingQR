@@ -9,6 +9,7 @@
     >
 
     <TextView
+        android:id="@+id/transmit_title"
         android:text="@string/transmit_title"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
@@ -20,7 +21,9 @@
     <ImageView
         android:id="@+id/send_window"
         android:layout_width="fill_parent"
-        android:layout_height="200dp" />
+        android:layout_height="0dp"
+        android:layout_weight="0.9"
+        />
 
     <TextView
         android:id="@+id/data_title"

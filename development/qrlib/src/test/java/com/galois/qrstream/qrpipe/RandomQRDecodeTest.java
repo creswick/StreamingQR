@@ -55,13 +55,7 @@ public class RandomQRDecodeTest {
       int width = 200 + (nextNatural(rand) % 7) * 100;
 
       Transmit t = new Transmit(height, width);
-      BitMatrix bmap;
-
-      try {
-        bmap = t.bytesToQRCode(bytes);
-      } catch (TransmitException e) {
-        continue;
-      }
+      BitMatrix bmap = t.bytesToQRCode(bytes);
 
       BufferedImage newCode = MatrixToImageWriter.toBufferedImage(bmap);
 
