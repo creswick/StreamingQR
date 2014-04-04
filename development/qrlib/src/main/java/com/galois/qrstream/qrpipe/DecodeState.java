@@ -1,6 +1,11 @@
 package com.galois.qrstream.qrpipe;
 
+import java.text.NumberFormat;
 import java.util.BitSet;
+import java.util.List;
+
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 
 /**
  * Used to mark the progress of decoding stream of QR codes.
@@ -21,7 +26,7 @@ public class DecodeState {
 	 * @param capacity The number of QR code chunks in a full message.
 	 */
 	public DecodeState(int capacity) {
-		if (capacity < 0) {
+		if (capacity <= 0) {
 			throw new IllegalArgumentException("DecodeState must have capacity > 0");
 		}
 		this.capacity = capacity;
@@ -41,11 +46,23 @@ public class DecodeState {
 			return State.Fail;
 		} else if (data.isEmpty()) {
 			return State.Initial;
-		} else if (data.cardinality() == this.capacity) {
+		} else if (allBitsSet()) {
 			return State.Final;
 		} else {
 			return State.Intermediate;
 		}
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder s = new StringBuilder(getState().toString());
+		int nFramesReceived = data.cardinality();
+		double complete = (double) nFramesReceived / this.capacity;
+		if(nFramesReceived > 0) {
+		  s.append(", " + nFramesReceived +" of " + this.capacity + ": ");
+			s.append(NumberFormat.getPercentInstance().format(complete));
+		}
+		return s.toString();
 	}
 
 	/**
@@ -57,7 +74,7 @@ public class DecodeState {
 	 */
 	public void markDataReceived (int chunkId) throws IndexOutOfBoundsException {
 		if (chunkId < 1 || chunkId > capacity) {
-			throw new IndexOutOfBoundsException("Cannot mark bit the  chunkId: " + chunkId +
+			throw new IndexOutOfBoundsException("Cannot mark bit, the chunkId: " + chunkId +
 			                                    ", is out of bounds");
 		}
 		data.set(chunkId - 1);
@@ -68,7 +85,10 @@ public class DecodeState {
 	 * to decode.
 	 */
 	public void markFailedTransmission() {
-		this.hasTransmissionFailed = true;
+		// Fail only if transmission didn't already complete successfully.
+		if (!allBitsSet()) {
+			this.hasTransmissionFailed = true;
+		}
 	}
 
 	/**
@@ -79,4 +99,30 @@ public class DecodeState {
 	public BitSet getData() {
 		return (BitSet) data.clone();
 	}
+
+	/**
+	 * Returns a list of integers identifying the chunks of data that are still
+	 * missing from the transmission.
+	 */
+	public int[] identifyMissingChunks() {
+		List<Integer> missingChunks = Lists.newArrayList();
+		int i = 0;
+		do {
+			int bit = data.nextClearBit(i);
+			if (bit < capacity) {
+				missingChunks.add(bit + 1);
+			}
+			i = bit + 1;
+		} while (i < capacity);
+		return Ints.toArray(missingChunks);
+	}
+
+	/**
+	 * Returns true when all of the chunks of data have been
+	 * received and false otherwise.
+	 */
+	private boolean allBitsSet() {
+		return (data.cardinality() == this.capacity);
+	}
+
 }
