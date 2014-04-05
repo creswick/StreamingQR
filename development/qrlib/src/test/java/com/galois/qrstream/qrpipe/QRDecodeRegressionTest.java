@@ -57,12 +57,12 @@ public class QRDecodeRegressionTest {
     // If this does not throw an exception, everything is fine:
     decodeImage(bi);
   }
-  
+
   /**
    * Decode a qr code from a buffered image.
-   * 
+   *
    * Catches transmission failure exceptions, and returns null.
-   * 
+   *
    * @param bi The buffered image to decode.
    * @return
    * @throws ReceiveException
@@ -84,13 +84,12 @@ public class QRDecodeRegressionTest {
     try {
       result = receive.decodeQRCodes(queue);
     } catch (ReceiveException e) {
-      System.out.println(e.getMessage());
       // this should only happen if receive was expecting more than one QR code:
       if (!e.getMessage().startsWith("Transmission failed")) {
         throw e;
       }
     }
-    
+
     return result;
   }
 }
