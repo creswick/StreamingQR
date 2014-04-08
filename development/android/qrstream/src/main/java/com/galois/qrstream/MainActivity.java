@@ -46,6 +46,8 @@ public class MainActivity extends CommonActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        hideUI();
+
         fragmentManager = getFragmentManager();
         transmitFragment = new TransmitFragment();
         receiveFragment = new ReceiveFragment();
@@ -152,6 +154,14 @@ public class MainActivity extends CommonActivity {
             }
         }
         return new Job(name, bytes);
+    }
+
+    public void hideUI() {
+        View rootView = findViewById(R.id.container);
+        rootView.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+        );
     }
 
     /**
