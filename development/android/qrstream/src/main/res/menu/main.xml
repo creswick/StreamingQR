@@ -6,13 +6,4 @@
         android:title="@string/action_settings"
         android:orderInCategory="100"
         android:showAsAction="never" />
-    <item android:id="@+id/action_receive"
-        android:title="@string/action_receive"
-        android:orderInCategory="90"
-        android:showAsAction="ifRoom|withText"/>
-    <item android:id="@+id/action_transmit"
-        android:title="@string/action_transmit"
-        android:orderInCategory="80"
-        android:showAsAction="ifRoom|withText"/>
-
 </menu>

@@ -94,14 +94,6 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
             return true;
         }
 
-        if (id == R.id.action_receive) {
-            showFragment(receiveFragment);
-            return true;
-        }
-        if (id == R.id.action_transmit) {
-            showFragment(transmitFragment);
-            return true;
-        }
         return super.onOptionsItemSelected(item);
     }
 
