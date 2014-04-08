@@ -31,7 +31,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
     private SurfaceView camera_window;
-    private TextView statusLine;
     private View rootView;
     private LinearLayout ll;
 
@@ -51,7 +50,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         ll = (LinearLayout)rootView.findViewById(R.id.receive_layout);
         ll.setKeepScreenOn(true);
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
-        statusLine = (TextView)rootView.findViewById(R.id.receive_status);
         return rootView;
     }
 
@@ -164,7 +162,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    statusLine.setText(params.getString("message"));
+                    //setText(params.getString("message"));
                 }
             });
 

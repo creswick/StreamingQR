@@ -8,6 +8,7 @@ import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
 import android.database.Cursor;
+import android.gesture.Gesture;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -16,6 +17,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -36,7 +38,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class MainActivity extends CommonActivity {
+public class MainActivity extends CommonActivity implements View.OnTouchListener {
 
     private FragmentManager fragmentManager;
     protected ReceiveFragment receiveFragment; // accessed via unittest
@@ -46,6 +48,7 @@ public class MainActivity extends CommonActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        setupUI();
         hideUI();
 
         fragmentManager = getFragmentManager();
@@ -156,12 +159,38 @@ public class MainActivity extends CommonActivity {
         return new Job(name, bytes);
     }
 
-    public void hideUI() {
+    private void setupUI() {
+        View rootView = findViewById(R.id.container);
+        rootView.setOnTouchListener(this);
+    }
+
+    public boolean onTouch(View v, MotionEvent event) {
+        showUI();
+        return false;
+    }
+
+    private void showUI() {
+        getActionBar().show();
+        getWindow().getDecorView().getHandler().postDelayed(new ShowUIRun(this), 3000);
+    }
+
+    private class ShowUIRun implements Runnable {
+        MainActivity main;
+        public ShowUIRun(MainActivity ma) {
+            main = ma;
+        }
+        @Override
+        public void run() {
+            main.hideUI();
+        }
+    }
+
+    private void hideUI() {
+        getActionBar().hide();
         View rootView = findViewById(R.id.container);
         rootView.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_FULLSCREEN |
-                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-        );
+                View.SYSTEM_UI_FLAG_LOW_PROFILE
+         );
     }
 
     /**

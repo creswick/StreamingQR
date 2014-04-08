@@ -8,15 +8,6 @@
     android:layout_gravity="center_vertical"
     >
 
-    <TextView
-        android:id="@+id/receive_status"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:textSize="12pt"
-        android:textColor="#0000ff"
-        />
-
     <SurfaceView
         android:id="@+id/camera_window"
         android:gravity="center_horizontal"
