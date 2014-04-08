@@ -9,15 +9,6 @@
     >
 
     <TextView
-        android:text="@string/receive_title"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:textSize="13pt"
-        android:textColor="#0000ff"
-        />
-
-    <TextView
         android:id="@+id/receive_status"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
@@ -34,9 +25,4 @@
         android:layout_weight="0.9"
         />
 
-    <Button
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text="Capture"
-        android:tag="capture"/>
 </LinearLayout>

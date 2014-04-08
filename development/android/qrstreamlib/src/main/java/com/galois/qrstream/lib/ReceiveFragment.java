@@ -36,7 +36,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private LinearLayout ll;
 
     private Camera camera;
-    private Button capture;
     private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(1);
     private Receive receiveQrpipe;
     private DecodeThread decodeThread;
@@ -53,8 +52,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         ll.setKeepScreenOn(true);
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
         statusLine = (TextView)rootView.findViewById(R.id.receive_status);
-        capture = (Button)rootView.findViewWithTag("capture");
-        capture.setOnClickListener(new CaptureClick());
         return rootView;
     }
 
