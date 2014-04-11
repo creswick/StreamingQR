@@ -2,15 +2,21 @@
 
 <PreferenceScreen
     xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
     >
 
     <PreferenceCategory
-        android:title="placeholder">
+        android:title="Transmit">
 
         <CheckBoxPreference
             android:key="checkbox_preference"
             android:title="placeholder"
             android:summary="placeholder" />
 
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Receive">
     </PreferenceCategory>
 </PreferenceScreen>
