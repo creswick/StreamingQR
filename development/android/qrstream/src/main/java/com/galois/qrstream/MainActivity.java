@@ -163,18 +163,12 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
 
     private void showUI() {
         getActionBar().show();
-        getWindow().getDecorView().getHandler().postDelayed(new ShowUIRun(this), 3000);
-    }
-
-    private class ShowUIRun implements Runnable {
-        MainActivity main;
-        public ShowUIRun(MainActivity ma) {
-            main = ma;
-        }
-        @Override
-        public void run() {
-            main.hideUI();
-        }
+        getWindow().getDecorView().getHandler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.hideUI();
+            }
+        }, 3000);
     }
 
     private void hideUI() {
