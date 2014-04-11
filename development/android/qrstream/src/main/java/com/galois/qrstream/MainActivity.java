@@ -24,6 +24,7 @@ import android.view.ViewGroup;
 import com.galois.qrstream.lib.Constants;
 import com.galois.qrstream.lib.Job;
 import com.galois.qrstream.lib.ReceiveFragment;
+import com.galois.qrstream.lib.SettingsFragment;
 import com.galois.qrstream.lib.TransmitFragment;
 
 import java.io.DataInputStream;
@@ -43,6 +44,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
     private FragmentManager fragmentManager;
     protected ReceiveFragment receiveFragment; // accessed via unittest
     protected TransmitFragment transmitFragment; // accessed via unittest
+    protected SettingsFragment settingsFragment; // accessed via unittest
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +56,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         fragmentManager = getFragmentManager();
         transmitFragment = new TransmitFragment();
         receiveFragment = new ReceiveFragment();
+        settingsFragment = new SettingsFragment();
 
         if (savedInstanceState == null) {
             Intent startingIntent = getIntent();
@@ -91,6 +94,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if (id == R.id.action_settings) {
+            showFragment(settingsFragment);
             return true;
         }
 
