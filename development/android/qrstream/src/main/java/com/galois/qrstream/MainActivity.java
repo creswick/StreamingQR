@@ -11,6 +11,9 @@ import android.database.Cursor;
 import android.gesture.Gesture;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.util.Log;
@@ -41,6 +44,8 @@ import java.util.List;
 
 public class MainActivity extends CommonActivity implements View.OnTouchListener {
 
+    private static final String HANDLER_TOKEN_HIDE_UI = "hide_ui";
+    private static final int HIDE_UI_DELAY_MS = 3000;
     private FragmentManager fragmentManager;
     protected ReceiveFragment receiveFragment; // accessed via unittest
     protected TransmitFragment transmitFragment; // accessed via unittest
@@ -95,6 +100,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         int id = item.getItemId();
         if (id == R.id.action_settings) {
             showFragment(settingsFragment);
+            getWindow().getDecorView().getHandler().removeCallbacksAndMessages(HANDLER_TOKEN_HIDE_UI);
             return true;
         }
 
@@ -167,12 +173,13 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
 
     private void showUI() {
         getActionBar().show();
-        getWindow().getDecorView().getHandler().postDelayed(new Runnable() {
+        Handler windowHandler = getWindow().getDecorView().getHandler();
+        getWindow().getDecorView().getHandler().postAtTime(new Runnable() {
             @Override
             public void run() {
                 MainActivity.this.hideUI();
             }
-        }, 3000);
+        }, HANDLER_TOKEN_HIDE_UI, SystemClock.uptimeMillis()+HIDE_UI_DELAY_MS);
     }
 
     private void hideUI() {
