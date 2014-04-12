@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <string-array name="qr_density">
+        <item>Low</item>
+        <item>Medium</item>
+        <item>High</item>
+    </string-array>
+    <string-array name="qr_density_values">
+        <item>10</item>
+        <item>25</item>
+        <item>40</item>
+    </string-array>
+
+    <string-array name="frame_time">
+        <item>100ms</item>
+        <item>500ms</item>
+        <item>1000ms</item>
+    </string-array>
+    <string-array name="frame_time_values">
+        <item>100</item>
+        <item>500</item>
+        <item>1000</item>
+    </string-array>
+
+    <string-array name="error_correction">
+        <item>Low</item>
+        <item>Medium</item>
+        <item>High</item>
+    </string-array>
+    <string-array name="error_correction_values">
+        <item>1</item>
+        <item>5</item>
+        <item>10</item>
+    </string-array>
+
+    <string-array name="frame_population">
+        <item>1</item>
+        <item>2</item>
+        <item>4</item>
+    </string-array>
+    <string-array name="frame_population_values">
+        <item>1</item>
+        <item>2</item>
+        <item>4</item>
+    </string-array>
+</resources>

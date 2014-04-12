@@ -5,4 +5,13 @@
     <string name="transmit_sendButtonTxt">Send</string>
     <string name="transmit_pauseButtonTxt">Pause</string>
     <string name="transmit_chunkTxt">, chunk:</string>
+
+    <string name="preference_title_qr_density">QR Code Density</string>
+    <string name="preference_description_qr_density">Set the relative capacity of each QR code used</string>
+    <string name="preference_title_frame_time">Frame time</string>
+    <string name="preference_description_frame_time">Time used to display each frame</string>
+    <string name="preference_title_error_correction">Error Correction</string>
+    <string name="preference_description_error_correction">Amount of redundancy in each QR code</string>
+    <string name="preference_title_frame_population">Frame Population</string>
+    <string name="preference_description_frame_population">Number of QR codes per frame</string>
 </resources>
