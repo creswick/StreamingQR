@@ -1,5 +1,7 @@
 package com.galois.qrstream.qrpipe;
 
+import java.io.ByteArrayInputStream;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -57,6 +59,28 @@ public class Receive {
     this.progress = progress;
   }
 
+  /**
+   * Decode an object from an incoming stream of QR codes.
+   * 
+   * @param qrCodeImages
+   * @return
+   * @throws ReceiveException
+   */
+  public Object decodeQRSerializable(BlockingQueue<YuvImage> qrCodeImages)
+     throws ReceiveException {
+    byte[] buf = decodeQRCodes(qrCodeImages);
+    
+    ByteArrayInputStream bais = new ByteArrayInputStream(buf);
+
+    try {
+      ObjectInputStream ois = new ObjectInputStream(bais);
+      Object res = ois.readObject();
+      return res;
+    } catch (Exception e) {
+      throw new ReceiveException(e);
+    }
+  }
+  
   /**
    * Detects and decodes QR codes found within a collection of
    * YUV images. Designed to interface with QRStream Android application.

@@ -8,11 +8,15 @@ import java.io.Serializable;
 public class Job implements Serializable {
     private String title;
     private byte[] data;
+    private String mimeType;
 
-    public Job(String title, byte[] data) {
+    public Job(String title, byte[] data, String mimeType) {
         this.title = title;
         this.data = data;
+        this.mimeType = mimeType;
     }
+
+    public String getMimeType() { return mimeType; }
 
     public String getTitle() {
         return title;
@@ -20,5 +24,9 @@ public class Job implements Serializable {
 
     public byte[] getData() {
         return data;
+    }
+
+    public String toString() {
+        return title+": "+mimeType;
     }
 }

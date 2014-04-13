@@ -88,7 +88,7 @@ public class TransmitFragment extends Fragment {
         Bundle bundle = getArguments();
         if(bundle != null) {
             job = (Job) bundle.getSerializable("job");
-            transmitData(job.getTitle(), job.getData());
+            transmitData(job);
             nextFrame();
         }
     }
@@ -98,12 +98,14 @@ public class TransmitFragment extends Fragment {
         super.onResume();
     }
 
-    private void transmitData(String title, byte[] bytes) {
+    private void transmitData(Job job) {
+        byte[] bytes = job.getData();
+        String title = job.getTitle();
         Log.i(Constants.APP_TAG, "Trying to create and transmit QR codes");
         Log.i(Constants.APP_TAG, "transmitData title=" + title + " byte count=" + bytes.length);
         updateUi(title);
         try {
-            qrCodes = transmitter.encodeQRCodes(bytes);
+            qrCodes = transmitter.encodeQRCodes(job);
             qrCodeIter = qrCodes.iterator();
             count = 0;
             Log.i(Constants.APP_TAG, "transmitData(), Successful creation of QR codes");
@@ -162,8 +164,8 @@ public class TransmitFragment extends Fragment {
                 // If not invoked via "ShareAs" API, then send an random
                 // alphanumeric string, to test the transmission.
                 if (qrCodeIter == null) {
-                    String input = RandomStringUtils.randomAlphanumeric(20);
-                    transmitData(input, input.getBytes(Charsets.ISO_8859_1));
+                    // String input = RandomStringUtils.randomAlphanumeric(20);
+                    // transmitData(input, input.getBytes(Charsets.ISO_8859_1));
                 }
                 if (qrCodeIter != null) {
                     sendButton.setText(getString(R.string.transmit_pauseButtonTxt));

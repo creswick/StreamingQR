@@ -145,7 +145,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                                         previewSize.width,
                                         Constants.RECEIVE_TIMEOUT_MS,
                                         progress);
-            decodeThread = new DecodeThread(receiveQrpipe, frameQueue);
+            decodeThread = new DecodeThread(getActivity(), receiveQrpipe, frameQueue);
             decodeThread.start();
         } else {
             Log.e(Constants.APP_TAG, "Error: DecodeThread already running");
