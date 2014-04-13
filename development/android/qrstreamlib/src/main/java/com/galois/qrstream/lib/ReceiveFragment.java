@@ -14,17 +14,19 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.view.ViewGroup;
-import android.widget.Button;
 
 import com.galois.qrstream.image.YuvImage;
 import com.galois.qrstream.qrpipe.IProgress;
 import com.galois.qrstream.qrpipe.Receive;
 import com.galois.qrstream.qrpipe.State;
+import com.google.common.collect.Queues;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * Created by donp on 2/11/14.
@@ -32,12 +34,10 @@ import java.util.concurrent.ArrayBlockingQueue;
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
     private SurfaceView camera_window;
-    private View rootView;
-    private LinearLayout ll;
 
+    private LinearLayout ll;
     private Camera camera;
-    private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(1);
-    private Receive receiveQrpipe;
+    private final BlockingQueue<YuvImage> frameQueue = Queues.newArrayBlockingQueue(1);
     private DecodeThread decodeThread;
     private final Progress progress = new Progress();
 
@@ -45,9 +45,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        rootView = inflater.inflate(R.layout.receive_fragment, container, false);
+    public @Nullable View onCreateView(@NotNull LayoutInflater inflater,
+                                       @NotNull ViewGroup container,
+                                       @NotNull Bundle savedInstanceState) {
+        View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
+        if (null == rootView) {
+           Log.e(Constants.APP_TAG, "Could not inflate root view for ReceiveFragment");
+           return null;
+        }
         ll = (LinearLayout)rootView.findViewById(R.id.receive_layout);
         ll.setKeepScreenOn(true);
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
@@ -99,7 +104,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera.release();
     }
 
-    private byte[] makePreviewBuffer(Camera.Parameters params) {
+    private @NotNull byte[] makePreviewBuffer(@NotNull Camera.Parameters params) {
         Camera.Size size = params.getPreviewSize();
         int bitsPerPixel = ImageFormat.getBitsPerPixel(params.getPreviewFormat());
         int byteSize = size.height * size.width * bitsPerPixel/8;
@@ -141,7 +146,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     public void startPipe(Camera.Parameters params, IProgress progress) {
         if(decodeThread == null) {
             Camera.Size previewSize = params.getPreviewSize();
-            receiveQrpipe = new Receive(previewSize.height,
+            Receive receiveQrpipe = new Receive(previewSize.height,
                                         previewSize.width,
                                         Constants.RECEIVE_TIMEOUT_MS,
                                         progress);
@@ -156,7 +161,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         // todo: notify the qr code receiver to stop
     }
 
-    public class DisplayUpdate extends Handler {
+    private class DisplayUpdate extends Handler {
         private final Activity activity;
 
         public DisplayUpdate(Activity activity) {

@@ -7,7 +7,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.graphics.Bitmap;
@@ -21,9 +20,6 @@ import java.util.Iterator;
 import com.galois.qrstream.qrpipe.Transmit;
 import com.galois.qrstream.qrpipe.TransmitException;
 import com.galois.qrstream.image.BitmapImage;
-import com.google.common.base.Charsets;
-import org.apache.commons.lang.RandomStringUtils;
-
 
 /**
  * Created by donp on 2/11/14.
@@ -34,7 +30,6 @@ public class TransmitFragment extends Fragment {
     private ImageView send_window;
     private Button sendButton;
     private Transmit transmitter;
-    private Job job;
 
     // Allows us to step through QR code transmission
     private Iterable<BitmapImage> qrCodes;
@@ -87,7 +82,7 @@ public class TransmitFragment extends Fragment {
     private void sendJob() {
         Bundle bundle = getArguments();
         if(bundle != null) {
-            job = (Job) bundle.getSerializable("job");
+            Job job = (Job) bundle.getSerializable("job");
             transmitData(job);
             nextFrame();
         }

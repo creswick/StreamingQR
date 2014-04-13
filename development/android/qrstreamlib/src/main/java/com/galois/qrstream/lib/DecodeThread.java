@@ -9,6 +9,8 @@ import com.galois.qrstream.qrpipe.Receive;
 import com.galois.qrstream.qrpipe.ReceiveException;
 import com.google.common.base.Charsets;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -57,7 +59,7 @@ public class DecodeThread extends Thread {
         }
     }
 
-    private URI storeData(Job message) throws IOException {
+    private @NotNull URI storeData(Job message) throws IOException {
         File cacheDir = context.getCacheDir();
         File tmpFile = File.createTempFile("qrstream","", cacheDir);
 
