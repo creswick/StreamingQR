@@ -139,16 +139,24 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     }
 
     public void startPipe(Camera.Parameters params, IProgress progress) {
+        if(decodeThread != null) {
+            if(decodeThread.isAlive()) {
+                Log.e(Constants.APP_TAG, "startPipe Error: DecodeThread already running");
+            } else {
+                Log.e(Constants.APP_TAG, "startPipe Error: DecodeThread dead. restarting.");
+                decodeThread = null;
+            }
+        }
+
         if(decodeThread == null) {
+            Log.e(Constants.APP_TAG, "startPipe: DecodeThread starting");
             Camera.Size previewSize = params.getPreviewSize();
             receiveQrpipe = new Receive(previewSize.height,
-                                        previewSize.width,
-                                        Constants.RECEIVE_TIMEOUT_MS,
-                                        progress);
+                    previewSize.width,
+                    Constants.RECEIVE_TIMEOUT_MS,
+                    progress);
             decodeThread = new DecodeThread(receiveQrpipe, frameQueue);
             decodeThread.start();
-        } else {
-            Log.e(Constants.APP_TAG, "Error: DecodeThread already running");
         }
     }
 
