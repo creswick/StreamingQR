@@ -13,10 +13,9 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.view.ViewGroup;
-import android.widget.Button;
 
 import com.galois.qrstream.image.YuvImage;
 import com.galois.qrstream.qrpipe.IProgress;
@@ -33,7 +32,10 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
     private SurfaceView camera_window;
     private View rootView;
-    private LinearLayout ll;
+    private RelativeLayout rootLayout;
+    private ProgressBar progressBar;
+    private int progressStatus = 0;
+    private Handler progressHandler = new Handler();
 
     private Camera camera;
     private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(1);
@@ -48,9 +50,11 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         rootView = inflater.inflate(R.layout.receive_fragment, container, false);
-        ll = (LinearLayout)rootView.findViewById(R.id.receive_layout);
-        ll.setKeepScreenOn(true);
+        rootLayout = (RelativeLayout)rootView.findViewById(R.id.receive_layout);
+        rootLayout.setKeepScreenOn(true);
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
+        progressBar = (ProgressBar) rootView.findViewById(R.id.progressbar);
+        progressBar.setProgress(progressStatus);
         return rootView;
     }
 
@@ -171,7 +175,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    //setText(params.getString("message"));
+                Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress "+progressStatus);
+                progressBar.incrementProgressBy(10);
                 }
             });
 
@@ -180,7 +185,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                     @Override
                     public void run() {
                         stopPipe();
-                        ll.removeView(camera_window);
+                        rootLayout.removeView(camera_window);
                     }
                 });
             }
