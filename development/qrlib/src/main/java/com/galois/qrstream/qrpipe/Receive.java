@@ -67,6 +67,7 @@ public class Receive {
    * images to complete the data transmission.
    */
   public byte[] decodeQRCodes (BlockingQueue<YuvImage> qrCodeImages) throws ReceiveException {
+    System.out.println("decodeQRCodes: OUTTEST");
     // The received data and track transmission status.
     DecodedMessage message = new DecodedMessage(progress);
     while(true) {
@@ -74,6 +75,7 @@ public class Receive {
         // if we receive one, try to read the QR code contained within it.
         YuvImage img = null;
         try {
+          System.out.print("decodeQRCodes: polling queue for "+milliseconds);
           img = qrCodeImages.poll(milliseconds,TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
           // Interrupted while waiting for image.
@@ -88,7 +90,7 @@ public class Receive {
         if (img == null) {
           // Communicate failed state to progress indicator.
           message.setFailedDecoding();
-          throw new ReceiveException("Transmission failed before message could be read.");
+          throw new ReceiveException("Transmission failed before message could be read in "+milliseconds+"ms");
         }
         try {
           // TODO Try improving performance by spawning new thread run each image decoding
@@ -103,6 +105,7 @@ public class Receive {
           continue;
         } catch (ReceiveException e) {
           // Encountered invalid QR code during parsing, try next image.
+          message.setFailedFrame();
           continue;
         }
     }

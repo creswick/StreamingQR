@@ -44,6 +44,21 @@ public class DecodedMessage {
   }
 
   /**
+   * Mark frame decode failure. Signal the receiver to send another frame.
+   */
+  public void setFailedFrame() {
+    DecodeState failed;
+
+    // Possible for transmission to fail before decodeState is initialized.
+    if (decodeState == null) {
+      failed = new DecodeState(1);
+    }else{
+      failed = decodeState;
+    }
+    decodeProgress.changeState(failed);
+  }
+
+  /**
    * Mark transmission failure. Expect no more QR codes to decode.
    */
   public void setFailedDecoding() {
