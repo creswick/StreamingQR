@@ -39,6 +39,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(1);
     private Receive receiveQrpipe;
     private DecodeThread decodeThread;
+    private Preview previewCallback;
     private final Progress progress = new Progress();
 
     public ReceiveFragment() {
@@ -60,9 +61,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera = Camera.open();
         setCameraDisplayOrientation(camera);
         Camera.Parameters params = camera.getParameters();
-        Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
-        camera.addCallbackBuffer(makePreviewBuffer(params));
-        camera.setPreviewCallbackWithBuffer(previewCallback);
+        previewCallback = new Preview(frameQueue, params.getPreviewSize());
+        camera.setOneShotPreviewCallback(previewCallback);
         camera_window.getHolder().addCallback(this);
         DisplayUpdate displayUpdate = new DisplayUpdate(getActivity());
         progress.setStateHandler(displayUpdate);
@@ -179,7 +179,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    //setText(params.getString("message"));
+                    Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage runOnUi reset callback");
+                    camera.setOneShotPreviewCallback(previewCallback);
                 }
             });
 
