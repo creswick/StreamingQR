@@ -118,6 +118,7 @@ public class Receive {
           // TODO Try improving performance by spawning new thread run each image decoding
           Result res = decodeSingleQRCode(img.getYuvData());
           State s = saveMessageAndUpdateProgress(res, message);
+          
           if(s == State.Final) {
             System.out.println("decodeQRCodes: Hit final state");
             break;

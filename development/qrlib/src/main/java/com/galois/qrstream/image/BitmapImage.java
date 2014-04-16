@@ -50,4 +50,12 @@ public class BitmapImage {
     }
     return m.get(x, y);
   }
+
+  /**
+   * BitMatrix accessor, currently only used for testing, which is why it is 
+   * protected.
+   */
+  protected BitMatrix getBitMatrix() {
+    return m;
+  }
 }
