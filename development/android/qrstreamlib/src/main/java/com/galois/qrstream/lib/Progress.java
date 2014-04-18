@@ -3,6 +3,7 @@ package com.galois.qrstream.lib;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 import com.galois.qrstream.qrpipe.DecodeState;
 import com.galois.qrstream.qrpipe.IProgress;
@@ -23,6 +24,14 @@ public class Progress implements IProgress {
         Bundle changeMsg = new Bundle();
         changeMsg.putString("message", state.toString());
         changeMsg.putSerializable("state", state.getState());
+
+        Log.d(Constants.APP_TAG, "changeState state = " + state.getState());
+        if(state.getState() == State.Intermediate) {
+            int total_frame_count = state.getCapacity();
+            int percent_complete = (int)(state.getData().cardinality() / (float)total_frame_count)*100;
+            changeMsg.putSerializable("percent_complete", percent_complete);
+            Log.d(Constants.APP_TAG, "changeState handler, total " + total_frame_count + " ordinal " + state.getState().ordinal());
+        }
 
         Message stateChange = Message.obtain();
         stateChange.setData(changeMsg);

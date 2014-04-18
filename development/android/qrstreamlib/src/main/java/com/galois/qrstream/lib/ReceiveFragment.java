@@ -33,7 +33,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private View rootView;
     private RelativeLayout rootLayout;
     private ProgressBar progressBar;
-    private int progressStatus = 0;
     private Handler progressHandler = new Handler();
 
     private Camera camera;
@@ -53,7 +52,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         rootLayout.setKeepScreenOn(true);
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
         progressBar = (ProgressBar) rootView.findViewById(R.id.progressbar);
-        progressBar.setProgress(progressStatus);
         return rootView;
     }
 
@@ -134,6 +132,15 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     }
 
     public void startPipe(Camera.Parameters params, IProgress progress) {
+        if(decodeThread != null) {
+            if(decodeThread.isAlive()) {
+                Log.e(Constants.APP_TAG, "Error: DecodeThread already running");
+            } else {
+                // drop dead thread
+                decodeThread = null;
+            }
+        }
+
         if(decodeThread == null) {
             Camera.Size previewSize = params.getPreviewSize();
             receiveQrpipe = new Receive(previewSize.height,
@@ -142,8 +149,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                                         progress);
             decodeThread = new DecodeThread(receiveQrpipe, frameQueue);
             decodeThread.start();
-        } else {
-            Log.e(Constants.APP_TAG, "Error: DecodeThread already running");
         }
     }
 
@@ -160,16 +165,20 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
         @Override
         public void handleMessage(Message msg) {
-            Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage");
             final Bundle params = msg.getData();
             State state = (State)params.getSerializable("state");
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress "+progressStatus);
-                progressBar.incrementProgressBy(10);
-                }
-            });
+            Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
+
+            if(state == State.Intermediate) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        int progressStatus = params.getInt("percent_complete");
+                        Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
+                        progressBar.incrementProgressBy(10);
+                    }
+                });
+            }
 
             if(state == State.Final) {
                 activity.runOnUiThread(new Runnable() {
