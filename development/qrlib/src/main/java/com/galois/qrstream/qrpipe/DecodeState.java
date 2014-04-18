@@ -117,12 +117,23 @@ public class DecodeState {
 		return Ints.toArray(missingChunks);
 	}
 
-        /**
-         * Returns the capacity (BitSet capacity is rounded up to nearest 64)
-         */
-        public int getCapacity() {
-	    return capacity;
-        }
+	/**
+	 * Returns the capacity
+	*/
+	public int getCapacity() {
+    // BitSet capacity is rounded up to nearest 64, that's why
+    // we do not want to return data.getCapacity()
+		return this.capacity;
+	}
+
+	/**
+	 * Returns the number of QR codes that have been received and decoded
+	*/
+	public int getTotalFramesDecoded() {
+		//Note, this call will take O(n) time.
+		return data.cardinality();
+	}
+
 
 	/**
 	 * Returns true when all of the chunks of data have been
