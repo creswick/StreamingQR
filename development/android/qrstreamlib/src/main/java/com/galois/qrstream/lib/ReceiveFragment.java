@@ -2,7 +2,6 @@ package com.galois.qrstream.lib;
 
 import android.app.Activity;
 import android.app.Fragment;
-import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
@@ -65,8 +64,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         setCameraDisplayOrientation(camera);
         Camera.Parameters params = camera.getParameters();
         Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
-        camera.addCallbackBuffer(makePreviewBuffer(params));
-        camera.setPreviewCallbackWithBuffer(previewCallback);
+        camera.setPreviewCallback(previewCallback);
         camera_window.getHolder().addCallback(this);
         DisplayUpdate displayUpdate = new DisplayUpdate(getActivity());
         progress.setStateHandler(displayUpdate);
@@ -101,13 +99,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera.stopPreview();
         camera.setPreviewCallback(null);
         camera.release();
-    }
-
-    private byte[] makePreviewBuffer(Camera.Parameters params) {
-        Camera.Size size = params.getPreviewSize();
-        int bitsPerPixel = ImageFormat.getBitsPerPixel(params.getPreviewFormat());
-        int byteSize = size.height * size.width * bitsPerPixel/8;
-        return new byte[byteSize];
     }
 
     public void setCameraDisplayOrientation(android.hardware.Camera camera) {
