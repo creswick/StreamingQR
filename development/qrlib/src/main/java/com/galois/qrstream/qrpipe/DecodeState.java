@@ -117,6 +117,13 @@ public class DecodeState {
 		return Ints.toArray(missingChunks);
 	}
 
+        /**
+         * Returns the capacity (BitSet capacity is rounded up to nearest 64)
+         */
+        public int getCapacity() {
+	    return capacity;
+        }
+
 	/**
 	 * Returns true when all of the chunks of data have been
 	 * received and false otherwise.
