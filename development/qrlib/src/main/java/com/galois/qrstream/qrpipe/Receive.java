@@ -67,7 +67,6 @@ public class Receive {
    * images to complete the data transmission.
    */
   public byte[] decodeQRCodes (BlockingQueue<YuvImage> qrCodeImages) throws ReceiveException {
-    System.out.println("decodeQRCodes: OUTTEST");
     // The received data and track transmission status.
     DecodedMessage message = new DecodedMessage(progress);
     while(true) {
@@ -75,12 +74,13 @@ public class Receive {
         // if we receive one, try to read the QR code contained within it.
         YuvImage img = null;
         try {
-          System.out.print("decodeQRCodes: polling queue for "+milliseconds);
+          System.out.println("decodeQRCodes: polling queue for "+milliseconds);
           img = qrCodeImages.poll(milliseconds,TimeUnit.MILLISECONDS);
+          System.out.println("decodeQRCodes: frame received");
         } catch (InterruptedException e) {
           // Interrupted while waiting for image.
           // Log interruption for now and try waiting for another image.
-          System.out.print("decodeQRCodes: Encountered InterruptedException");
+          System.out.println("decodeQRCodes: Encountered InterruptedException");
           if (e.getMessage() != null) {
             System.out.print(e.getMessage());
           }
@@ -89,10 +89,12 @@ public class Receive {
         }
         if (img == null) {
           // Communicate failed state to progress indicator.
+	  System.out.println("decodeQRcodes img == null");
           message.setFailedDecoding();
           throw new ReceiveException("Transmission failed before message could be read in "+milliseconds+"ms");
         }
         try {
+	  System.out.println("decodeQRcodes attempting singleDecode");
           // TODO Try improving performance by spawning new thread run each image decoding
           Result res = decodeSingleQRCode(img.getYuvData());
           State s = saveMessageAndUpdateProgress(res, message);
@@ -102,6 +104,7 @@ public class Receive {
           }
         } catch (NotFoundException e) {
           // Unable to detect QR in this image, try next one.
+          message.setFailedFrame();
           continue;
         } catch (ReceiveException e) {
           // Encountered invalid QR code during parsing, try next image.

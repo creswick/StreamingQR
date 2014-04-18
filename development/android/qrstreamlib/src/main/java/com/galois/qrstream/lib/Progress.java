@@ -23,7 +23,11 @@ public class Progress implements IProgress {
         Bundle changeMsg = new Bundle();
         changeMsg.putString("message", state.toString());
         changeMsg.putSerializable("state", state.getState());
-
+        int total_frame_count = state.getData().length();
+        if(total_frame_count > 0) {
+            int percent_complete = state.getState().ordinal() / total_frame_count;
+            changeMsg.putSerializable("percent_complete", percent_complete);
+        }
         Message stateChange = Message.obtain();
         stateChange.setData(changeMsg);
         handler.dispatchMessage(stateChange);

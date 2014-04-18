@@ -55,6 +55,7 @@ public class DecodedMessage {
     }else{
       failed = decodeState;
     }
+    System.out.println("setFailedFrame, signaling IProgress");
     decodeProgress.changeState(failed);
   }
 

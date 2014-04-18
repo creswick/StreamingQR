@@ -36,7 +36,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private LinearLayout ll;
 
     private Camera camera;
-    private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(1);
+    private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(5);
     private Receive receiveQrpipe;
     private DecodeThread decodeThread;
     private Preview previewCallback;
@@ -56,7 +56,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     }
 
     @Override
-    public void onResume(){
+    public void onResume() {
+        Log.d(Constants.APP_TAG, "ReceiveFragment onResume");
         super.onResume();
         camera = Camera.open();
         setCameraDisplayOrientation(camera);
