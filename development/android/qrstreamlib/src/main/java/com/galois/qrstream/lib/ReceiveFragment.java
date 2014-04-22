@@ -175,7 +175,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                     public void run() {
                         int progressStatus = params.getInt("percent_complete");
                         Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
-                        progressBar.incrementProgressBy(10);
+                        progressBar.setProgress(progressStatus);
                     }
                 });
             }
@@ -184,6 +184,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        progressBar.setProgress(progressBar.getMax());
                         stopPipe();
                         rootLayout.removeView(camera_window);
                     }
