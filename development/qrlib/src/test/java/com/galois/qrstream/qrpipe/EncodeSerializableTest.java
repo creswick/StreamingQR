@@ -6,6 +6,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.junit.Test;
@@ -16,6 +17,7 @@ import org.junit.runners.Parameterized.Parameters;
 import com.galois.qrstream.image.BitmapImage;
 import com.galois.qrstream.image.ImageUtils;
 import com.google.common.collect.Lists;
+import com.google.zxing.DecodeHintType;
 
 import static com.galois.qrstream.qrpipe.TestUtils.nextNatural;
 
@@ -113,11 +115,28 @@ public class EncodeSerializableTest {
   @Test
   public void test() throws TransmitException, ReceiveException {
     Transmit tx = new Transmit(1024, 1024);
-    Receive rx  = new Receive(1024, 1024, 10000, new EchoProgress(name));
+    Receive rx  = new Receive(1024, 1024, 500, new EchoProgress(name));
+    // ZXing can incorrectly identify black blobs in image as finder
+    // square and render it invalid code: https://code.google.com/p/zxing/issues/detail?id=1262
+    // The suggestion was to tell ZXing when you just have QR code in image and nothing else.
+    Map<DecodeHintType, Object> hints = Receive.getDecodeHints();
+    hints.put(DecodeHintType.PURE_BARCODE, Boolean.TRUE);
+    hints.remove(DecodeHintType.TRY_HARDER);
     
     Iterable<BitmapImage> codes = tx.encodeQRCodes(expected);
-    Object acutal = rx.decodeQRSerializable(ImageUtils.toYuvQueue(codes));
-    
-    assertEquals("Round-trip failed.", expected, acutal);
+    Object actual = null;
+    try {
+      actual = rx.decodeQRSerializable(ImageUtils.toYuvQueue(codes));
+    }catch (ReceiveException e) {
+      System.err.println("Could not decode with PURE_BARCODE=TRUE");
+      hints.put(DecodeHintType.PURE_BARCODE, Boolean.FALSE);
+      try {
+        actual = rx.decodeQRSerializable(ImageUtils.toYuvQueue(codes));
+      } catch (ReceiveException e1) {
+        System.err.println("Could not decode with PURE_BARCODE=FALSE");
+      }
+      throw e;
+    }
+    assertEquals("Round-trip failed.", expected, actual);    
   }
 }
