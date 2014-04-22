@@ -29,9 +29,9 @@ public class Progress implements IProgress {
         if(state.getState() == State.Intermediate) {
             int total_frame_count = state.getCapacity();
             int num_frames_decoded = state.getTotalFramesDecoded();
-            int percent_complete = (int)(num_frames_decode / (float)total_frame_count)*100;
+            int percent_complete = (int)((num_frames_decoded / (float)total_frame_count)*100);
             changeMsg.putSerializable("percent_complete", percent_complete);
-            Log.d(Constants.APP_TAG, "changeState handler, total " + total_frame_count + " received " + num_frames_decoded);
+            Log.d(Constants.APP_TAG, "changeState handler, total " + total_frame_count + " received " + num_frames_decoded + " percent "+percent_complete);
         }
 
         Message stateChange = Message.obtain();
