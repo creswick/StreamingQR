@@ -70,7 +70,7 @@ public class SerializableRoundTripTest {
     
     public TestSerializable(byte[] data) {
       super();
-      this.data = data;
+      this.data = data.clone();
     }
 
     @Override
@@ -108,6 +108,7 @@ public class SerializableRoundTripTest {
    */
   public static class EchoProgress implements IProgress {
     
+    @SuppressWarnings("unused")
     private String id;
     
     public EchoProgress(String id) {
@@ -116,9 +117,9 @@ public class SerializableRoundTripTest {
     
     @Override
     public void changeState(DecodeState state) {
-      System.out.println(this.id + " " + state.getState() + ": "
-          + state.getData().cardinality()
-          +"/"+state.getCapacity());
+//      System.out.println(this.id + " " + state.getState() + ": "
+//          + state.getData().cardinality()
+//          +"/"+state.getCapacity());
     }
   };
 
@@ -170,7 +171,7 @@ public class SerializableRoundTripTest {
           System.err.println("Data did not round-trip: seed="+seed+" Object count="+num);
           errors++;
         }
-      } catch (ReceiveException | TransmitException e) {
+      } catch (Exception e) {
         System.err.println("Exception during round-trip: seed="+seed+" Object count="+num);
         e.printStackTrace();
         errors++;
