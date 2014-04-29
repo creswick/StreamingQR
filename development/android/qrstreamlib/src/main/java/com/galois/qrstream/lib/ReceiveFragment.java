@@ -14,15 +14,19 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
+import android.widget.LinearLayout;
 import android.view.ViewGroup;
 
 import com.galois.qrstream.image.YuvImage;
 import com.galois.qrstream.qrpipe.IProgress;
 import com.galois.qrstream.qrpipe.Receive;
 import com.galois.qrstream.qrpipe.State;
+import com.google.common.collect.Queues;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 /**
@@ -31,13 +35,14 @@ import java.util.concurrent.BlockingQueue;
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
     private SurfaceView camera_window;
-    private View rootView;
+
     private RelativeLayout rootLayout;
     private ProgressBar progressBar;
 
+    private LinearLayout ll;
     private Camera camera;
-    private final BlockingQueue<YuvImage> frameQueue = new ArrayBlockingQueue<YuvImage>(1);
     private Receive receiveQrpipe;
+    private final BlockingQueue<YuvImage> frameQueue = Queues.newArrayBlockingQueue(1);
     private DecodeThread decodeThread;
 
     /**
@@ -85,11 +90,13 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        rootView = inflater.inflate(R.layout.receive_fragment, container, false);
+    public @Nullable View onCreateView(@NotNull LayoutInflater inflater,
+                                       ViewGroup container,
+                                       @NotNull Bundle savedInstanceState) {
+        View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
         rootLayout = (RelativeLayout)rootView.findViewById(R.id.receive_layout);
         rootLayout.setKeepScreenOn(true);
+
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
         progressBar = (ProgressBar) rootView.findViewById(R.id.progressbar);
         return rootView;
@@ -162,13 +169,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera.setDisplayOrientation(result);
     }
 
-    public static class CaptureClick implements View.OnClickListener{
-        @Override
-        public void onClick(View v) {
-            Log.d("qstream", "Capture Pushed");
-        }
-    }
-
     public void startPipe(Camera.Parameters params, IProgress progress) {
         if(decodeThread != null) {
             if(decodeThread.isAlive()) {
@@ -181,11 +181,11 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
         if(decodeThread == null) {
             Camera.Size previewSize = params.getPreviewSize();
-            receiveQrpipe = new Receive(previewSize.height,
+            Receive receiveQrpipe = new Receive(previewSize.height,
                                         previewSize.width,
                                         Constants.RECEIVE_TIMEOUT_MS,
                                         progress);
-            decodeThread = new DecodeThread(receiveQrpipe, frameQueue);
+            decodeThread = new DecodeThread(getActivity(), receiveQrpipe, frameQueue);
             decodeThread.start();
         }
     }
@@ -193,5 +193,4 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     public void stopPipe() {
         // todo: notify the qr code receiver to stop
     }
-
 }

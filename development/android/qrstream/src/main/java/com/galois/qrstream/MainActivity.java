@@ -158,7 +158,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
                 bytes = body.getBytes();
             }
         }
-        return new Job(name, bytes);
+        return new Job(name, bytes, type);
     }
 
     private void setupUI() {

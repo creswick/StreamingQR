@@ -6,6 +6,8 @@ import android.util.Log;
 
 import com.galois.qrstream.image.YuvImage;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.Queue;
 
 /**
@@ -16,22 +18,23 @@ public class Preview implements Camera.PreviewCallback {
     private int height;
     private int width;
 
-    public Preview(Queue frames, Camera.Size size) {
+    public Preview(@NotNull Queue frames, @NotNull Camera.Size size) {
         setQueue(frames);
         setSize(size);
     }
 
-    public void setQueue(Queue frames) {
+    public void setQueue(@NotNull Queue frames) {
         this.frames = frames;
     }
 
-    public void setSize(Camera.Size size) {
+    public void setSize(@NotNull Camera.Size size) {
         this.height = size.height;
         this.width = size.width;
     }
 
     @Override
-    public void onPreviewFrame(byte[] data, Camera camera) {
+    public void onPreviewFrame(@NotNull byte[] data, @NotNull Camera camera) {
+        Log.v(Constants.APP_TAG, "previewFrame data "+data.length);
         YuvImage frame = new YuvImage(data, height, width);
         String fullFlag = "";
         if(frames.offer(frame) == false) {

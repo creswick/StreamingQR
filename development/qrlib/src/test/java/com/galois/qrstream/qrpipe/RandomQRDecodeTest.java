@@ -22,6 +22,9 @@ import com.google.common.collect.Lists;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 
+import static com.galois.qrstream.qrpipe.TestUtils.nextNatural;
+
+
 @Ignore("Ignore until OutOfMemory exception is resolved") @RunWith(Parameterized.class)
 public class RandomQRDecodeTest {
 
@@ -37,10 +40,6 @@ public class RandomQRDecodeTest {
     @Override
     public void changeState(DecodeState state) {
     }};
-
-  private static int nextNatural(Random r) {
-    return Math.abs(r.nextInt());
-  }
 
   @Parameters(name = "{0}")
   public static Collection<Object[]> setup() {
