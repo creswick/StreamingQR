@@ -203,15 +203,7 @@ public class SerializableRoundTripTest {
     Function<BitmapImage, YuvImage> rotateAddBg = compose(
         buffToYuv, compose( addBackground(sampleImage),
                             compose( rotate(3), toBufferedImage)));    
-    
-//    Iterable<BufferedImage> imgs = transform(tx.encodeQRCodes(expected),
-//        compose( addBackground(sampleImage), compose( rotate(3), toBufferedImage)));
-//    int i = 1;
-//    for (BufferedImage img : imgs) {
-//      ImageIO.write(img, "PNG", new File("/Users/creswick/tmp/testImg/"+i+".png"));
-//      i++;
-//    }
-//    
+
     // Now apply (lazily) the transformer to the incoming stream of BitmapImages
     // to get a stream of YuvImages we can extract QR codes from.
     Iterable<YuvImage> yuvCodes = concat(
