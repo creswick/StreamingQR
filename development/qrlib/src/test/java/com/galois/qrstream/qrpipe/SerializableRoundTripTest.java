@@ -47,7 +47,7 @@ public class SerializableRoundTripTest {
    * This is set based on rough estimations of the behavior of zxing at the time
    * this test was written.
    */
-  private static final double FAIL_LIMIT = 0.30;
+  private static final double FAIL_LIMIT = 0.40;
   
   private static final BufferedImage sampleImage;
   private static final BufferedImage whiteImage;
