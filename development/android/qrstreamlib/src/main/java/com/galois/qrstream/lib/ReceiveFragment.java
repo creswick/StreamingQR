@@ -139,7 +139,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     public static class CaptureClick implements View.OnClickListener{
         @Override
         public void onClick(View v) {
-            Log.d("qstream", "Capture Pushed");
+            Log.d(Constants.APP_TAG, "Capture Pushed");
         }
     }
 

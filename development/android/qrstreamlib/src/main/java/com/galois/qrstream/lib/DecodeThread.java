@@ -44,13 +44,18 @@ public class DecodeThread extends Thread {
             //String msg = new String(message, Charsets.ISO_8859_1);
             Log.w(Constants.APP_TAG, "DecodeThread heard " + message.toString());
 
-            URI dataLoc = storeData(message);
 
             Intent i = new Intent();
             i.setAction(Intent.ACTION_SEND);
             i.addCategory(Intent.CATEGORY_DEFAULT);
             i.setType(message.getMimeType());
+
+            // this should conditionally use a URI if the payload is too large.
+            URI dataLoc = storeData(message);
             i.putExtra(Intent.EXTRA_STREAM, dataLoc);
+
+            // TODO integrate with ZXing
+
             context.startActivity(Intent.createChooser(i, "Open with"));
         } catch(ReceiveException e) {
             Log.e(Constants.APP_TAG, "DecodeThread failed to read message. " + e.getMessage());
