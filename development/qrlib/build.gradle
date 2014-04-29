@@ -47,6 +47,9 @@ uploadArchives {
 }
 
 test {
+    minHeapSize = "128m"
+    maxHeapSize = "256m"
+
     testLogging.showStandardStreams = true
 
     // listen to events in the test execution lifecycle

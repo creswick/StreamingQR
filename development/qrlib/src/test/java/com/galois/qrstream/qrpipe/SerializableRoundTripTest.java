@@ -50,11 +50,13 @@ public class SerializableRoundTripTest {
   private static final BufferedImage sampleImage;
   private static final BufferedImage whiteImage;
   private static final long seed;
+  private static final Random rand;
   
   static {
     sampleImage = loadResourceImg("/samplePhoneImage.png");
     whiteImage = loadResourceImg("/white1500.png");
     seed = System.currentTimeMillis();
+    rand = new Random(seed);
   }
   
   /**
@@ -127,8 +129,6 @@ public class SerializableRoundTripTest {
     List<TestSerializable> data = Lists.newArrayList();
 
     // generate random data:
-    Random rand = new Random(seed);
-    
     for(int i = 0; i < count; i++ ){
       byte[] bytes = new byte[nextNatural(rand) % 1024];
       rand.nextBytes(bytes);
@@ -173,7 +173,7 @@ public class SerializableRoundTripTest {
         }
       } catch (Exception e) {
         System.err.println("Exception during round-trip: seed="+seed+" Object count="+num);
-        e.printStackTrace();
+        System.err.println(e.getMessage());
         errors++;
       } finally {
         num++;
