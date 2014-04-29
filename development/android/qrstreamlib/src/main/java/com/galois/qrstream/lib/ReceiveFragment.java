@@ -76,7 +76,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                     @Override
                     public void run() {
                         progressBar.setProgress(progressBar.getMax());
-                        stopPipe();
                         rootLayout.removeView(camera_window);
                     }
                 });
@@ -105,20 +104,27 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     @Override
     public void onResume(){
         super.onResume();
-        camera = Camera.open();
-        setCameraDisplayOrientation(camera);
-        Camera.Parameters params = camera.getParameters();
-        Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
-        camera.setPreviewCallback(previewCallback);
-        camera_window.getHolder().addCallback(this);
-        startPipe(params, progress);
+
+        try {
+            // TODO Camera.open() returns null if there is no back-facing camera.
+            camera = Camera.open();
+            setCameraDisplayOrientation(camera);
+            Camera.Parameters params = camera.getParameters();
+            Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
+            camera.setPreviewCallback(previewCallback);
+            camera_window.getHolder().addCallback(this);
+            startPipe(params, progress);
+        }catch (RuntimeException re) {
+            // TODO handle this more elegantly.
+            Log.e(Constants.APP_TAG, "Could not open camera.");
+        }
     }
 
     @Override
     public void onPause(){
         super.onPause();
-        camera.setPreviewCallback(null);
-        stopPipe();
+
+        disposeCamera();
     }
 
     @Override
@@ -139,9 +145,18 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
+        disposeCamera();
+    }
+
+    private void disposeCamera() {
+        if (null == camera) {
+            return;
+        }
         camera.stopPreview();
         camera.setPreviewCallback(null);
         camera.release();
+
+        camera = null;
     }
 
     public void setCameraDisplayOrientation(android.hardware.Camera camera) {
@@ -190,7 +205,4 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         }
     }
 
-    public void stopPipe() {
-        // todo: notify the qr code receiver to stop
-    }
 }
