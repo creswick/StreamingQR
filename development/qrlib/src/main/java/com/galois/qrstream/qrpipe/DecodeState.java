@@ -101,15 +101,6 @@ public class DecodeState {
 	}
 
 	/**
-	 * Get the expected number of entries.
-	 * 
-	 * @return The capacity of the underlying bitset.
-	 */
-	public int getCapacity() {
-	  return this.capacity;
-	}
-	
-	/**
 	 * Returns a list of integers identifying the chunks of data that are still
 	 * missing from the transmission.
 	 */
