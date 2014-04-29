@@ -23,6 +23,7 @@ import com.galois.qrstream.qrpipe.State;
 
 import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * Created by donp on 2/11/14.
@@ -33,13 +34,52 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private View rootView;
     private RelativeLayout rootLayout;
     private ProgressBar progressBar;
-    private Handler progressHandler = new Handler();
 
     private Camera camera;
-    private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(1);
+    private final BlockingQueue<YuvImage> frameQueue = new ArrayBlockingQueue<YuvImage>(1);
     private Receive receiveQrpipe;
     private DecodeThread decodeThread;
-    private final Progress progress = new Progress();
+
+    /**
+     * Handler to process progress updates from the IProgress implementation.
+     *
+     * This update handler is passed to the Progress object during the UI initialization.
+     */
+    private Handler displayUpdate = new Handler() {
+
+        @Override
+        public void handleMessage(Message msg) {
+            Activity activity = ReceiveFragment.this.getActivity();
+
+            final Bundle params = msg.getData();
+            State state = (State)params.getSerializable("state");
+            Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
+
+            if(state == State.Intermediate) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        int progressStatus = params.getInt("percent_complete");
+                        Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
+                        progressBar.setProgress(progressStatus);
+                    }
+                });
+            }
+
+            if(state == State.Final) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        progressBar.setProgress(progressBar.getMax());
+                        stopPipe();
+                        rootLayout.removeView(camera_window);
+                    }
+                });
+            }
+        }
+    };
+
+    private final Progress progress = new Progress(displayUpdate);
 
     public ReceiveFragment() {
     }
@@ -64,8 +104,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
         camera.setPreviewCallback(previewCallback);
         camera_window.getHolder().addCallback(this);
-        DisplayUpdate displayUpdate = new DisplayUpdate(getActivity());
-        progress.setStateHandler(displayUpdate);
         startPipe(params, progress);
     }
 
@@ -156,40 +194,4 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         // todo: notify the qr code receiver to stop
     }
 
-    public class DisplayUpdate extends Handler {
-        private final Activity activity;
-
-        public DisplayUpdate(Activity activity) {
-            this.activity = activity;
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            final Bundle params = msg.getData();
-            State state = (State)params.getSerializable("state");
-            Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
-
-            if(state == State.Intermediate) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        int progressStatus = params.getInt("percent_complete");
-                        Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
-                        progressBar.setProgress(progressStatus);
-                    }
-                });
-            }
-
-            if(state == State.Final) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        progressBar.setProgress(progressBar.getMax());
-                        stopPipe();
-                        rootLayout.removeView(camera_window);
-                    }
-                });
-            }
-        }
-    }
 }

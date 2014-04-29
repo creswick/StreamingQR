@@ -13,9 +13,9 @@ import com.galois.qrstream.qrpipe.State;
  * Created by donp on 3/5/14.
  */
 public class Progress implements IProgress {
-    private Handler handler;
+    private final Handler handler;
 
-    public void setStateHandler(Handler handler){
+    public Progress(Handler handler){
         this.handler = handler;
     }
 
@@ -31,7 +31,8 @@ public class Progress implements IProgress {
             int num_frames_decoded = state.getTotalFramesDecoded();
             int percent_complete = (int)((num_frames_decoded / (float)total_frame_count)*100);
             changeMsg.putSerializable("percent_complete", percent_complete);
-            Log.d(Constants.APP_TAG, "changeState handler, total " + total_frame_count + " received " + num_frames_decoded + " percent "+percent_complete);
+            Log.d(Constants.APP_TAG, "changeState handler, total " + total_frame_count +
+                    " received " + num_frames_decoded + " percent "+percent_complete);
         }
 
         Message stateChange = Message.obtain();
