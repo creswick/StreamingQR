@@ -47,8 +47,7 @@ uploadArchives {
 }
 
 test {
-    minHeapSize = "128m"
-    maxHeapSize = "256m"
+    maxHeapSize = "2048m"
 
     testLogging.showStandardStreams = true
 

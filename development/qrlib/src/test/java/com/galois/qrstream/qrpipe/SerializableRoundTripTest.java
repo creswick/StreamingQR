@@ -34,6 +34,8 @@ import com.google.zxing.DecodeHintType;
 
 public class SerializableRoundTripTest {
 
+  private static final int MAX_PAYLOAD_BYTES = 512;
+
   /**
    * The number of tests to create:
    */
@@ -45,7 +47,7 @@ public class SerializableRoundTripTest {
    * This is set based on rough estimations of the behavior of zxing at the time
    * this test was written.
    */
-  private static final double FAIL_LIMIT = 0.25;
+  private static final double FAIL_LIMIT = 0.30;
   
   private static final BufferedImage sampleImage;
   private static final BufferedImage whiteImage;
@@ -130,7 +132,7 @@ public class SerializableRoundTripTest {
 
     // generate random data:
     for(int i = 0; i < count; i++ ){
-      byte[] bytes = new byte[nextNatural(rand) % 1024];
+      byte[] bytes = new byte[nextNatural(rand) % MAX_PAYLOAD_BYTES];
       rand.nextBytes(bytes);
 
       data.add(new TestSerializable(bytes));
