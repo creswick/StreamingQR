@@ -15,6 +15,8 @@ import android.graphics.drawable.BitmapDrawable;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Iterator;
 
 import com.galois.qrstream.qrpipe.Transmit;
@@ -100,10 +102,14 @@ public class TransmitFragment extends Fragment {
         Log.i(Constants.APP_TAG, "transmitData title=" + title + " byte count=" + bytes.length);
         updateUi(title);
         try {
-            qrCodes = transmitter.encodeQRCodes(job);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            job.write(baos);
+            qrCodes = transmitter.encodeQRCodes(baos.toByteArray());
             qrCodeIter = qrCodes.iterator();
             count = 0;
             Log.i(Constants.APP_TAG, "transmitData(), Successful creation of QR codes");
+        } catch (IOException e) {
+            Log.e(Constants.APP_TAG, e.getMessage());
         } catch (TransmitException e) {
             Log.e(Constants.APP_TAG, e.getMessage());
         }

@@ -12,6 +12,7 @@ import com.google.common.base.Charsets;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -37,7 +38,8 @@ public class DecodeThread extends Thread {
     public void run(){
         Job message;
         try {
-            message = (Job)receiver.decodeQRSerializable(queue);
+            byte[] data = receiver.decodeQRCodes(queue);
+            message = Job.read(new ByteArrayInputStream(data));
             Log.w(Constants.APP_TAG, "DecodeThread read message of length: " + message.getData().length);
             // We'll  need to read MIME type later, but for now, we
             // assume we have text input.
@@ -57,6 +59,8 @@ public class DecodeThread extends Thread {
             // TODO integrate with ZXing
 
             context.startActivity(Intent.createChooser(i, "Open with"));
+        } catch(ClassNotFoundException e) {
+            Log.e(Constants.APP_TAG, "DecodeThread failed to parse message. " + e.getMessage());
         } catch(ReceiveException e) {
             Log.e(Constants.APP_TAG, "DecodeThread failed to read message. " + e.getMessage());
         } catch (IOException e) {

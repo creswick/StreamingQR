@@ -15,13 +15,13 @@ public class Utils {
    * encoded as well as the id of the current QR code.
    * Must be <= MAX_INT_SIZE.
    */
-  private static final int NUM_BYTES_PER_INT = 4;
+  private static final int NUM_BYTES_PER_INT = Integer.SIZE / 8;
 
   /* The number of integers we are reserving in QR payload for chunk data */
   private static final int NUM_RESERVED_INTS = 2;
 
   /* There can be at most 4 bytes to represent an integer */
-  private static final int MAX_INT_SIZE = 4;
+  private static final int MAX_INT_SIZE = Integer.SIZE / 8;
 
   /* Transmitting and receiving of BYTE data */
   private static final Mode DATA_ENCODING = Mode.BYTE;
@@ -192,6 +192,22 @@ public class Utils {
     System.arraycopy(rawData, getNumberOfReservedBytes(),
                      payload, 0, payload.length);
     return payload;
+  }
+
+  public static short bytesToShort(byte[] buf) {
+    ByteBuffer bbuf = ByteBuffer.allocate(Short.SIZE / 8);
+    
+    bbuf.put(buf);
+    bbuf.flip();
+    return bbuf.getShort();
+  }
+
+  public static byte[] shortToBytes(short s) {
+    ByteBuffer bbuf = ByteBuffer.allocate(Short.SIZE / 8);
+    
+    bbuf.putShort(s);
+    bbuf.flip();
+    return bbuf.array();    
   }
 
 }
