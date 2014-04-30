@@ -35,11 +35,10 @@ import java.util.concurrent.BlockingQueue;
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
     private SurfaceView camera_window;
-
+    private ViewGroup.LayoutParams camera_window_params;
     private RelativeLayout rootLayout;
     private ProgressBar progressBar;
 
-    private LinearLayout ll;
     private Camera camera;
     private Receive receiveQrpipe;
     private final BlockingQueue<YuvImage> frameQueue = Queues.newArrayBlockingQueue(1);
@@ -95,15 +94,30 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
         rootLayout = (RelativeLayout)rootView.findViewById(R.id.receive_layout);
         rootLayout.setKeepScreenOn(true);
-
-        camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
+        camera_window = (SurfaceView)rootLayout.findViewWithTag("camera_window");
+        /* remember the camera_window details for rebuilding later */
+        camera_window_params = camera_window.getLayoutParams();
+        setCameraWindowCallback();
         progressBar = (ProgressBar) rootView.findViewById(R.id.progressbar);
         return rootView;
+    }
+
+    private void setCameraWindowCallback() {
+        SurfaceHolder camWindowHolder = camera_window.getHolder();
+        camWindowHolder.addCallback(this);
     }
 
     @Override
     public void onResume(){
         super.onResume();
+        Log.d(Constants.APP_TAG, "onResume");
+
+        /* In some cases, onPause will destroy the camera_window */
+        if(rootLayout.findViewWithTag("camera_window") == null) {
+            Log.d(Constants.APP_TAG, "onResume camera_window is null");
+            replaceCameraWindow();
+        }
+
 
         try {
             resetUI();
@@ -111,8 +125,18 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             startPipe(params, progress);
         }catch (RuntimeException re) {
             // TODO handle this more elegantly.
-            Log.e(Constants.APP_TAG, "Could not open camera.");
+            Log.e(Constants.APP_TAG, "Could not open camera. "+re);
         }
+    }
+
+    /*
+     * rebuild the camera window as the first element in rootLayout
+     */
+    private void replaceCameraWindow() {
+        camera_window = new SurfaceView(rootLayout.getContext());
+        camera_window.setTag("camera_window");
+        rootLayout.addView(camera_window, 0, camera_window_params);
+        setCameraWindowCallback();
     }
 
     /*
@@ -132,24 +156,25 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         Camera.Parameters params = camera.getParameters();
         Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
         camera.setPreviewCallback(previewCallback);
-        camera_window.getHolder().addCallback(this);
         return params;
     }
 
     @Override
     public void onPause(){
         super.onPause();
-
+        Log.d(Constants.APP_TAG, "onPause");
         disposeCamera();
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        Log.d(Constants.APP_TAG, "surfaceCreated");
 
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+        Log.d(Constants.APP_TAG, "surfaceChanged");
         try {
             camera.setPreviewDisplay(holder);
             camera.startPreview();
@@ -161,6 +186,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
+        Log.d(Constants.APP_TAG, "surfaceDestroyed");
         disposeCamera();
     }
 
@@ -206,16 +232,19 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      * using the qrlib receiver.
      */
     public void startPipe(Camera.Parameters params, IProgress progress) {
+        Log.d(Constants.APP_TAG, "startPipe");
         if(decodeThread != null) {
             if(decodeThread.isAlive()) {
                 Log.e(Constants.APP_TAG, "Error: DecodeThread already running");
             } else {
+                Log.d(Constants.APP_TAG, "startPipe dropping dead thread");
                 // drop dead thread
                 decodeThread = null;
             }
         }
 
         if(decodeThread == null) {
+            Log.d(Constants.APP_TAG, "startPipe starting decodeThread");
             Camera.Size previewSize = params.getPreviewSize();
             Receive receiveQrpipe = new Receive(previewSize.height,
                                         previewSize.width,
