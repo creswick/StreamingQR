@@ -106,18 +106,34 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         super.onResume();
 
         try {
-            // TODO Camera.open() returns null if there is no back-facing camera.
-            camera = Camera.open();
-            setCameraDisplayOrientation(camera);
-            Camera.Parameters params = camera.getParameters();
-            Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
-            camera.setPreviewCallback(previewCallback);
-            camera_window.getHolder().addCallback(this);
+            resetUI();
+            Camera.Parameters params = openCamera();
             startPipe(params, progress);
         }catch (RuntimeException re) {
             // TODO handle this more elegantly.
             Log.e(Constants.APP_TAG, "Could not open camera.");
         }
+    }
+
+    /*
+     * Reset the UI elements to an initial state.
+     */
+    private void resetUI() {
+        progressBar.setProgress(0);
+    }
+
+    /*
+     * Reserve the hardware camera and setup a callback for the preview frames
+     */
+    private Camera.Parameters openCamera() {
+        // TODO Camera.open() returns null if there is no back-facing camera.
+        camera = Camera.open();
+        setCameraDisplayOrientation(camera);
+        Camera.Parameters params = camera.getParameters();
+        Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
+        camera.setPreviewCallback(previewCallback);
+        camera_window.getHolder().addCallback(this);
+        return params;
     }
 
     @Override
@@ -184,6 +200,10 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera.setDisplayOrientation(result);
     }
 
+    /*
+     * Create a worker thread for decoding the preview frames
+     * using the qrlib receiver.
+     */
     public void startPipe(Camera.Parameters params, IProgress progress) {
         if(decodeThread != null) {
             if(decodeThread.isAlive()) {
