@@ -2,9 +2,9 @@
 
 <resources>
     <string-array name="qr_density">
-        <item>Low</item>
-        <item>Medium</item>
-        <item>High</item>
+        <item>@string/preference_low</item>
+        <item>@string/preference_med</item>
+        <item>@string/preference_high</item>
     </string-array>
     <string-array name="qr_density_values">
         <item>10</item>
@@ -24,14 +24,15 @@
     </string-array>
 
     <string-array name="error_correction">
-        <item>Low</item>
-        <item>Medium</item>
-        <item>High</item>
+        <item>@string/preference_low</item>
+        <item>@string/preference_med</item>
+        <item>@string/preference_high</item>
     </string-array>
     <string-array name="error_correction_values">
-        <item>1</item>
-        <item>5</item>
-        <item>10</item>
+        <item>L</item>
+        <item>M</item>
+        <!-- <item>Q</item> -->
+        <item>H</item>
     </string-array>
 
     <string-array name="frame_population">
