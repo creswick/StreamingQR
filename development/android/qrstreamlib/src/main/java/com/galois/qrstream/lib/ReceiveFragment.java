@@ -170,6 +170,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         }
         camera.stopPreview();
         camera.setPreviewCallback(null);
+        frameQueue.clear(); /* drop unprocessed frames */
         camera.release();
 
         camera = null;
