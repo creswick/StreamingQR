@@ -1,8 +1,12 @@
 package com.galois.qrstream.lib;
 
+import android.app.Activity;
 import android.app.Fragment;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -34,17 +38,51 @@ public class TransmitFragment extends Fragment {
     // Allows us to step through QR code transmission
     private Iterable<BitmapImage> qrCodes;
     private Iterator<BitmapImage> qrCodeIter;
+    private BitmapImage currentQR;
     private int count = 0;
 
+    // Manage shared settings for application
+    private SharedPreferences settings;
+    private final OnSharedPreferenceChangeListener settingsChangelistener =
+        new SharedPreferences.OnSharedPreferenceChangeListener() {
+            @Override
+            public void onSharedPreferenceChanged(SharedPreferences pref, String key) {
+                Log.i(Constants.APP_TAG, "Setting with key changed: " + key);
+                if (key.equalsIgnoreCase("frame_time")) {
+                    transmitInterval = Integer.parseInt(settings.getString(key, ""));
+                    Log.e(Constants.APP_TAG, "new frame time =" + transmitInterval);
+                } else {
+                    // TODO: Restart encodeQRCodes
+                    // When these settings (qr_density, error_correction,frame_population)
+                    // get updated, the transmission will need to be restarted.
+                    // But we do not have access to the Job.
+                }
+            }
+        };
+
     // Updates frame of QR code at regular interval
+    private int transmitInterval = 0; // set once settings are loaded
     private final Handler handleFrameUpdate = new Handler();
     private final Runnable runThroughFrames = new Runnable() {
         @Override
         public void run() {
             nextFrame();
-            handleFrameUpdate.postDelayed(this,Constants.TRANSMIT_INTERVAL_MS);
+            handleFrameUpdate.postDelayed(this,transmitInterval);
         }
     };
+
+
+    @Override
+    public void onAttach(Activity activity) {
+        // Context is first available at this lifecycle stage and so
+        // fragment can get reference to the preference settings for app.
+        settings = PreferenceManager.getDefaultSharedPreferences(activity);
+        settings.registerOnSharedPreferenceChangeListener(settingsChangelistener);
+
+        // Setup initial default interval since we have settings
+        transmitInterval = Integer.parseInt(settings.getString("frame_time", ""));
+        super.onAttach(activity);
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -91,6 +129,13 @@ public class TransmitFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        repeatFrame();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        pauseTransmission();
     }
 
     private void transmitData(Job job) {
@@ -102,6 +147,7 @@ public class TransmitFragment extends Fragment {
         try {
             qrCodes = transmitter.encodeQRCodes(job);
             qrCodeIter = qrCodes.iterator();
+            currentQR = null;
             count = 0;
             Log.i(Constants.APP_TAG, "transmitData(), Successful creation of QR codes");
         } catch (TransmitException e) {
@@ -135,20 +181,58 @@ public class TransmitFragment extends Fragment {
         }
         // Reset so we can transmit again
         if (qrCodeIter == null || !qrCodeIter.hasNext()) {
-            Log.w(Constants.APP_TAG, "nextFrame resetting iterator");
+            resetQRTransmission();
+        }
+        count++;
+        currentQR = qrCodeIter.next();
+        displayImageOnUI(currentQR, count);
+    }
+
+    /**
+     * Re-draw a frame with QR codes whenever resume from pause
+     */
+    private void repeatFrame() {
+        if (currentQR != null) {
+            displayImageOnUI(currentQR, count);
+        }
+    }
+
+    /**
+     * Draw a frame containing to the phone.
+     *
+     * @param qrCode The image to display on the UI, should contain QR codes.
+     * @param frame Indicates which frame from the stream is being displayed.
+     */
+    private void displayImageOnUI(BitmapImage qrCode, int frame) {
+        Log.i(Constants.APP_TAG, "Drawing QR Code: " + frame);
+        Bitmap b = toBitmap(qrCode);
+        send_window.setImageDrawable(new BitmapDrawable(getResources(), b));
+        updateUI(frame);
+    }
+
+    /**
+     * Restart transmission by resetting QR code iterators
+     */
+    private void resetQRTransmission() {
+        if (qrCodes != null) {
+            Log.d(Constants.APP_TAG, "Tx: Restarting transmission");
             qrCodeIter = qrCodes.iterator();
             count = 0;
         }
-        count++;
-        Log.w(Constants.APP_TAG, "Drawing QR Code: " + count);
-        Bitmap b = toBitmap(qrCodeIter.next());
-        send_window.setImageDrawable(new BitmapDrawable(getResources(), b));
-        updateUI(count);
     }
-
-    @Override
-    public void onPause() {
-        super.onPause();
+    /**
+     * Stop iterating through the QR codes
+     */
+    private void pauseTransmission() {
+        handleFrameUpdate.removeCallbacks(runThroughFrames);
+        sendButton.setText(getString(R.string.transmit_sendButtonTxt));
+    }
+    /*
+     * Resume iterating through the QR codes
+     */
+    private void resumeTransmission() {
+        sendButton.setText(getString(R.string.transmit_pauseButtonTxt));
+        handleFrameUpdate.post(runThroughFrames);
     }
 
     private class CaptureClick implements View.OnClickListener {
@@ -156,19 +240,9 @@ public class TransmitFragment extends Fragment {
         public void onClick(View v) {
             String buttonTxt = sendButton.getText().toString();
             if(getString(R.string.transmit_sendButtonTxt).equalsIgnoreCase(buttonTxt)) {
-                // If not invoked via "ShareAs" API, then send an random
-                // alphanumeric string, to test the transmission.
-                if (qrCodeIter == null) {
-                    // String input = RandomStringUtils.randomAlphanumeric(20);
-                    // transmitData(input, input.getBytes(Charsets.ISO_8859_1));
-                }
-                if (qrCodeIter != null) {
-                    sendButton.setText(getString(R.string.transmit_pauseButtonTxt));
-                    handleFrameUpdate.post(runThroughFrames);
-                }
+                resumeTransmission();
             } else {
-                sendButton.setText(getString(R.string.transmit_sendButtonTxt));
-                handleFrameUpdate.removeCallbacks(runThroughFrames);
+                pauseTransmission();
             }
         }
     }
