@@ -1,7 +1,10 @@
 package com.galois.qrstream.lib;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.Fragment;
+import android.content.DialogInterface;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
@@ -79,6 +82,24 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                     }
                 });
             }
+
+            if(state == State.Fail) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        new AlertDialog.Builder(getActivity()).
+                                setMessage("Receive failed").
+                                setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        disposeCamera();
+                                        resume();
+                                    }
+                                }).
+                                show();
+                    }
+                });
+            }
         }
     };
 
@@ -111,8 +132,11 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     public void onResume(){
         super.onResume();
         Log.d(Constants.APP_TAG, "onResume");
+        resume();
+    }
 
-        /* In some cases, onPause will destroy the camera_window */
+    private void resume() {
+    /* In some cases, onPause will destroy the camera_window */
         if(rootLayout.findViewWithTag("camera_window") == null) {
             Log.d(Constants.APP_TAG, "onResume camera_window is null");
             replaceCameraWindow();
