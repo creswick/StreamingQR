@@ -23,6 +23,7 @@ import java.util.Iterator;
 
 import com.galois.qrstream.qrpipe.Transmit;
 import com.galois.qrstream.qrpipe.TransmitException;
+import com.galois.qrstream.qrpipe.CorrectionLevel;
 import com.galois.qrstream.image.BitmapImage;
 
 /**
@@ -144,8 +145,16 @@ public class TransmitFragment extends Fragment {
         Log.i(Constants.APP_TAG, "Trying to create and transmit QR codes");
         Log.i(Constants.APP_TAG, "transmitData title=" + title + " byte count=" + bytes.length);
         updateUi(title);
+
+        // Retrieve transmission settings before encoding QR codes
+        int density = Integer.parseInt(settings.getString("qr_density", "10"));
+        CorrectionLevel ecLevel = Enum.valueOf(CorrectionLevel.class,
+                                                settings.getString("error_correction", "L"));
+        Log.i(Constants.APP_TAG, "transmitData density=" + density +
+                                 " error correction Level=" + ecLevel);
+
         try {
-            qrCodes = transmitter.encodeQRCodes(job);
+            qrCodes = transmitter.encodeQRCodes(job, density, ecLevel);
             qrCodeIter = qrCodes.iterator();
             currentQR = null;
             count = 0;

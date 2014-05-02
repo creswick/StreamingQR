@@ -41,45 +41,77 @@ public class Transmit {
 
   /**
    * Encode a serializable object as a sequence of QR codes.
-   * 
+   *
    * @param s The object to serialize.
+   * @param density The desired density of the resulting QR code (i.e. version 1-40).
+   * @param ecLevel Error correction level of the QR codes.
+   *   There are four error acceptable error correction levels:
+   *    Level L (Low)        7% of codewords can be restored.
+   *    Level M (Medium)    15% of codewords can be restored.
+   *    Level Q (Quartile)  25% of codewords can be restored.
+   *    Level H (High)      30% of codewords can be restored.
    * @return A lazy iterable of QR codes.
    * @throws TransmitException If something goes wrong (inspect the thrown cause
    *         for more details).
    */
-  public Iterable<BitmapImage> encodeQRCodes(Serializable s)
+  public Iterable<BitmapImage> encodeQRCodes(Serializable s, int density, CorrectionLevel ecLevel)
       throws TransmitException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    
+
     try {
       ObjectOutputStream oos = new ObjectOutputStream(baos);
       oos.writeObject(s);
     } catch (Exception e) {
       throw new TransmitException(e);
     }
-
-    return encodeQRCodes(baos.toByteArray());
+    return encodeQRCodes(baos.toByteArray(), density, ecLevel);
   }
-  
+
+  // TODO decide which public APIs to keep?
+  // LC: Believes that this can be removed (at least made protected since it's only in test cases)
+  public Iterable<BitmapImage> encodeQRCodes(Serializable s)
+      throws TransmitException {
+    // Use default QR density and error correction level so that
+    // we can calculate the appropriate chunk size for the input data.
+    return encodeQRCodes(s, 1, CorrectionLevel.L);
+
+  }
+
   /**
    * Encodes array of bytes into a collection of QR codes. It is designed to
    * interface with QRStream Android application. It will break input data into
    * chunks small enough for encoding into QR codes.
    *
    * @param data The array of bytes to encode
+   * @param density The desired density of the resulting QR code (i.e. version 1-40).
+   * @param ecLevel Error correction level of the QR codes.
+   *   There are four error acceptable error correction levels:
+   *    Level L (Low)        7% of codewords can be restored.
+   *    Level M (Medium)    15% of codewords can be restored.
+   *    Level Q (Quartile)  25% of codewords can be restored.
+   *    Level H (High)      30% of codewords can be restored.
    * @return The sequence of QR codes generated from input data.
    * @throws TransmitException if input {@code data} cannot be encoded as QR code.
    */
-  // TODO Step 2: change function to: public Iterable<BitmapImage> encodeQRCodes (Iterable<byte[]>)
+  public Iterable<BitmapImage> encodeQRCodes(final byte[] data, int density, CorrectionLevel ecLevel)
+          throws TransmitException {
+    if (density < 1 || density > 40) {
+      throw new IllegalArgumentException("QR density must be equal an integer between 1 and 40.");
+    }
+
+    Version qrVersion = Version.getVersionForNumber(density);
+    return encodeQRCodes(data, qrVersion, ecLevel.toZXingECLevel());
+  }
+
+  // TODO decide which public APIs to keep?
+  // LC: Believes that this can be removed (at least made 'protected' since it's only in test cases)
   public Iterable<BitmapImage> encodeQRCodes(final byte[] data) throws TransmitException {
-    // TODO: Settle on appropriate density and error level for phones.
-    // Assume particular QR density and error correction level so that
+    // Use default QR density and error correction level so that
     // we can calculate the appropriate chunk size for the input data.
     Version qrVersion = Version.getVersionForNumber(1);
     ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
     return encodeQRCodes(data, qrVersion, ecLevel);
   }
-
   /**
    * Encodes array of bytes into a collection of QR codes. It will break input
    * into chunks small enough for encoding into QR codes for the requested
