@@ -1,6 +1,9 @@
 package com.galois.qrstream.qrpipe;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -36,6 +39,28 @@ public class Transmit {
     imgWidth = width;
   }
 
+  /**
+   * Encode a serializable object as a sequence of QR codes.
+   * 
+   * @param s The object to serialize.
+   * @return A lazy iterable of QR codes.
+   * @throws TransmitException If something goes wrong (inspect the thrown cause
+   *         for more details).
+   */
+  public Iterable<BitmapImage> encodeQRCodes(Serializable s)
+      throws TransmitException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    
+    try {
+      ObjectOutputStream oos = new ObjectOutputStream(baos);
+      oos.writeObject(s);
+    } catch (Exception e) {
+      throw new TransmitException(e);
+    }
+
+    return encodeQRCodes(baos.toByteArray());
+  }
+  
   /**
    * Encodes array of bytes into a collection of QR codes. It is designed to
    * interface with QRStream Android application. It will break input data into

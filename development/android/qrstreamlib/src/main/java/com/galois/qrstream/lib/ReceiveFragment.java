@@ -2,7 +2,6 @@ package com.galois.qrstream.lib;
 
 import android.app.Activity;
 import android.app.Fragment;
-import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
@@ -13,18 +12,22 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.view.ViewGroup;
-import android.widget.Button;
 
 import com.galois.qrstream.image.YuvImage;
 import com.galois.qrstream.qrpipe.IProgress;
 import com.galois.qrstream.qrpipe.Receive;
 import com.galois.qrstream.qrpipe.State;
+import com.google.common.collect.Queues;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * Created by donp on 2/11/14.
@@ -32,26 +35,71 @@ import java.util.concurrent.ArrayBlockingQueue;
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
     private SurfaceView camera_window;
-    private View rootView;
-    private LinearLayout ll;
 
+    private RelativeLayout rootLayout;
+    private ProgressBar progressBar;
+
+    private LinearLayout ll;
     private Camera camera;
-    private final ArrayBlockingQueue frameQueue = new ArrayBlockingQueue<YuvImage>(5);
-    private Receive receiveQrpipe;
+    private final BlockingQueue<YuvImage> frameQueue = Queues.newArrayBlockingQueue(5);
     private DecodeThread decodeThread;
+
+    // Switching to different camera preview callback mode
     private Preview previewCallback;
-    private final Progress progress = new Progress();
+
+    /**
+     * Handler to process progress updates from the IProgress implementation.
+     *
+     * This update handler is passed to the Progress object during the UI initialization.
+     */
+    private Handler displayUpdate = new Handler() {
+
+        @Override
+        public void handleMessage(Message msg) {
+            Activity activity = ReceiveFragment.this.getActivity();
+
+            final Bundle params = msg.getData();
+            State state = (State)params.getSerializable("state");
+            Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
+
+            if(state == State.Intermediate) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        int progressStatus = params.getInt("percent_complete");
+                        Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
+                        progressBar.setProgress(progressStatus);
+                    }
+                });
+            }
+
+            if(state == State.Final) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        progressBar.setProgress(progressBar.getMax());
+                        rootLayout.removeView(camera_window);
+                    }
+                });
+            }
+        }
+    };
+
+    private final Progress progress = new Progress(displayUpdate);
 
     public ReceiveFragment() {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        rootView = inflater.inflate(R.layout.receive_fragment, container, false);
-        ll = (LinearLayout)rootView.findViewById(R.id.receive_layout);
-        ll.setKeepScreenOn(true);
+    public @Nullable View onCreateView(@NotNull LayoutInflater inflater,
+                                       ViewGroup container,
+                                       @NotNull Bundle savedInstanceState) {
+        View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
+        rootLayout = (RelativeLayout)rootView.findViewById(R.id.receive_layout);
+        rootLayout.setKeepScreenOn(true);
+
         camera_window = (SurfaceView)rootView.findViewById(R.id.camera_window);
+        progressBar = (ProgressBar) rootView.findViewById(R.id.progressbar);
         return rootView;
     }
 
@@ -59,22 +107,27 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     public void onResume() {
         Log.d(Constants.APP_TAG, "ReceiveFragment onResume");
         super.onResume();
-        camera = Camera.open();
-        setCameraDisplayOrientation(camera);
-        Camera.Parameters params = camera.getParameters();
-        previewCallback = new Preview(frameQueue, params.getPreviewSize());
-        camera.setOneShotPreviewCallback(previewCallback);
-        camera_window.getHolder().addCallback(this);
-        DisplayUpdate displayUpdate = new DisplayUpdate(getActivity());
-        progress.setStateHandler(displayUpdate);
-        startPipe(params, progress);
+        try {
+            // TODO Camera.open() returns null if there is no back-facing camera.
+            camera = Camera.open();
+            setCameraDisplayOrientation(camera);
+            Camera.Parameters params = camera.getParameters();
+            Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
+            //camera.setPreviewCallback(previewCallback);
+            camera.setOneShotPreviewCallback(previewCallback);
+            camera_window.getHolder().addCallback(this);
+            startPipe(params, progress);
+        }catch (RuntimeException re) {
+            // TODO handle this more elegantly.
+            Log.e(Constants.APP_TAG, "Could not open camera.");
+        }
     }
 
     @Override
     public void onPause(){
         super.onPause();
-        camera.setPreviewCallback(null);
-        stopPipe();
+
+        disposeCamera();
     }
 
     @Override
@@ -95,16 +148,18 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
+        disposeCamera();
+    }
+
+    private void disposeCamera() {
+        if (null == camera) {
+            return;
+        }
         camera.stopPreview();
         camera.setPreviewCallback(null);
         camera.release();
-    }
 
-    private byte[] makePreviewBuffer(Camera.Parameters params) {
-        Camera.Size size = params.getPreviewSize();
-        int bitsPerPixel = ImageFormat.getBitsPerPixel(params.getPreviewFormat());
-        int byteSize = size.height * size.width * bitsPerPixel/8;
-        return new byte[byteSize];
+        camera = null;
     }
 
     public void setCameraDisplayOrientation(android.hardware.Camera camera) {
@@ -132,13 +187,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera.setDisplayOrientation(result);
     }
 
-    public static class CaptureClick implements View.OnClickListener{
-        @Override
-        public void onClick(View v) {
-            Log.d("qstream", "Capture Pushed");
-        }
-    }
-
     public void startPipe(Camera.Parameters params, IProgress progress) {
         if(decodeThread != null) {
             if(decodeThread.isAlive()) {
@@ -152,48 +200,12 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         if(decodeThread == null) {
             Log.e(Constants.APP_TAG, "startPipe: DecodeThread starting");
             Camera.Size previewSize = params.getPreviewSize();
-            receiveQrpipe = new Receive(previewSize.height,
-                    previewSize.width,
-                    Constants.RECEIVE_TIMEOUT_MS,
-                    progress);
-            decodeThread = new DecodeThread(receiveQrpipe, frameQueue);
+            Receive receiveQrpipe = new Receive(previewSize.height,
+                                        previewSize.width,
+                                        Constants.RECEIVE_TIMEOUT_MS,
+                                        progress);
+            decodeThread = new DecodeThread(getActivity(), receiveQrpipe, frameQueue);
             decodeThread.start();
-        }
-    }
-
-    public void stopPipe() {
-        // todo: notify the qr code receiver to stop
-    }
-
-    public class DisplayUpdate extends Handler {
-        private final Activity activity;
-
-        public DisplayUpdate(Activity activity) {
-            this.activity = activity;
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage");
-            final Bundle params = msg.getData();
-            State state = (State)params.getSerializable("state");
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage runOnUi reset callback");
-                    camera.setOneShotPreviewCallback(previewCallback);
-                }
-            });
-
-            if(state == State.Final) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        stopPipe();
-                        ll.removeView(camera_window);
-                    }
-                });
-            }
         }
     }
 }
