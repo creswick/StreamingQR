@@ -30,6 +30,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.Calendar;
 import java.util.concurrent.BlockingQueue;
 
 /**
@@ -46,6 +47,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private Receive receiveQrpipe;
     private final BlockingQueue<YuvImage> frameQueue = Queues.newArrayBlockingQueue(1);
     private DecodeThread decodeThread;
+    private Activity activity;
 
     /**
      * Handler to process progress updates from the IProgress implementation.
@@ -56,12 +58,17 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
         @Override
         public void handleMessage(Message msg) {
-            Activity activity = ReceiveFragment.this.getActivity();
-
             final Bundle params = msg.getData();
             State state = (State)params.getSerializable("state");
             Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
+            if(activity.isFinishing()) {
+                Log.d(Constants.APP_TAG, "ignoring displayUpdate message. Acivity is finishing.");
+            } else {
+                dispatchState(params, state);
+            }
+        }
 
+        private void dispatchState(final Bundle params, State state) {
             if(state == State.Intermediate) {
                 activity.runOnUiThread(new Runnable() {
                     @Override
@@ -87,7 +94,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        new AlertDialog.Builder(getActivity()).
+                        new AlertDialog.Builder(activity).
                                 setMessage("Receive failed").
                                 setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                                     @Override
@@ -106,6 +113,17 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private final Progress progress = new Progress(displayUpdate);
 
     public ReceiveFragment() {
+    }
+
+    /**
+     * Called when this fragment is associated with an Activity.
+     * Save the activity for use in the displayUpdate handler.
+     * @param activity
+     */
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+        this.activity = activity;
     }
 
     @Override
