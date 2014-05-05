@@ -54,7 +54,7 @@ public class Transmit {
    * @throws TransmitException If something goes wrong (inspect the thrown cause
    *         for more details).
    */
-  public Iterable<BitmapImage> encodeQRCodes(Serializable s, int density, CorrectionLevel ecLevel)
+  public Iterable<BitmapImage> encodeQRCodes(Serializable s, int density, ErrorCorrectionLevel ecLevel)
       throws TransmitException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
@@ -73,7 +73,7 @@ public class Transmit {
       throws TransmitException {
     // Use default QR density and error correction level so that
     // we can calculate the appropriate chunk size for the input data.
-    return encodeQRCodes(s, 1, CorrectionLevel.L);
+    return encodeQRCodes(s, 1, ErrorCorrectionLevel.L);
 
   }
 
@@ -93,14 +93,14 @@ public class Transmit {
    * @return The sequence of QR codes generated from input data.
    * @throws TransmitException if input {@code data} cannot be encoded as QR code.
    */
-  public Iterable<BitmapImage> encodeQRCodes(final byte[] data, int density, CorrectionLevel ecLevel)
+  public Iterable<BitmapImage> encodeQRCodes(final byte[] data, int density, ErrorCorrectionLevel ecLevel)
           throws TransmitException {
     if (density < 1 || density > 40) {
       throw new IllegalArgumentException("QR density must be equal an integer between 1 and 40.");
     }
 
     Version qrVersion = Version.getVersionForNumber(density);
-    return encodeQRCodes(data, qrVersion, ecLevel.toZXingECLevel());
+    return encodeQRCodes(data, qrVersion, ecLevel);
   }
 
   // TODO decide which public APIs to keep?

@@ -19,4 +19,9 @@
     <string name="preference_low">Low</string>
     <string name="preference_med">Medium</string>
     <string name="preference_high">High</string>
+
+    <!-- Possible settings for QR density -->
+    <string name="preference_density_low">3</string>
+    <string name="preference_density_med">5</string>
+    <string name="preference_density_high">12</string>
 </resources>

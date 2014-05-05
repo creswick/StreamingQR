@@ -7,18 +7,18 @@
         <item>@string/preference_high</item>
     </string-array>
     <string-array name="qr_density_values">
-        <item>10</item>
-        <item>25</item>
-        <item>40</item>
+        <item>@string/preference_density_low</item>
+        <item>@string/preference_density_med</item>
+        <item>@string/preference_density_high</item>
     </string-array>
 
     <string-array name="frame_time">
-        <item>100ms</item>
+        <item>200ms</item>
         <item>500ms</item>
         <item>1000ms</item>
     </string-array>
     <string-array name="frame_time_values">
-        <item>100</item>
+        <item>200</item>
         <item>500</item>
         <item>1000</item>
     </string-array>

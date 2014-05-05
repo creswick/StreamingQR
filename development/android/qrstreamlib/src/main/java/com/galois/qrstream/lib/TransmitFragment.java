@@ -21,9 +21,10 @@ import android.widget.TextView;
 
 import java.util.Iterator;
 
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+
 import com.galois.qrstream.qrpipe.Transmit;
 import com.galois.qrstream.qrpipe.TransmitException;
-import com.galois.qrstream.qrpipe.CorrectionLevel;
 import com.galois.qrstream.image.BitmapImage;
 
 /**
@@ -148,7 +149,7 @@ public class TransmitFragment extends Fragment {
 
         // Retrieve transmission settings before encoding QR codes
         int density = Integer.parseInt(settings.getString("qr_density", "10"));
-        CorrectionLevel ecLevel = Enum.valueOf(CorrectionLevel.class,
+        ErrorCorrectionLevel ecLevel = Enum.valueOf(ErrorCorrectionLevel.class,
                                                 settings.getString("error_correction", "L"));
         Log.i(Constants.APP_TAG, "transmitData density=" + density +
                                  " error correction Level=" + ecLevel);

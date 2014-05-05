@@ -13,7 +13,7 @@
             android:summary="@string/preference_description_qr_density"
             android:entries="@array/qr_density"
             android:entryValues="@array/qr_density_values"
-            android:defaultValue="10"
+            android:defaultValue="@string/preference_density_med"
             />
 
         <ListPreference
