@@ -192,6 +192,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      */
     private void resetUI() {
         progressBar.setProgress(0);
+        progressText.setText("");
     }
 
     /*
