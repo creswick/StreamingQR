@@ -52,7 +52,7 @@ public class TransmitFragment extends Fragment {
                 Log.i(Constants.APP_TAG, "Setting with key changed: " + key);
                 if (key.equalsIgnoreCase("frame_time")) {
                     transmitInterval = Integer.parseInt(settings.getString(key, ""));
-                    Log.e(Constants.APP_TAG, "new frame time =" + transmitInterval);
+                    Log.i(Constants.APP_TAG, "new frame time =" + transmitInterval);
                 } else {
                     // TODO: Restart encodeQRCodes
                     // When these settings (qr_density, error_correction,frame_population)
