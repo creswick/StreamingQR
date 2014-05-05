@@ -67,8 +67,6 @@ public class Transmit {
     return encodeQRCodes(baos.toByteArray(), density, ecLevel);
   }
 
-  // TODO decide which public APIs to keep?
-  // LC: Believes that this can be removed (at least made protected since it's only in test cases)
   public Iterable<BitmapImage> encodeQRCodes(Serializable s)
       throws TransmitException {
     // Use default QR density and error correction level so that
@@ -103,8 +101,6 @@ public class Transmit {
     return encodeQRCodes(data, qrVersion, ecLevel);
   }
 
-  // TODO decide which public APIs to keep?
-  // LC: Believes that this can be removed (at least made 'protected' since it's only in test cases)
   public Iterable<BitmapImage> encodeQRCodes(final byte[] data) throws TransmitException {
     // Use default QR density and error correction level so that
     // we can calculate the appropriate chunk size for the input data.
