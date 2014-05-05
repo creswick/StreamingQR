@@ -3,6 +3,7 @@ package com.galois.qrstream;
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.content.ContentResolver;
 import android.content.CursorLoader;
 import android.content.Intent;
@@ -14,6 +15,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
+import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.util.Log;
@@ -63,6 +65,10 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         receiveFragment = new ReceiveFragment();
         settingsFragment = new SettingsFragment();
 
+        // Load application's default settings before user opens settings
+        // screen because we want Rx and Tx to run with defaults.
+        PreferenceManager.setDefaultValues(this,com.galois.qrstream.lib.R.xml.settings, false);
+
         if (savedInstanceState == null) {
             Intent startingIntent = getIntent();
             Log.d(Constants.APP_TAG, "startingIntent  " + startingIntent.getAction());
@@ -79,14 +85,23 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
     }
 
     private void showFragment(Fragment fragment) {
-        fragmentManager.beginTransaction()
-                .replace(R.id.container, fragment)
-                .commit();
+        showFragment(fragment, false);
+    }
+
+    private void showFragment(Fragment fragment, boolean addToBackStack) {
+        FragmentTransaction ft = fragmentManager.beginTransaction();
+
+        // Replace null parameter with string only if
+        // change to ft.replace(int,Fragment,String)
+        ft.replace(R.id.container, fragment);
+        if (addToBackStack) {
+            ft.addToBackStack(null);
+        }
+        ft.commit();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
@@ -99,7 +114,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if (id == R.id.action_settings) {
-            showFragment(settingsFragment);
+            showFragment(settingsFragment, true);
             getWindow().getDecorView().getHandler().removeCallbacksAndMessages(HANDLER_TOKEN_HIDE_UI);
             return true;
         }
@@ -179,7 +194,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
             public void run() {
                 MainActivity.this.hideUI();
             }
-        }, HANDLER_TOKEN_HIDE_UI, SystemClock.uptimeMillis()+HIDE_UI_DELAY_MS);
+        }, HANDLER_TOKEN_HIDE_UI, SystemClock.uptimeMillis() + HIDE_UI_DELAY_MS);
     }
 
     private void hideUI() {

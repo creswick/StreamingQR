@@ -14,4 +14,24 @@
     <string name="preference_description_error_correction">Amount of redundancy in each QR code</string>
     <string name="preference_title_frame_population">Frame Population</string>
     <string name="preference_description_frame_population">Number of QR codes per frame</string>
+
+    <!-- Text for setting preferences -->
+    <string name="preference_low">Low</string>
+    <string name="preference_med">Medium</string>
+    <string name="preference_high">High</string>
+
+    <!-- Possible settings for QR density -->
+    <string name="preference_density_low">3</string>
+    <string name="preference_density_med">5</string>
+    <string name="preference_density_high">12</string>
+
+    <!-- Possible settings for frame display rate (milliseconds) -->
+    <string name="preference_frame_time_low">200</string>
+    <string name="preference_frame_time_med">500</string>
+    <string name="preference_frame_time_high">1000</string>
+
+    <!-- Possible settings for number QR codes per frame -->
+    <string name="preference_frame_population_low">1</string>
+    <string name="preference_frame_population_med">2</string>
+    <string name="preference_frame_population_high">4</string>
 </resources>
