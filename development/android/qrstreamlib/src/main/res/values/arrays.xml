@@ -18,9 +18,9 @@
         <item>1000ms</item>
     </string-array>
     <string-array name="frame_time_values">
-        <item>200</item>
-        <item>500</item>
-        <item>1000</item>
+        <item>@string/preference_frame_time_low</item>
+        <item>@string/preference_frame_time_med</item>
+        <item>@string/preference_frame_time_high</item>
     </string-array>
 
     <string-array name="error_correction">
@@ -36,13 +36,13 @@
     </string-array>
 
     <string-array name="frame_population">
-        <item>1</item>
-        <item>2</item>
-        <item>4</item>
+        <item>@string/preference_frame_population_low</item>
+        <item>@string/preference_frame_population_med</item>
+        <item>@string/preference_frame_population_high</item>
     </string-array>
     <string-array name="frame_population_values">
-        <item>1</item>
-        <item>2</item>
-        <item>4</item>
+        <item>@string/preference_frame_population_low</item>
+        <item>@string/preference_frame_population_med</item>
+        <item>@string/preference_frame_population_high</item>
     </string-array>
 </resources>

@@ -22,7 +22,7 @@
             android:summary="@string/preference_description_frame_time"
             android:entries="@array/frame_time"
             android:entryValues="@array/frame_time_values"
-            android:defaultValue="1000"
+            android:defaultValue="@string/preference_frame_time_high"
             />
 
         <ListPreference
@@ -40,7 +40,7 @@
             android:summary="@string/preference_description_frame_population"
             android:entries="@array/frame_population"
             android:entryValues="@array/frame_population_values"
-            android:defaultValue="1"
+            android:defaultValue="@string/preference_frame_population_low"
             />
 
     </PreferenceCategory>
