@@ -45,19 +45,20 @@ public class TransmitFragment extends Fragment {
 
     // Manage shared settings for application
     private SharedPreferences settings;
-    private final OnSharedPreferenceChangeListener settingsChangelistener =
+    private final OnSharedPreferenceChangeListener settingsChangeListener =
         new SharedPreferences.OnSharedPreferenceChangeListener() {
             @Override
             public void onSharedPreferenceChanged(SharedPreferences pref, String key) {
-                Log.i(Constants.APP_TAG, "Setting with key changed: " + key);
+                Log.i(Constants.APP_TAG, "Setting with key changed: " + key
+                        + " to value: " + pref.getString(key, "no default"));
                 if (key.equalsIgnoreCase("frame_time")) {
-                    transmitInterval = Integer.parseInt(settings.getString(key, ""));
+                    // Only the frame rate changed, no need to restart transmission
+                    transmitInterval = Integer.parseInt(pref.getString(key, ""));
                     Log.i(Constants.APP_TAG, "new frame time =" + transmitInterval);
                 } else {
-                    // TODO: Restart encodeQRCodes
-                    // When these settings (qr_density, error_correction,frame_population)
+                    // When remaining settings (qr_density, error_correction,frame_population)
                     // get updated, the transmission will need to be restarted.
-                    // But we do not have access to the Job.
+                    sendJob();
                 }
             }
         };
@@ -73,13 +74,12 @@ public class TransmitFragment extends Fragment {
         }
     };
 
-
     @Override
     public void onAttach(Activity activity) {
         // Context is first available at this lifecycle stage and so
         // fragment can get reference to the preference settings for app.
         settings = PreferenceManager.getDefaultSharedPreferences(activity);
-        settings.registerOnSharedPreferenceChangeListener(settingsChangelistener);
+        settings.registerOnSharedPreferenceChangeListener(settingsChangeListener);
 
         // Setup initial default interval since we have settings
         transmitInterval = Integer.parseInt(settings.getString("frame_time", ""));
