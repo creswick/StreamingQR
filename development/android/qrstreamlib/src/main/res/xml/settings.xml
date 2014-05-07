@@ -13,6 +13,7 @@
             android:summary="@string/preference_description_qr_density"
             android:entries="@array/qr_density"
             android:entryValues="@array/qr_density_values"
+            android:defaultValue="@string/preference_density_med"
             />
 
         <ListPreference
@@ -21,6 +22,7 @@
             android:summary="@string/preference_description_frame_time"
             android:entries="@array/frame_time"
             android:entryValues="@array/frame_time_values"
+            android:defaultValue="@string/preference_frame_time_high"
             />
 
         <ListPreference
@@ -29,6 +31,7 @@
             android:summary="@string/preference_description_error_correction"
             android:entries="@array/error_correction"
             android:entryValues="@array/error_correction_values"
+            android:defaultValue="L"
             />
 
         <ListPreference
@@ -37,6 +40,7 @@
             android:summary="@string/preference_description_frame_population"
             android:entries="@array/frame_population"
             android:entryValues="@array/frame_population_values"
+            android:defaultValue="@string/preference_frame_population_low"
             />
 
     </PreferenceCategory>
