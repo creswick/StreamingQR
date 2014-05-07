@@ -39,9 +39,6 @@ public class DecodeThread extends Thread {
         try {
             message = (Job)receiver.decodeQRSerializable(queue);
             Log.w(Constants.APP_TAG, "DecodeThread read message of length: " + message.getData().length);
-            // We'll  need to read MIME type later, but for now, we
-            // assume we have text input.
-            //String msg = new String(message, Charsets.ISO_8859_1);
             Log.w(Constants.APP_TAG, "DecodeThread heard " + message.toString());
 
 
