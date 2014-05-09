@@ -31,4 +31,18 @@ public class SettingsFragment extends PreferenceFragment {
         // Load the preferences from an XML resource
         addPreferencesFromResource(R.xml.settings);
     }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        getActivity().getActionBar().setDisplayHomeAsUpEnabled(true);
+        getActivity().invalidateOptionsMenu();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        getActivity().getActionBar().setDisplayHomeAsUpEnabled(false);
+        getActivity().invalidateOptionsMenu();
+    }
 }
