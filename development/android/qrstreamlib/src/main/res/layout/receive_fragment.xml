@@ -35,8 +35,16 @@
             style="@android:style/Widget.ProgressBar.Horizontal"
             />
 
+        <TextView android:id="@+id/progresstext"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.3"
+            android:layout_marginLeft="4dp"
+            android:textColor="#ffffff"
+            ></TextView>
+
         <View android:layout_width="0dp"
-            android:layout_weight="0.2"
+            android:layout_weight="0.1"
             android:layout_height="0dp"></View>
 
     </LinearLayout>

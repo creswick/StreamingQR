@@ -32,6 +32,8 @@ public class Progress implements IProgress {
             int total_frame_count = state.getCapacity();
             int num_frames_decoded = state.getTotalFramesDecoded();
             int percent_complete = (int)((num_frames_decoded / (float)total_frame_count)*100);
+            changeMsg.putSerializable("chunk_count", num_frames_decoded);
+            changeMsg.putSerializable("chunk_total", total_frame_count);
             changeMsg.putSerializable("percent_complete", percent_complete);
             Log.d(Constants.APP_TAG, "changeState handler, " + num_frames_decoded +
                                         "/" + total_frame_count +

@@ -19,6 +19,7 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.LinearLayout;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import com.galois.qrstream.image.YuvImage;
 import com.galois.qrstream.qrpipe.IProgress;
@@ -42,6 +43,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private ViewGroup.LayoutParams camera_window_params;
     private RelativeLayout rootLayout;
     private ProgressBar progressBar;
+    private TextView progressText;
 
     private Camera camera;
     private Receive receiveQrpipe;
@@ -74,8 +76,11 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                     @Override
                     public void run() {
                         int progressStatus = params.getInt("percent_complete");
+                        int count = params.getInt("chunk_count");
+                        int total = params.getInt("chunk_total");
                         Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
                         progressBar.setProgress(progressStatus);
+                        progressText.setText(""+count+"/"+total+" "+progressStatus+"%");
                     }
                 });
             }
@@ -138,6 +143,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera_window_params = camera_window.getLayoutParams();
         setCameraWindowCallback();
         progressBar = (ProgressBar) rootView.findViewById(R.id.progressbar);
+        progressText = (TextView) rootView.findViewById(R.id.progresstext);
         return rootView;
     }
 
@@ -186,6 +192,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      */
     private void resetUI() {
         progressBar.setProgress(0);
+        progressText.setText("");
     }
 
     /*
