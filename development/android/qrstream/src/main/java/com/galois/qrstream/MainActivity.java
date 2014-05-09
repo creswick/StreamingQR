@@ -49,7 +49,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
     private static final String HANDLER_TOKEN_HIDE_UI = "hide_ui";
     private static final int HIDE_UI_DELAY_MS = 3000;
     private FragmentManager fragmentManager;
-    private Fragment currentFragment;
+    private Fragment currentFragment, lastFragment;
     protected ReceiveFragment receiveFragment; // accessed via unittest
     protected TransmitFragment transmitFragment; // accessed via unittest
     protected SettingsFragment settingsFragment; // accessed via unittest
@@ -99,6 +99,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
             ft.addToBackStack(null);
         }
         ft.commit();
+        lastFragment = currentFragment;
         currentFragment = fragment;
     }
 
