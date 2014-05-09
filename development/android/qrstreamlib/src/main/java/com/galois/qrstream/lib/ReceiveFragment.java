@@ -14,7 +14,9 @@ import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View.OnClickListener;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.LinearLayout;
@@ -37,13 +39,15 @@ import java.util.concurrent.BlockingQueue;
 /**
  * Created by donp on 2/11/14.
  */
-public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
+public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
+                                                         OnClickListener {
 
     private SurfaceView camera_window;
     private ViewGroup.LayoutParams camera_window_params;
     private RelativeLayout rootLayout;
     private ProgressBar progressBar;
     private TextView progressText;
+    private Button cancelButton;
 
     private Camera camera;
     private Receive receiveQrpipe;
@@ -81,6 +85,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                         Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
                         progressBar.setProgress(progressStatus);
                         progressText.setText(""+count+"/"+total+" "+progressStatus+"%");
+                        cancelButton.setVisibility(View.VISIBLE);
                     }
                 });
             }
@@ -91,6 +96,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                     public void run() {
                         progressBar.setProgress(progressBar.getMax());
                         rootLayout.removeView(camera_window);
+                        cancelButton.setVisibility(View.INVISIBLE);
                     }
                 });
             }
@@ -144,6 +150,9 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         setCameraWindowCallback();
         progressBar = (ProgressBar) rootView.findViewById(R.id.progressbar);
         progressText = (TextView) rootView.findViewById(R.id.progresstext);
+        cancelButton = (Button)rootLayout.findViewById(R.id.cancel_button);
+        cancelButton.setOnClickListener(this);
+        cancelButton.setVisibility(View.GONE);
         return rootView;
     }
 
@@ -304,4 +313,11 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         }
     }
 
+    /**
+     * Click listener for cancel button
+     */
+    @Override
+    public void onClick(View v) {
+        // signal the qrlib.Receiver to stop
+    }
 }
