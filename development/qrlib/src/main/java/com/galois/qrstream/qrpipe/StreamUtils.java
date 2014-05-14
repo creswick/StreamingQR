@@ -1,5 +1,8 @@
 package com.galois.qrstream.qrpipe;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -22,8 +25,16 @@ public class StreamUtils {
    * @throws IOException If the underlying stream throws an exception.
    */
   public static String readString(InputStream in, int len) throws IOException {
+    
+    DataInputStream dis = new DataInputStream(in);
     byte[] buf = new byte[len];
-    in.read(buf);
+    try {
+      dis.readFully(buf);
+    } catch (EOFException e) {
+      // This may happen if the length coming in is incorrect -- we shouldn't
+      // trust the data at this point:
+      throw new IOException("Incorrect length in incoming data.", e);
+    }
     return new String(buf);
   }
   
@@ -38,7 +49,8 @@ public class StreamUtils {
    * @throws IOException
    */
   public static void writeInt(OutputStream out, int length) throws IllegalArgumentException, IOException {
-    out.write(Utils.intToBytes(length));
+    DataOutputStream dos = new DataOutputStream(out);
+    dos.writeInt(length);
   }
   
   /**
@@ -51,8 +63,10 @@ public class StreamUtils {
    * @throws IllegalArgumentException
    * @throws IOException
    */
-  public static void writeShort(OutputStream out, short s) throws IllegalArgumentException, IOException {
-    out.write(Utils.shortToBytes(s));
+  public static void writeShort(OutputStream out, short s)
+      throws IllegalArgumentException, IOException {
+    DataOutputStream dos = new DataOutputStream(out);
+    dos.writeShort(s);
   }
   
   /**
@@ -66,10 +80,15 @@ public class StreamUtils {
    * @throws IOException
    */
   public static int readInt(InputStream in) throws IOException {
-    byte[] buf = new byte[Integer.SIZE / 8];
-    in.read(buf);
-    int len = Utils.bytesToInt(buf);
-    return len;
+    DataInputStream dis = new DataInputStream(in);
+    
+    try {
+      return dis.readInt();
+    } catch (EOFException e) {
+      // This may happen if the length coming in is invalid -- we shouldn't
+      // trust the data at this point:
+      throw new IOException("Insufficient data to read int.", e);
+    }
   }
   
   /**
@@ -83,9 +102,14 @@ public class StreamUtils {
    * @throws IOException
    */
   public static short readShort(InputStream in) throws IOException {
-    byte[] buf = new byte[Short.SIZE / 8];
-    in.read(buf);
-    short len = Utils.bytesToShort(buf);
-    return len;
+    DataInputStream dis = new DataInputStream(in);
+    
+    try {
+      return dis.readShort();
+    } catch (EOFException e) {
+      // This may happen if the data coming in is invalid -- we shouldn't
+      // trust the data at this point:
+      throw new IOException("Insufficient data to read short.", e);
+    }
   }
 }

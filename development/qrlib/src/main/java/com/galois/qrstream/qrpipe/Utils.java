@@ -68,7 +68,7 @@ public class Utils {
    * @throws IllegalArgumentException if integer would need more than
    * NUM_BYTES_PER_INT to represent correctly.
    */
-  @SuppressWarnings("unused")
+  @SuppressWarnings("unused") // needed because of a tautology in the code below.
   public static byte[] intToBytes( final int i ) throws IllegalArgumentException {
     if (i < 0) {
       throw new IllegalArgumentException("Cannot convert negative numbers.");
@@ -193,21 +193,4 @@ public class Utils {
                      payload, 0, payload.length);
     return payload;
   }
-
-  public static short bytesToShort(byte[] buf) {
-    ByteBuffer bbuf = ByteBuffer.allocate(Short.SIZE / 8);
-    
-    bbuf.put(buf);
-    bbuf.flip();
-    return bbuf.getShort();
-  }
-
-  public static byte[] shortToBytes(short s) {
-    ByteBuffer bbuf = ByteBuffer.allocate(Short.SIZE / 8);
-    
-    bbuf.putShort(s);
-    bbuf.flip();
-    return bbuf.array();    
-  }
-
 }
