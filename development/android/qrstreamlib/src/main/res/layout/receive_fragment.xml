@@ -28,7 +28,7 @@
             android:layout_weight="0.2"
             android:layout_height="0dp"></View>
 
-        <ProgressBar android:id="@+id/progressbar"
+        <com.galois.qrstream.lib.TorrentBar android:id="@+id/progressbar"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="0.6"
