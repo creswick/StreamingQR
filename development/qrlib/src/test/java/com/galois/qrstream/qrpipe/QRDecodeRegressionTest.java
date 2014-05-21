@@ -6,9 +6,6 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-
 import javax.imageio.ImageIO;
 
 import org.junit.Test;
@@ -57,12 +54,12 @@ public class QRDecodeRegressionTest {
     // If this does not throw an exception, everything is fine:
     decodeImage(bi);
   }
-  
+
   /**
    * Decode a qr code from a buffered image.
-   * 
+   *
    * Catches transmission failure exceptions, and returns null.
-   * 
+   *
    * @param bi The buffered image to decode.
    * @return
    * @throws ReceiveException
@@ -74,23 +71,43 @@ public class QRDecodeRegressionTest {
     YuvImage img = new YuvImage(YuvUtilities.toYUV(bi),
                                 width, height);
 
-    BlockingQueue<YuvImage> queue = new ArrayBlockingQueue<YuvImage>(2);
-    queue.add(img);
-
     Receive receive = new Receive(height, width, 100,
         RandomQRDecodeTest.NULL_PROGRESS);
 
     byte[] result = null;
     try {
-      result = receive.decodeQRCodes(queue);
+      result = receive.decodeQRCodes(new EchoFrame(img));
     } catch (ReceiveException e) {
-      System.out.println(e.getMessage());
       // this should only happen if receive was expecting more than one QR code:
       if (!e.getMessage().startsWith("Transmission failed")) {
         throw e;
       }
     }
-    
+
     return result;
   }
+
+  /**
+   * Placeholder CaptureFrame manager for testing.
+   */
+  public static class EchoFrame implements ICaptureFrame {
+    private final YuvImage img;
+    private boolean running = true;
+    public EchoFrame(YuvImage img) {
+      this.img = img;
+    }
+
+    // Allows image to be decoded only once before exiting
+    @Override
+    public YuvImage captureFrameFromCamera() {
+      running = false;
+      return this.img;
+    }
+
+    @Override
+    public boolean isRunning() {
+      return running;
+    }
+  };
+
 }

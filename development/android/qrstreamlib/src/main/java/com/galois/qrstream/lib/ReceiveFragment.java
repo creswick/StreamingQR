@@ -2,7 +2,6 @@ package com.galois.qrstream.lib;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.app.Fragment;
 import android.content.DialogInterface;
 import android.hardware.Camera;
@@ -17,22 +16,17 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
-import android.widget.LinearLayout;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.galois.qrstream.image.YuvImage;
 import com.galois.qrstream.qrpipe.IProgress;
 import com.galois.qrstream.qrpipe.Receive;
 import com.galois.qrstream.qrpipe.State;
-import com.google.common.collect.Queues;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.util.Calendar;
-import java.util.concurrent.BlockingQueue;
 
 /**
  * Created by donp on 2/11/14.
@@ -46,12 +40,12 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private TextView progressText;
 
     private Camera camera;
-    private final BlockingQueue<YuvImage> frameQueue = Queues.newArrayBlockingQueue(5);
     private DecodeThread decodeThread;
     private Activity activity;
 
-    // Switching to different camera preview callback mode
-    private Preview previewCallback;
+    // LC experimenting with QRlib managing preview requests
+    private CameraManager cameraManager = new CameraManager();
+    private boolean hasSurface = false;
 
     /**
      * Handler to process progress updates from the IProgress implementation.
@@ -66,7 +60,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             State state = (State)params.getSerializable("state");
             Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
             if(activity.isFinishing()) {
-                Log.d(Constants.APP_TAG, "ignoring displayUpdate message. Acivity is finishing.");
+                Log.d(Constants.APP_TAG, "ignoring displayUpdate message. Activity is finishing.");
             } else {
                 dispatchState(params, state);
             }
@@ -86,7 +80,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                     }
                 });
             }
-
             if(state == State.Final) {
                 activity.runOnUiThread(new Runnable() {
                     @Override
@@ -137,6 +130,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     public @Nullable View onCreateView(@NotNull LayoutInflater inflater,
                                        ViewGroup container,
                                        @NotNull Bundle savedInstanceState) {
+        // Will have surface after onSurfaceCreated called
+        hasSurface = false;
         View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
         rootLayout = (RelativeLayout)rootView.findViewById(R.id.receive_layout);
         rootLayout.setKeepScreenOn(true);
@@ -149,11 +144,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         return rootView;
     }
 
-    private void setCameraWindowCallback() {
-        SurfaceHolder camWindowHolder = camera_window.getHolder();
-        camWindowHolder.addCallback(this);
-    }
-
     @Override
     public void onResume() {
         super.onResume();
@@ -162,17 +152,18 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     }
 
     private void resume() {
-    /* In some cases, onPause will destroy the camera_window */
-        if(rootLayout.findViewWithTag("camera_window") == null) {
+        resetUI();
+
+        /* In some cases, onPause will destroy the camera_window */
+        SurfaceView previewSurface = (SurfaceView) rootLayout.findViewWithTag("camera_window");
+        if(previewSurface == null) {
             Log.d(Constants.APP_TAG, "onResume camera_window is null");
             replaceCameraWindow();
         }
 
-
         try {
-            resetUI();
             Camera.Parameters params = openCamera();
-            startPipe(params, progress);
+            startPipe(params, progress, cameraManager);
         }catch (RuntimeException re) {
             // TODO handle this more elegantly.
             Log.e(Constants.APP_TAG, "Could not open camera. "+re);
@@ -189,25 +180,17 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         setCameraWindowCallback();
     }
 
+    private void setCameraWindowCallback() {
+        SurfaceHolder camWindowHolder = camera_window.getHolder();
+        camWindowHolder.addCallback(this);
+    }
+
     /*
      * Reset the UI elements to an initial state.
      */
     private void resetUI() {
         progressBar.setProgress(0);
         progressText.setText("");
-    }
-
-    /*
-     * Reserve the hardware camera and setup a callback for the preview frames
-     */
-    private Camera.Parameters openCamera() {
-        // TODO Camera.open() returns null if there is no back-facing camera.
-        camera = Camera.open();
-        setCameraDisplayOrientation(camera);
-        Camera.Parameters params = camera.getParameters();
-        Preview previewCallback = new Preview(frameQueue, params.getPreviewSize());
-        camera.setPreviewCallback(previewCallback);
-        return params;
     }
 
     @Override
@@ -219,17 +202,38 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        Log.d(Constants.APP_TAG, "surfaceCreated");
+        Log.e(Constants.APP_TAG, "surfaceCreated");
+        if (holder == null) {
+            Log.e (Constants.APP_TAG, "*** WARNING *** surfaceCreated() gave us a null surface!");
+        }
+        if (!hasSurface) {
+            hasSurface = true;
+            //initCamera(holder);
+        }
 
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        Log.d(Constants.APP_TAG, "surfaceChanged");
-        try {
-            camera.setPreviewDisplay(holder);
-            camera.startPreview();
+        Log.e(Constants.APP_TAG, "surfaceChanged");
+        if(camera == null) {
+            Log.e(Constants.APP_TAG, "surfaceChanged but camera is null. WTF?!");
+        }else {
+            startCameraPreview(holder, camera);
+        }
+    }
 
+    private void startCameraPreview(SurfaceHolder holder, Camera c) {
+        try {
+            c.setPreviewDisplay(holder);
+            c.startPreview();
+            if(decodeThread == null) {
+                Log.e(Constants.APP_TAG, "camera preview started, but DecodeThread == null");
+            }else{
+                if(!decodeThread.isAlive()) {
+                    decodeThread.start();
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -239,15 +243,46 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     public void surfaceDestroyed(SurfaceHolder holder) {
         Log.d(Constants.APP_TAG, "surfaceDestroyed");
         disposeCamera();
+        hasSurface = false;
+    }
+
+    private void initCamera (SurfaceHolder surfaceHolder) throws IOException {
+        if(surfaceHolder == null) {
+            throw new IllegalStateException("No valid SurfaceHolder provided");
+        }
+        if (camera != null) {
+            Log.d(Constants.APP_TAG, "initCamera() while camera already open.");
+            return;
+        }
+        int cameraId = 0;
+        camera = Camera.open();
+        camera.setPreviewDisplay(surfaceHolder);
+        camera.setDisplayOrientation(defaultCameraOrientation(cameraId));
+        Camera.Parameters params = camera.getParameters();
+
+    }
+
+    /*
+     * Reserve the hardware camera and setup a callback for the preview frames
+     */
+    private Camera.Parameters openCamera() {
+        // TODO Camera.open() returns null if there is no back-facing camera.
+        camera = Camera.open();
+        setCameraDisplayOrientation(camera);
+        Camera.Parameters params = camera.getParameters();
+        cameraManager.startRunning(camera, new Preview(params.getPreviewSize()));
+        return params;
     }
 
     private void disposeCamera() {
         if (null == camera) {
             return;
         }
+
+        cameraManager.stopRunning();
+
         camera.stopPreview();
         camera.setPreviewCallback(null);
-        frameQueue.clear(); /* drop unprocessed frames */
         camera.release();
 
         camera = null;
@@ -255,6 +290,17 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
     public void setCameraDisplayOrientation(android.hardware.Camera camera) {
         int cameraId = 0;
+        camera.setDisplayOrientation(defaultCameraOrientation(cameraId));
+    }
+
+    /**
+     * Calculate the default orientation for the requested camera.
+     * Front facing cameras will compensate for the mirror effect.
+     *
+     * @param cameraId The id of the camera to display.
+     * @return Rotation in degrees of the camera display.
+     */
+    private int defaultCameraOrientation(int cameraId) {
         android.hardware.Camera.CameraInfo info =
                 new android.hardware.Camera.CameraInfo();
         android.hardware.Camera.getCameraInfo(cameraId, info);
@@ -275,14 +321,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         } else {  // back-facing
             result = (info.orientation - degrees + 360) % 360;
         }
-        camera.setDisplayOrientation(result);
+        return result;
     }
 
     /*
      * Create a worker thread for decoding the preview frames
      * using the qrlib receiver.
      */
-    public void startPipe(Camera.Parameters params, IProgress progress) {
+    public void startPipe(Camera.Parameters params, IProgress progress, CameraManager fm) {
         Log.d(Constants.APP_TAG, "startPipe");
         if(decodeThread != null) {
             if(decodeThread.isAlive()) {
@@ -301,8 +347,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                                         previewSize.width,
                                         Constants.RECEIVE_TIMEOUT_MS,
                                         progress);
-            decodeThread = new DecodeThread(getActivity(), receiveQrpipe, frameQueue);
-            decodeThread.start();
+            decodeThread = new DecodeThread(getActivity(), receiveQrpipe, fm);
         }
     }
+
 }
