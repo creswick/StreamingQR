@@ -119,11 +119,9 @@ public class Receive {
         }
       } catch (NotFoundException e) {
         // Unable to detect QR in this image, try next one.
-        message.setFailedFrame(); // TODO remove this call?
         continue;
       } catch (ReceiveException e) {
         // Encountered invalid QR code during parsing, try next image.
-        message.setFailedFrame(); // TODO remove this call?
         continue;
       }
     }
