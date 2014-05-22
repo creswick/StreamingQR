@@ -18,7 +18,6 @@ package com.galois.qrstream.lib;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.app.Fragment;
 import android.content.DialogInterface;
 import android.hardware.Camera;
@@ -31,9 +30,7 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
-import android.widget.LinearLayout;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
@@ -47,7 +44,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.util.Calendar;
 import java.util.concurrent.BlockingQueue;
 
 /**
@@ -58,7 +54,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private SurfaceView camera_window;
     private ViewGroup.LayoutParams camera_window_params;
     private RelativeLayout rootLayout;
-    private ProgressBar progressBar;
+    private TorrentBar torrentBar;
     private TextView progressText;
 
     private Camera camera;
@@ -95,7 +91,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                         int count = params.getInt("chunk_count");
                         int total = params.getInt("chunk_total");
                         Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
-                        progressBar.setProgress(progressStatus);
+                        torrentBar.setProgress(progressStatus);
                         progressText.setText(""+count+"/"+total+" "+progressStatus+"%");
                     }
                 });
@@ -105,7 +101,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        progressBar.setProgress(progressBar.getMax());
+                        torrentBar.setProgress(torrentBar.getMax());
                         rootLayout.removeView(camera_window);
                     }
                 });
@@ -158,7 +154,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         /* remember the camera_window details for rebuilding later */
         camera_window_params = camera_window.getLayoutParams();
         setCameraWindowCallback();
-        progressBar = (ProgressBar) rootView.findViewById(R.id.progressbar);
+        torrentBar = (TorrentBar) rootView.findViewById(R.id.progressbar);
         progressText = (TextView) rootView.findViewById(R.id.progresstext);
         return rootView;
     }
@@ -207,7 +203,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      * Reset the UI elements to an initial state.
      */
     private void resetUI() {
-        progressBar.setProgress(0);
+        torrentBar.setProgress(0);
         progressText.setText("");
     }
 
