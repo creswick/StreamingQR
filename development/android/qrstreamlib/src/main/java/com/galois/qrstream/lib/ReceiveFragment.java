@@ -110,7 +110,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                         }
                         int count = params.getInt("chunk_count");
                         torrentBar.setProgress(count);
-                        progressText.setText(""+count+"/"+torrentBar.getTotalChunks());
+                        progressText.setText(""+count+"/"+torrentBar.getCellCount());
                     }
                 });
             }
@@ -118,7 +118,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        torrentBar.setProgress(torrentBar.getMax());
+                        torrentBar.setProgress(torrentBar.getCellCount()-1);
                         rootLayout.removeView(camera_window);
                     }
                 });

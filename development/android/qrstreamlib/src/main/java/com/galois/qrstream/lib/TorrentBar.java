@@ -22,21 +22,21 @@ public class TorrentBar extends View {
         paintInit();
     }
 
+    private void paintInit() {
+        onPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        onPaint.setColor(Color.YELLOW);
+        offPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        offPaint.setColor(Color.BLUE);
+    }
+
     public void setCellCount(int total) {
         this.cellCount = total;
         this.cellWidth = width / total;
         onoffs = new boolean[total];
     }
 
-    public int getTotalChunks() {
+    public int getCellCount() {
         return this.cellCount;
-    }
-
-    private void paintInit() {
-        onPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        onPaint.setColor(Color.YELLOW);
-        offPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        offPaint.setColor(Color.BLUE);
     }
 
     protected void onSizeChanged (int w, int h, int oldw, int oldh) {
@@ -80,10 +80,6 @@ public class TorrentBar extends View {
     public void setProgress(int progressStatus) {
         onoffs[progressStatus] = true;
         invalidate();
-    }
-
-    public int getMax() {
-        return 100;
     }
 
     public void reset() {
