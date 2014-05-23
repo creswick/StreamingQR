@@ -37,7 +37,7 @@ public class CameraManager implements ICaptureFrame {
                 if(currentFrame.offer((YuvImage) msg.obj) == false) {
                     Log.e(Constants.APP_TAG, "CameraManager tried to set currentFrame before successful read.");
                 }else {
-                    Log.d(Constants.APP_TAG, "CameraManager set currentFrame.");
+                    //Log.d(Constants.APP_TAG, "CameraManager set currentFrame.");
                 }
             }else{
                 // Probably not a big deal as it would just cause qrlib to stop decoding QR codes

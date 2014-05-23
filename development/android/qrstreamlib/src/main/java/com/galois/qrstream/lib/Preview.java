@@ -51,7 +51,7 @@ public class Preview implements Camera.PreviewCallback {
 
     @Override
     public void onPreviewFrame(@NotNull byte[] data, @NotNull Camera camera) {
-        Log.v(Constants.APP_TAG, "onPreviewFrame data len "+data.length);
+        //Log.v(Constants.APP_TAG, "onPreviewFrame data len "+data.length);
 
         Handler thePreviewHandler = previewHandler;
         if (thePreviewHandler != null) {

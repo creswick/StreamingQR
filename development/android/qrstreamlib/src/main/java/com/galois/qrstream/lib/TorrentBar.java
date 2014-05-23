@@ -40,13 +40,11 @@ public class TorrentBar extends View {
     }
 
     protected void onSizeChanged (int w, int h, int oldw, int oldh) {
-        Log.d("qrstream", "onSizeChanged w:"+w+" h:"+h+" ow:"+oldw+" oh:"+oldh);
         this.width = w;
         this.height= w/10;
     }
 
     protected void onDraw(Canvas canvas) {
-        Log.d("qrstream", "onDraw total "+cellCount);
         super.onDraw(canvas);
         if(onoffs != null) {
             for (int i = 0; i < cellCount; i++) {
