@@ -20,6 +20,9 @@ public class CameraManager implements ICaptureFrame {
 
     private Camera camera;
     private Preview previewCallback;
+
+    // When isRunning is false it signals that the camera is not available
+    // and any decoding of QR in progress should be stopped.
     private boolean isRunning = false;
 
     private final BlockingQueue<YuvImage> currentFrame = Queues.newSynchronousQueue();
@@ -30,19 +33,15 @@ public class CameraManager implements ICaptureFrame {
 
         @Override
         public void handleMessage(Message msg) {
-            if (isRunning && msg.obj != null) {
-                Log.d(Constants.APP_TAG, "CameraManager about to setFrame.");
+            if (msg.obj != null) {
                 if(currentFrame.offer((YuvImage) msg.obj) == false) {
-                    Log.e(Constants.APP_TAG, "CameraManager trying to setFrame before successful read.");
+                    Log.e(Constants.APP_TAG, "CameraManager tried to set currentFrame before successful read.");
                 }else {
-                    Log.d(Constants.APP_TAG, "CameraManager finished setFrame.");
+                    Log.d(Constants.APP_TAG, "CameraManager set currentFrame.");
                 }
             }else{
-                if(isRunning && msg.obj == null) {
-                    Log.e(Constants.APP_TAG, "CameraManager received empty message.");
-                }else {
-                    Log.d(Constants.APP_TAG, "CameraManager not running, ignoring handleMessage request.");
-                }
+                // Probably not a big deal as it would just cause qrlib to stop decoding QR codes
+                Log.d(Constants.APP_TAG, "CameraManager asked to handle NULL message.");
             }
         }
     };
@@ -53,17 +52,15 @@ public class CameraManager implements ICaptureFrame {
         this.previewCallback = previewCallback;
         this.isRunning = true;
 
-        previewCallback.setHandler(frameHandler);
         camera.setPreviewCallback(null);
     }
 
     public void stopRunning() {
         Log.e(Constants.APP_TAG, "CameraManager stopRunning called.");
-        isRunning = false;
         // Release camera and callback
         if (camera != null && previewCallback != null) {
-            // TODO are there any unhandled messages that we need to remove?
-            Log.e(Constants.APP_TAG, "CameraManager stopRunning: camera ref is null.");
+            isRunning = false;
+            camera.setPreviewCallback(null);
             camera = null;
             previewCallback = null;
         }
@@ -71,52 +68,45 @@ public class CameraManager implements ICaptureFrame {
 
     // When isRunning is false, it signals that camera and preview callback are not valid
     // and that any decoding of QR codes should stop.
+    @Override
     public boolean isRunning() {
         return isRunning;
     }
 
+    @Override
+    public synchronized YuvImage captureFrameFromCamera() {
+        // Only one thread at a time can request a frame from the camera
+        setupOneShotPreviewCallback();
+        return getFrame();
+    }
 
-    public YuvImage captureFrameFromCamera() {
-        if (! isRunning ) {
-            return null;
-        }
-
-        if (camera == null) {
-            Log.e(Constants.APP_TAG, "XXX: Why is camera null!? GRRR!!");
-        }
-        if (previewCallback == null) {
-            Log.e(Constants.APP_TAG, "XXX: Why is previewCallback null!? GRRR!!");
-        }
-
-        previewCallback.setHandler(frameHandler);
-        camera.setOneShotPreviewCallback(previewCallback);
-
-        // We need to wait for framehandler to set img before it can be returned
+    // Waits for preview frame from frameHandler before returning.
+    private YuvImage getFrame() {
         YuvImage img = null;
         try {
-            img = currentFrame.poll(10000, TimeUnit.MILLISECONDS);
+            img = currentFrame.poll(Constants.RECEIVE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
-            // Interrupted while waiting for image
-            // Log interruption and decide what to do
-            // ? add: while ( img == null ), poll again... wait longer
+            // Interrupted while waiting for image. Log interruption and return null frame.
+            Log.v(Constants.APP_TAG, "CameraManager interrupted while waiting for image.");
         }
         if(img == null) {
-            Log.e(Constants.APP_TAG, "captureFrameFromCamera got null frame.");
+            Log.v(Constants.APP_TAG, "CameraManager received null preview frame.");
         }
         return img;
-
     }
 
     // Setup camera callback to handle next preview frame
     private void setupOneShotPreviewCallback() {
         if ((camera != null) && (previewCallback != null)) {
+            previewCallback.setHandler(frameHandler);
             camera.setOneShotPreviewCallback(previewCallback);
         } else {
             if (camera == null) {
-                Log.e(Constants.APP_TAG, "XXX: Why is camera null!? GRRR!!");
+                Log.e(Constants.APP_TAG, "Cannot request preview frame when camera is not initialized.");
             }
             if (previewCallback == null) {
-                Log.e(Constants.APP_TAG, "XXX: Why is previewCallback null!? GRRR!!");
+                Log.e(Constants.APP_TAG, "Cannot request preview frame from camera without " +
+                        "first specifying a handler for the preview frames.");
             }
         }
     }

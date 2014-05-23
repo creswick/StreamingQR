@@ -16,13 +16,12 @@
 
 
     <LinearLayout android:id="@+id/status_overlay"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
         android:alpha="0.7"
         android:orientation="horizontal"
-        android:gravity="center"
-        >
+        android:gravity="center">
 
         <View android:layout_width="0dp"
             android:layout_weight="0.2"
@@ -30,10 +29,18 @@
 
         <com.galois.qrstream.lib.TorrentBar android:id="@+id/progressbar"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="28dp"
             android:layout_weight="0.6"
             style="@android:style/Widget.ProgressBar.Horizontal"
             />
+
+        <ImageButton android:id="@+id/progressbutton"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/cancel"
+            style="@android:style/Widget.DeviceDefault.Button.Borderless.Small"
+            android:cropToPadding="false"
+            android:scaleType="fitCenter" />
 
         <TextView android:id="@+id/progresstext"
             android:layout_width="0dp"
