@@ -14,10 +14,12 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.galois.qrstream.qrpipe.IProgress;
 import com.galois.qrstream.qrpipe.Receive;
@@ -43,9 +45,19 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private DecodeThread decodeThread;
     private Activity activity;
 
-    // LC experimenting with QRlib managing preview requests
+    // Help QRlib manage the camera preview requests
     private CameraManager cameraManager = new CameraManager();
     private boolean hasSurface = false;
+
+    // Keep track of visibility of Rx fragment so that we can dispose of
+    // cancellation messages that are not relevant.  The activity.isFinishing()
+    // does not trigger onPause() only onDestroy().
+    private boolean isVisible = false;
+
+    // Sometimes the main thread tries to start the DecodeThread
+    // twice -- if tries twice in quick succession the
+    // decodeThread.isAlive() may yield false negative
+    private boolean hasDecodeThreadStarted = false;
 
     /**
      * Handler to process progress updates from the IProgress implementation.
@@ -59,8 +71,11 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             final Bundle params = msg.getData();
             State state = (State)params.getSerializable("state");
             Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
-            if(activity.isFinishing()) {
-                Log.d(Constants.APP_TAG, "ignoring displayUpdate message. Activity is finishing.");
+            // Keep track of visibility of Rx fragment so that we can dispose of
+            // cancellation messages that are not relevant.  The activity.isFinishing()
+            // does not trigger onPause() only onDestroy().
+            if(!isVisible || activity.isFinishing()) {
+                Log.d(Constants.APP_TAG, "ignoring displayUpdate message. Fragment is not visible.");
             } else {
                 dispatchState(params, state);
             }
@@ -95,11 +110,10 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                     @Override
                     public void run() {
                         new AlertDialog.Builder(activity).
-                                setMessage("Receive failed").
-                                setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                setMessage(R.string.receive_failedTxt).
+                                setPositiveButton(R.string.receive_buttonOkTxt, new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
-                                        disposeCamera();
                                         resume();
                                     }
                                 }).
@@ -145,28 +159,44 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     }
 
     @Override
+    public void onPause(){
+        Log.d(Constants.APP_TAG, "onPause");
+        super.onPause();
+        isVisible = false;
+        disposeCamera();
+    }
+
+    @Override
     public void onResume() {
-        super.onResume();
         Log.d(Constants.APP_TAG, "onResume");
+        super.onResume();
+        isVisible = true;
         resume();
     }
 
     private void resume() {
+        // Make sure that camera resources had been released
+        disposeCamera();
         resetUI();
 
         /* In some cases, onPause will destroy the camera_window */
         SurfaceView previewSurface = (SurfaceView) rootLayout.findViewWithTag("camera_window");
         if(previewSurface == null) {
-            Log.d(Constants.APP_TAG, "onResume camera_window is null");
+            Log.d(Constants.APP_TAG, "Resume: camera_window is null");
             replaceCameraWindow();
         }
 
-        try {
-            Camera.Parameters params = openCamera();
-            startPipe(params, progress, cameraManager);
-        }catch (RuntimeException re) {
-            // TODO handle this more elegantly.
-            Log.e(Constants.APP_TAG, "Could not open camera. "+re);
+        if (hasSurface) {
+            // The fragment was paused but not stopped. Happens when power button is pressed
+            // instead of exiting through back button, opening settings fragment, or pushing
+            // home button. When this happens, the surface still exists and surfaceCreated callback
+            // won't be invoked. Therefore, we need to init the camera here.
+            initCamera(camera_window.getHolder());
+            startPipe(camera.getParameters(), progress, cameraManager);
+        }else{
+            // Install the callback and wait for surfaceCreated() to init the camera.
+            Log.i(Constants.APP_TAG, "ReceiveFragment:onResume: has NO surface.");
+            setCameraWindowCallback();
         }
     }
 
@@ -194,10 +224,10 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     }
 
     @Override
-    public void onPause(){
-        super.onPause();
-        Log.d(Constants.APP_TAG, "onPause");
+    public void surfaceDestroyed(SurfaceHolder holder) {
+        Log.d(Constants.APP_TAG, "surfaceDestroyed");
         disposeCamera();
+        hasSurface = false;
     }
 
     @Override
@@ -208,7 +238,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         }
         if (!hasSurface) {
             hasSurface = true;
-            //initCamera(holder);
+            initCamera(holder);
+            startPipe(camera.getParameters(), progress, cameraManager);
         }
 
     }
@@ -216,62 +247,58 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         Log.e(Constants.APP_TAG, "surfaceChanged");
-        if(camera == null) {
-            Log.e(Constants.APP_TAG, "surfaceChanged but camera is null. WTF?!");
-        }else {
-            startCameraPreview(holder, camera);
-        }
     }
 
-    private void startCameraPreview(SurfaceHolder holder, Camera c) {
-        try {
-            c.setPreviewDisplay(holder);
-            c.startPreview();
-            if(decodeThread == null) {
-                Log.e(Constants.APP_TAG, "camera preview started, but DecodeThread == null");
-            }else{
-                if(!decodeThread.isAlive()) {
-                    decodeThread.start();
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.d(Constants.APP_TAG, "surfaceDestroyed");
-        disposeCamera();
-        hasSurface = false;
-    }
-
-    private void initCamera (SurfaceHolder surfaceHolder) throws IOException {
-        if(surfaceHolder == null) {
+    /*
+     * Reserve the hardware camera and setup a callback for the preview frames
+     */
+    private void initCamera (SurfaceHolder surfaceHolder) {
+        if (surfaceHolder == null) {
             throw new IllegalStateException("No valid SurfaceHolder provided");
         }
         if (camera != null) {
             Log.d(Constants.APP_TAG, "initCamera() while camera already open.");
             return;
         }
-        int cameraId = 0;
-        camera = Camera.open();
-        camera.setPreviewDisplay(surfaceHolder);
-        camera.setDisplayOrientation(defaultCameraOrientation(cameraId));
-        Camera.Parameters params = camera.getParameters();
+
+        // TODO How should application behave if we find only front facing camera
+        int cameraId = requestCameraId();
+        try {
+            Log.d(Constants.APP_TAG, "initCamera: Trying to open and initialize camera");
+            camera = Camera.open(cameraId);
+            camera.setDisplayOrientation(defaultCameraOrientation(cameraId));
+            camera.setPreviewDisplay(surfaceHolder);
+            camera.startPreview();
+
+            Camera.Parameters params = camera.getParameters();
+            cameraManager.startRunning(camera, new Preview(params.getPreviewSize()));
+        } catch (RuntimeException re) {
+            // TODO handle this more elegantly.
+            Toast.makeText(getActivity(), "Unable to open camera", Toast.LENGTH_LONG).show();
+            Log.e(Constants.APP_TAG, "Could not open camera from resume(). "+re);
+            re.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 
     /*
-     * Reserve the hardware camera and setup a callback for the preview frames
+     * Returns the id of the first back facing camera if found.
+     * Otherwise, it returns the id of the first camera found.
      */
-    private Camera.Parameters openCamera() {
-        // TODO Camera.open() returns null if there is no back-facing camera.
-        camera = Camera.open();
-        setCameraDisplayOrientation(camera);
-        Camera.Parameters params = camera.getParameters();
-        cameraManager.startRunning(camera, new Preview(params.getPreviewSize()));
-        return params;
+    private int requestCameraId() {
+        int cameraId = 0;
+        int camerasOnPhone = Camera.getNumberOfCameras();
+        for (int i=0; i < camerasOnPhone; i++) {
+            Camera.CameraInfo info = new Camera.CameraInfo();
+            Camera.getCameraInfo(i, info);
+            if (info.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                cameraId = i;
+                break;
+            }
+        }
+        return cameraId;
     }
 
     private void disposeCamera() {
@@ -288,10 +315,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera = null;
     }
 
-    public void setCameraDisplayOrientation(android.hardware.Camera camera) {
-        int cameraId = 0;
-        camera.setDisplayOrientation(defaultCameraOrientation(cameraId));
-    }
 
     /**
      * Calculate the default orientation for the requested camera.
@@ -341,13 +364,23 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         }
 
         if(decodeThread == null) {
-            Log.d(Constants.APP_TAG, "startPipe starting decodeThread");
+            Log.d(Constants.APP_TAG, "startPipe building new decodeThread");
             Camera.Size previewSize = params.getPreviewSize();
             Receive receiveQrpipe = new Receive(previewSize.height,
                                         previewSize.width,
                                         Constants.RECEIVE_TIMEOUT_MS,
                                         progress);
+
+            // Cannot start up this thread yet.  We need to make sure that the
+            // camera preview is available for decodeThread to request frames.
+            cameraManager.startRunning(camera, new Preview(params.getPreviewSize()));
             decodeThread = new DecodeThread(getActivity(), receiveQrpipe, fm);
+            hasDecodeThreadStarted = false;
+        }
+
+        if(!hasDecodeThreadStarted) {
+            hasDecodeThreadStarted = true;
+            decodeThread.start();
         }
     }
 
