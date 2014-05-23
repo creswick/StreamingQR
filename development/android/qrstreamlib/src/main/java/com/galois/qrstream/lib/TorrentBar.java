@@ -10,12 +10,20 @@ import android.util.Log;
 import android.view.View;
 
 public class TorrentBar extends View {
+    private int cellCount;
     private Paint mPaint;
-    private RectF mBounds;
+    private int width;
+    private int height;
+    private int cellWidth;
 
     public TorrentBar(Context context, AttributeSet attrs) {
         super(context, attrs);
         paintInit();
+    }
+
+    public void setTotalChunks(int total) {
+        this.cellCount = total;
+        this.cellWidth = width / total;
     }
 
     private void paintInit() {
@@ -25,23 +33,38 @@ public class TorrentBar extends View {
 
     protected void onSizeChanged (int w, int h, int oldw, int oldh) {
         Log.d("qrstream", "onSizeChanged w:"+w+" h:"+h+" ow:"+oldw+" oh:"+oldh);
-        mBounds = new RectF();
-        int aspectHeight= w/10;
-        mBounds.set(0,0,w,aspectHeight);
-
+        this.width = w;
+        this.height= w/10;
     }
 
     protected void onDraw(Canvas canvas) {
+        Log.d("qrstream", "onDraw total "+cellCount);
         super.onDraw(canvas);
+        for(int i=0; i < cellCount; i++) {
+            drawCell(canvas, i, true);
+        }
+    }
 
-        // Draw the shadow
+    protected void drawCell(Canvas canvas, int idx, boolean onoff) {
+        RectF cellBounds = cellBounds(idx);
         canvas.drawOval(
-                mBounds,
+                cellBounds,
                 mPaint
         );
     }
 
+    protected RectF cellBounds(int idx) {
+        int top = 0;
+        int left = idx * cellWidth;
+        int right = left + this.height;
+        int bottom = top + this.height;
+        RectF bounds = new RectF();
+        bounds.set(left, top, right, bottom);
+        return bounds;
+    }
+
     public void setProgress(int progressStatus) {
+        invalidate();
     }
 
     public int getMax() {
