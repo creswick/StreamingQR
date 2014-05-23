@@ -20,6 +20,7 @@ import android.widget.RelativeLayout;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ImageButton;
 
 import com.galois.qrstream.qrpipe.IProgress;
 import com.galois.qrstream.qrpipe.Receive;
@@ -40,6 +41,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private RelativeLayout rootLayout;
     private ProgressBar progressBar;
     private TextView progressText;
+    private ImageButton progressButton;
 
     private Camera camera;
     private DecodeThread decodeThread;
@@ -155,6 +157,16 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         setCameraWindowCallback();
         progressBar = (ProgressBar) rootView.findViewById(R.id.progressbar);
         progressText = (TextView) rootView.findViewById(R.id.progresstext);
+        progressButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
+        progressButton.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // TODO remove after reducing size of button and determining approach is wanted.
+                Toast.makeText(activity, "Cancel button was clicked!", Toast.LENGTH_SHORT).show();
+                cameraManager.stopRunning();
+            }
+        });
+
         return rootView;
     }
 
