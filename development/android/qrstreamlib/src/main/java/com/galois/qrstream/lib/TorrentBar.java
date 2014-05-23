@@ -11,24 +11,32 @@ import android.view.View;
 
 public class TorrentBar extends View {
     private int cellCount;
-    private Paint mPaint;
+    private Paint onPaint, offPaint;
     private int width;
     private int height;
     private int cellWidth;
+    private boolean[] onoffs;
 
     public TorrentBar(Context context, AttributeSet attrs) {
         super(context, attrs);
         paintInit();
     }
 
-    public void setTotalChunks(int total) {
+    public void setCellCount(int total) {
         this.cellCount = total;
         this.cellWidth = width / total;
+        onoffs = new boolean[total];
+    }
+
+    public int getTotalChunks() {
+        return this.cellCount;
     }
 
     private void paintInit() {
-        mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mPaint.setColor(Color.BLUE);
+        onPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        onPaint.setColor(Color.YELLOW);
+        offPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        offPaint.setColor(Color.BLUE);
     }
 
     protected void onSizeChanged (int w, int h, int oldw, int oldh) {
@@ -40,16 +48,24 @@ public class TorrentBar extends View {
     protected void onDraw(Canvas canvas) {
         Log.d("qrstream", "onDraw total "+cellCount);
         super.onDraw(canvas);
-        for(int i=0; i < cellCount; i++) {
-            drawCell(canvas, i, true);
+        if(onoffs != null) {
+            for (int i = 0; i < cellCount; i++) {
+                drawCell(canvas, i, onoffs[i]);
+            }
         }
     }
 
     protected void drawCell(Canvas canvas, int idx, boolean onoff) {
         RectF cellBounds = cellBounds(idx);
+        Paint paint;
+        if(onoff) {
+            paint = onPaint;
+        } else {
+            paint = offPaint;
+        }
         canvas.drawOval(
                 cellBounds,
-                mPaint
+                paint
         );
     }
 
@@ -64,10 +80,16 @@ public class TorrentBar extends View {
     }
 
     public void setProgress(int progressStatus) {
+        onoffs[progressStatus] = true;
         invalidate();
     }
 
     public int getMax() {
         return 100;
     }
+
+    public void reset() {
+        invalidate();
+    }
+
 }
