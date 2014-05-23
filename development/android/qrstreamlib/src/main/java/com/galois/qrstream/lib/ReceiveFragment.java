@@ -81,6 +81,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      * This update handler is passed to the Progress object during the UI initialization.
      */
     private Handler displayUpdate = new Handler() {
+        boolean inProgress = false;
 
         @Override
         public void handleMessage(Message msg) {
@@ -102,13 +103,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        int progressStatus = params.getInt("percent_complete");
-                        int total = params.getInt("chunk_total");
-                        torrentBar.setTotalChunks(total);
+                        if(!inProgress) {
+                            inProgress = true; // State change
+                            int total = params.getInt("chunk_total");
+                            torrentBar.setCellCount(total);
+                        }
                         int count = params.getInt("chunk_count");
-                        Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
-                        torrentBar.setProgress(progressStatus);
-                        progressText.setText(""+count+"/"+total+" "+progressStatus+"%");
+                        torrentBar.setProgress(count);
+                        progressText.setText(""+count+"/"+torrentBar.getTotalChunks());
                     }
                 });
             }
@@ -246,7 +248,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      * Reset the UI elements to an initial state.
      */
     private void resetUI() {
-        torrentBar.setProgress(0);
+        torrentBar.reset();
         progressText.setText("");
     }
 
