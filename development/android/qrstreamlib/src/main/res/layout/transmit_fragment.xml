@@ -4,7 +4,7 @@
     android:id="@+id/transmit_layout"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="520dp"
+    android:layout_height="fill_parent"
     android:layout_gravity="center_vertical"
     >
 
@@ -18,12 +18,13 @@
         android:textColor="#00ff00"
         />
 
-    <ImageView
+    <TableLayout
         android:id="@+id/send_window"
-        android:layout_width="fill_parent"
-        android:layout_height="0dp"
-        android:layout_weight="0.9"
-        />
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight=".9"
+        android:focusable="true"
+        android:baselineAligned="true" />
 
     <TextView
         android:id="@+id/data_title"

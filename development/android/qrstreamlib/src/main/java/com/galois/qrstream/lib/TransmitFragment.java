@@ -20,6 +20,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
@@ -34,6 +35,8 @@ import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 
 import java.util.Iterator;
 
@@ -49,7 +52,7 @@ import com.galois.qrstream.image.BitmapImage;
 public class TransmitFragment extends Fragment {
 
     private TextView dataTitle;
-    private ImageView send_window;
+    private TableLayout send_window;
     private Button sendButton;
     private Transmit transmitter;
 
@@ -61,6 +64,7 @@ public class TransmitFragment extends Fragment {
 
     // Manage shared settings for application
     private SharedPreferences settings;
+    private int numQRCodesDisplayed = 1;
     private final OnSharedPreferenceChangeListener settingsChangeListener =
         new SharedPreferences.OnSharedPreferenceChangeListener() {
             @Override
@@ -71,8 +75,14 @@ public class TransmitFragment extends Fragment {
                     // Only the frame rate changed, no need to restart transmission
                     transmitInterval = Integer.parseInt(pref.getString(key, ""));
                     Log.i(Constants.APP_TAG, "new frame time =" + transmitInterval);
+                } else if (key.equalsIgnoreCase("frame_population")) {
+                    // Save display count so that we can populate the Tx with the
+                    // right number of QR codes. No need to restart transmission
+                    // since this will be handled onCreateView
+                    numQRCodesDisplayed = Integer.parseInt(pref.getString(key, ""));
+                    Log.i(Constants.APP_TAG, "new # of QR codes to display =" + numQRCodesDisplayed);
                 } else {
-                    // When remaining settings (qr_density, error_correction,frame_population)
+                    // When remaining settings (qr_density and error_correction)
                     // get updated, the transmission will need to be restarted.
                     sendJob();
                 }
@@ -99,6 +109,8 @@ public class TransmitFragment extends Fragment {
 
         // Setup initial default interval since we have settings
         transmitInterval = Integer.parseInt(settings.getString("frame_time", ""));
+        numQRCodesDisplayed = Integer.parseInt(settings.getString("frame_population", "1"));
+
         super.onAttach(activity);
     }
 
@@ -115,15 +127,78 @@ public class TransmitFragment extends Fragment {
         LinearLayout ll = (LinearLayout)rootView.findViewById(R.id.transmit_layout);
         ll.setKeepScreenOn(true);
 
-        send_window = (ImageView)rootView.findViewById(R.id.send_window);
+        // Determine the row and columns to display based on settings
+        int columnCount = (numQRCodesDisplayed <= 2) ? 1 : 2;
+        int rowCount = numQRCodesDisplayed / columnCount;
+
+        send_window = (TableLayout) rootView.findViewById(R.id.send_window);
+        // TODO Remove after satisfied with layout
+        send_window.setBackgroundColor(Color.CYAN);
+
+        // Calc height and width available to each barcode image
+        // Setup the layout parameters for each row and column in the table
+        for (int r=1; r<=rowCount; r++){
+            TableRow tr = new TableRow(getActivity());
+            // A TableRow must use the layout parameters from its parent, i.e. TableLayout params
+            tr.setLayoutParams(new TableLayout.LayoutParams(
+                    TableLayout.LayoutParams.MATCH_PARENT,
+                    TableLayout.LayoutParams.MATCH_PARENT, 1.0f));
+            for (int c=1; c<=columnCount; c++){
+                ImageView imgView = new ImageView (getActivity());
+                imgView.setPadding(0, 0, 0, 0); //padding in each image if needed
+                imgView.setLayoutParams( new TableRow.LayoutParams(
+                        TableRow.LayoutParams.MATCH_PARENT,
+                        TableRow.LayoutParams.MATCH_PARENT, 1.0f));
+
+                // TODO Remove after satisfied with layout
+                if (r == 1) {
+                    if (c == 1) {
+                        imgView.setBackgroundColor(Color.MAGENTA);
+                    }else{
+                        imgView.setBackgroundColor(Color.BLUE);
+                    }
+                }else{
+                    if (c == 1) {
+                        imgView.setBackgroundColor(Color.LTGRAY);
+                    }else{
+                        imgView.setBackgroundColor(Color.GREEN);
+                    }
+                }
+                tr.addView(imgView);
+            }
+            send_window.addView(tr);
+        }
+
+
         send_window.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom,
                                        int oldLeft, int oldTop, int oldRight, int oldBottom) {
                 if (transmitter == null) {
+
                     Log.d(Constants.APP_TAG, "onLayoutChange Transmitter created for width " +
                             send_window.getWidth() + " height " + send_window.getHeight());
-                    transmitter = new Transmit(send_window.getWidth(), send_window.getHeight());
+
+                    // Calculate the image height and width given the row and column count
+                    int numCols = 1;
+                    int numRows = send_window.getChildCount();
+                    if (numRows >= 1) {
+                        TableRow r = (TableRow) send_window.getChildAt(0);
+                        numCols = r.getChildCount();
+                    }
+                    Log.i(Constants.APP_TAG, "onLayoutChange: numRows= " + numRows +
+                                             " numCols= " + numCols);
+
+                    int imageWidth = send_window.getWidth() / numCols;
+                    int imageHeight = send_window.getHeight() / numRows;
+                    Log.i(Constants.APP_TAG, "onLayoutChange: imgWidth= " + imageWidth +
+                            " imgHeight= " + imageHeight);
+
+                    // QRCode size strategy borrowed from ZXing's BarcodeScanner
+                    int smallerDimension = imageWidth < imageHeight ? imageWidth : imageHeight;
+                    smallerDimension = smallerDimension * 7/8;
+                    transmitter = new Transmit(smallerDimension, smallerDimension);
+
                     sendJob();
                 }
             }
@@ -230,9 +305,28 @@ public class TransmitFragment extends Fragment {
      * @param frame Indicates which frame from the stream is being displayed.
      */
     private void displayImageOnUI(BitmapImage qrCode, int frame) {
+        // Note: setImageDrawable invokes requestLayout() internally
+        //       and emits warning about running another layout pass
+
         Log.i(Constants.APP_TAG, "Drawing QR Code: " + frame);
-        Bitmap b = toBitmap(qrCode);
-        send_window.setImageDrawable(new BitmapDrawable(getResources(), b));
+        Drawable prevBitmap = null;
+        int nRows = send_window.getChildCount();
+        for (int r = 0; r < nRows; r++) {
+            TableRow row = (TableRow) send_window.getChildAt(r);
+            for (int c = 0; c < row.getChildCount(); c++) {
+                ImageView imgView = (ImageView) row.getChildAt(c);
+                if (prevBitmap == null) {
+                    prevBitmap = imgView.getDrawable();
+                    Bitmap b = toBitmap(qrCode);
+                    imgView.setImageDrawable(new BitmapDrawable(getResources(), b));
+                }else{
+                    Drawable current = imgView.getDrawable();
+                    imgView.setImageDrawable(prevBitmap);
+                    prevBitmap = current;
+                }
+            }
+        }
+
         updateUI(frame);
     }
 
