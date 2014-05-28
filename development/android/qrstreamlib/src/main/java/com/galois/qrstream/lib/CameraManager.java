@@ -93,7 +93,7 @@ public class CameraManager implements ICaptureFrame {
     }
 
     // Waits for preview frame from frameHandler before returning.
-    private YuvImage getFrame() {
+    private synchronized YuvImage getFrame() {
         YuvImage img = null;
         try {
             img = currentFrame.poll(Constants.RECEIVE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
@@ -108,7 +108,7 @@ public class CameraManager implements ICaptureFrame {
     }
 
     // Setup camera callback to handle next preview frame
-    private void setupOneShotPreviewCallback() {
+    private synchronized void setupOneShotPreviewCallback() {
         if ((camera != null) && (previewCallback != null)) {
             previewCallback.setHandler(frameHandler);
             camera.setOneShotPreviewCallback(previewCallback);
