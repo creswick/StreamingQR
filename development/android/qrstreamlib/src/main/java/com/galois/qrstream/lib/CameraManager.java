@@ -18,18 +18,25 @@ import org.jetbrains.annotations.NotNull;
  */
 public class CameraManager implements ICaptureFrame {
 
-    private Camera camera;
-    private Preview previewCallback;
+    private static final CameraManager INSTANCE = new CameraManager();
+
+    private static final BlockingQueue<YuvImage> currentFrame = Queues.newSynchronousQueue();
 
     // When isRunning is false it signals that the camera is not available
     // and any decoding of QR in progress should be stopped.
     private boolean isRunning = false;
 
-    private final BlockingQueue<YuvImage> currentFrame = Queues.newSynchronousQueue();
+    private Camera camera;
+    private Preview previewCallback;
+
+    public static CameraManager getInstance() { return INSTANCE; }
+
+    private CameraManager () {}
+
 
     // Handler is bound to the same thread that created the CameraManager
     // i.e. the UI thread.  Perhaps this should get moved?
-    private final Handler frameHandler = new Handler() {
+    private static final Handler frameHandler = new Handler() {
 
         @Override
         public void handleMessage(Message msg) {
@@ -45,6 +52,11 @@ public class CameraManager implements ICaptureFrame {
             }
         }
     };
+
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        throw new CloneNotSupportedException("Cannot clone CameraManager");
+    }
 
     public void startRunning(@NotNull Camera camera,
                              @NotNull Preview previewCallback) {

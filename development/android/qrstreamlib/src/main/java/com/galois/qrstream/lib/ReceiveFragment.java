@@ -48,7 +48,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private Activity activity;
 
     // Help QRlib manage the camera preview requests
-    private CameraManager cameraManager = new CameraManager();
+    private final CameraManager cameraManager = CameraManager.getInstance();
     private boolean hasSurface = false;
 
     // Keep track of visibility of Rx fragment so that we can dispose of
