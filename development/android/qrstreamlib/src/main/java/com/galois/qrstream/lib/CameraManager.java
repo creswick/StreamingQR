@@ -70,10 +70,12 @@ public class CameraManager implements ICaptureFrame {
     public void stopRunning() {
         Log.e(Constants.APP_TAG, "CameraManager stopRunning called.");
         // Release camera and callback
-        if (camera != null && previewCallback != null) {
-            isRunning = false;
+        isRunning = false;
+        if (camera != null) {
             camera.setPreviewCallback(null);
             camera = null;
+        }
+        if (previewCallback != null) {
             previewCallback = null;
         }
     }
