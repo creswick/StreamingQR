@@ -264,10 +264,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     /*
      * Reserve the hardware camera and setup a callback for the preview frames
      */
-    private void initCamera (SurfaceHolder surfaceHolder) {
-        if (surfaceHolder == null) {
-            throw new IllegalStateException("No valid SurfaceHolder provided");
-        }
+    private void initCamera (@NotNull SurfaceHolder surfaceHolder) {
         if (camera != null) {
             Log.d(Constants.APP_TAG, "initCamera() while camera already open.");
             return;
@@ -287,7 +284,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         } catch (RuntimeException re) {
             // TODO handle this more elegantly.
             Toast.makeText(getActivity(), "Unable to open camera", Toast.LENGTH_LONG).show();
-            Log.e(Constants.APP_TAG, "Could not open camera from resume(). "+re);
+            Log.e(Constants.APP_TAG, "Could not open camera. "+re);
             re.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
