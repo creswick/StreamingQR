@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.DialogInterface;
 import android.hardware.Camera;
+import android.hardware.Camera.CameraInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -303,9 +304,9 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         int cameraId = 0;
         int camerasOnPhone = Camera.getNumberOfCameras();
         for (int i=0; i < camerasOnPhone; i++) {
-            Camera.CameraInfo info = new Camera.CameraInfo();
+            CameraInfo info = new CameraInfo();
             Camera.getCameraInfo(i, info);
-            if (info.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+            if (info.facing == CameraInfo.CAMERA_FACING_BACK) {
                 cameraId = i;
                 break;
             }
@@ -336,9 +337,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      * @return Rotation in degrees of the camera display.
      */
     private int defaultCameraOrientation(int cameraId) {
-        android.hardware.Camera.CameraInfo info =
-                new android.hardware.Camera.CameraInfo();
-        android.hardware.Camera.getCameraInfo(cameraId, info);
+        CameraInfo info = new CameraInfo();
+        Camera.getCameraInfo(cameraId, info);
         int rotation = getActivity().getWindowManager().getDefaultDisplay()
                 .getRotation();
         int degrees = 0;
@@ -350,7 +350,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         }
 
         int result;
-        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+        if (info.facing == CameraInfo.CAMERA_FACING_FRONT) {
             result = (info.orientation + degrees) % 360;
             result = (360 - result) % 360;  // compensate the mirror
         } else {  // back-facing
