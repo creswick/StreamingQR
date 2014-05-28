@@ -277,7 +277,7 @@ public class TransmitTest {
      */
     String filePrefix = "qr_" + origStr;
     BitMatrix qrActual = null;
-    qrActual = transmitter.bytesToQRCode(utfStr);
+    qrActual = transmitter.bytesToQRCode(utfStr, ErrorCorrectionLevel.L);
     assertNotNull("Expected QR encoding of string,"+origStr+", to be successful", qrActual);
 
     /*

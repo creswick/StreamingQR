@@ -252,7 +252,7 @@ public class Transmit {
               + getPayloadMaxBytes(ecLevel, v));
     }
     byte[] prependedData = Utils.prependChunkId(chunkedData, chunkId, totalChunks);
-    BitMatrix bMat = bytesToQRCode(prependedData);
+    BitMatrix bMat = bytesToQRCode(prependedData, ecLevel);
     return BitmapImage.createBitmapImage(bMat);
   }
 
@@ -287,8 +287,10 @@ public class Transmit {
    *  3. When ZXing sees ISO-8859-1 character-set they set the QR
    *     encoding mode to 'Byte encoding' and turn the String back to turn to byte[].
    * @param rawData the binary data to encode into a single QR code image.
+   * @param ecLevel the error correction level to encode the QR code with.
+   *
    */
-  protected BitMatrix bytesToQRCode(byte[] rawData) {
+  protected BitMatrix bytesToQRCode(byte[] rawData, ErrorCorrectionLevel ecLevel) {
     /*
      * Max QR code density is function of error correction level and version of
      * QR code. Max bytes for QR in binary/byte mode = 2,953 bytes using, QR
@@ -311,7 +313,7 @@ public class Transmit {
     try {
       // note: writer.encode cannot return a null value, as written. (It would throw a NPE.)
       BitMatrix bMat = writer.encode(data, BarcodeFormat.QR_CODE,
-          imgWidth, imgHeight, getEncodeHints());
+          imgWidth, imgHeight, getEncodeHints(ecLevel));
       return bMat;
     } catch (WriterException e) {
       //throw new TransmitException(e.getMessage());
