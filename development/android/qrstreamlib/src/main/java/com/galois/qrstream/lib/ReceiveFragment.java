@@ -246,14 +246,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     public void surfaceCreated(SurfaceHolder holder) {
         Log.e(Constants.APP_TAG, "surfaceCreated");
         if (holder == null) {
-            Log.e (Constants.APP_TAG, "*** WARNING *** surfaceCreated() gave us a null surface!");
+            Log.e(Constants.APP_TAG, "*** WARNING *** surfaceCreated() gave us a null surface!");
+        } else {
+            if (!hasSurface) {
+                hasSurface = true;
+                initCamera(holder);
+                startPipe(camera.getParameters(), progress, cameraManager);
+            }
         }
-        if (!hasSurface) {
-            hasSurface = true;
-            initCamera(holder);
-            startPipe(camera.getParameters(), progress, cameraManager);
-        }
-
     }
 
     @Override
