@@ -56,10 +56,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     // does not trigger onPause() only onDestroy().
     private boolean isVisible = false;
 
-    // Sometimes the main thread tries to start the DecodeThread
-    // twice -- if tries twice in quick succession the
-    // decodeThread.isAlive() may yield false negative
-    private boolean hasDecodeThreadStarted = false;
 
     /**
      * Handler to process progress updates from the IProgress implementation.
@@ -383,13 +379,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             // camera preview is available for decodeThread to request frames.
             cameraManager.startRunning(camera, new Preview(params.getPreviewSize()));
             decodeThread = new DecodeThread(getActivity(), receiveQrpipe, fm);
-            hasDecodeThreadStarted = false;
-        }
-
-        if(!hasDecodeThreadStarted) {
-            hasDecodeThreadStarted = true;
             decodeThread.start();
         }
     }
-
 }
