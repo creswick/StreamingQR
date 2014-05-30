@@ -234,7 +234,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         Log.d(Constants.APP_TAG, "surfaceDestroyed");
-        disposeCamera();
         hasSurface = false;
     }
 
