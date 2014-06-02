@@ -18,7 +18,7 @@ repositories {
 // runtime.
 dependencies {
     // ZXing core, i.e. the QR code library
-    compile "com.google.zxing:core:2.3.0"
+    compile "com.google.zxing:core:3.1.1-SNAPSHOT"
 
     // Guava library
     compile group: 'com.google.guava', name: 'guava', version: '16.+'
