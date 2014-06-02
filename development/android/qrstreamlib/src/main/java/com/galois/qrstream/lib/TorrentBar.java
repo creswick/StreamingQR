@@ -31,8 +31,14 @@ public class TorrentBar extends View {
 
     public void setCellCount(int total) {
         this.cellCount = total;
-        this.cellWidth = width / total;
         onoffs = new boolean[total];
+        recomputeCellWidth();
+    }
+
+    public void recomputeCellWidth() {
+        if(this.cellCount > 0) {
+            this.cellWidth = width / this.cellCount;
+        }
     }
 
     public int getCellCount() {
@@ -42,6 +48,7 @@ public class TorrentBar extends View {
     protected void onSizeChanged (int w, int h, int oldw, int oldh) {
         this.width = w;
         this.height= w/10;
+        recomputeCellWidth();
     }
 
     protected void onDraw(Canvas canvas) {
@@ -70,7 +77,7 @@ public class TorrentBar extends View {
     protected RectF cellBounds(int idx) {
         int top = 0;
         int left = idx * cellWidth;
-        int right = left + this.height;
+        int right = left + this.width;
         int bottom = top + this.height;
         RectF bounds = new RectF();
         bounds.set(left, top, right, bottom);
