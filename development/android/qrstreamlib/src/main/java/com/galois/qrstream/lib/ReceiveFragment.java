@@ -8,6 +8,7 @@ import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -40,11 +41,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private static ProgressBar progressBar;
     private static TextView progressText;
 
+    // Need static referneces for handler to process camera messages
+    // off the UI thread.
+    private static Camera camera;
+
     private SurfaceView camera_window;
     private ViewGroup.LayoutParams camera_window_params;
     private RelativeLayout rootLayout;
 
-    private Camera camera;
     private DecodeThread decodeThread;
     private Activity activity;
 
@@ -316,7 +320,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         int cameraId = requestCameraId();
         try {
             Log.d(Constants.APP_TAG, "initCamera: Trying to open and initialize camera");
-            camera = Camera.open(cameraId);
+            openCamera(cameraId);
             camera.setDisplayOrientation(defaultCameraOrientation(cameraId));
             camera.setPreviewDisplay(surfaceHolder);
             camera.startPreview();
@@ -329,8 +333,63 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
+    private CameraHandlerThread mThread = null;
+    private void openCamera(int cameraId) {
+        if (mThread == null) {
+            mThread = new CameraHandlerThread();
+        }
+
+        synchronized (mThread) {
+            mThread.openCamera(cameraId);
+        }
+    }
+
+    // CameraHandlerThread is not using the looper of the main UI thread.
+    // and so it does not need to be static handler.
+    private class CameraHandlerThread extends HandlerThread {
+        Handler mHandler = null;
+
+        CameraHandlerThread() {
+            super("CameraHandlerThread");
+            start();
+            mHandler = new Handler(getLooper());
+            Log.e(Constants.APP_TAG, "CameraHandlerThread Id# " + this.getId());
+        }
+
+        public void openCamera(final int cameraId) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    camera = getCameraInstance(cameraId);
+                    notifyCameraOpened();
+                }
+            });
+            try {
+                wait();
+            }
+            catch (InterruptedException e) {
+                Log.w(Constants.APP_TAG, "wait was interrupted");
+            }
+        }
+
+        private synchronized void notifyCameraOpened() {
+            notify();
+        }
+
+        private Camera getCameraInstance(int cameraId) {
+            Camera c = null;
+            try {
+                c = Camera.open(cameraId);
+            }
+            catch (RuntimeException e) {
+                // TODO handle this more elegantly.
+                Log.e(Constants.APP_TAG, "failed to open camera");
+            }
+            return c;
+        }
+    }
+
 
     /*
      * Returns the id of the first back facing camera if found.
@@ -355,6 +414,10 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             return;
         }
 
+        // Wait for camera to handle queue of PreviewCallback requests
+        // so that the camera can released safely
+        mThread.quitSafely(); // or should we use? mThread.quit();
+        mThread = null;
 
         camera.stopPreview();
         camera.release();
