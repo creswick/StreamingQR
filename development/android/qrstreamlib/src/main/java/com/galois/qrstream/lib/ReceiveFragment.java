@@ -36,11 +36,13 @@ import java.io.IOException;
  */
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
+    // Need static references so progress bar can be updated from static UI handler.
+    private static ProgressBar progressBar;
+    private static TextView progressText;
+
     private SurfaceView camera_window;
     private ViewGroup.LayoutParams camera_window_params;
     private RelativeLayout rootLayout;
-    private ProgressBar progressBar;
-    private TextView progressText;
 
     private Camera camera;
     private DecodeThread decodeThread;
@@ -50,18 +52,26 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private CameraManager cameraManager;
     private boolean hasSurface = false;
 
-    // Keep track of visibility of Rx fragment so that we can dispose of
-    // cancellation messages that are not relevant.  The activity.isFinishing()
-    // does not trigger onPause() only onDestroy().
-    private boolean isVisible = false;
 
+    // Used to show cancellation message on UI thread
+    // The dialog is setup in onCreateView since fragment context is available
+    private static AlertDialog alertDialog;
+    private static final Runnable runShowRxFailedDialog = new Runnable () {
+        @Override
+        public void run() {
+            Log.e(Constants.APP_TAG, "About to show failed alert message!");
+            if (alertDialog != null) {
+                alertDialog.show();
+            }
+        }
+    };
 
     /**
      * Handler to process progress updates from the IProgress implementation.
      *
      * This update handler is passed to the Progress object during the UI initialization.
      */
-    private Handler displayUpdate = new Handler() {
+    private static final Handler displayUpdate = new Handler() {
 
         @Override
         public void handleMessage(Message msg) {
@@ -76,44 +86,41 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         }
 
         private void dispatchState(final Bundle params, State state) {
-            if(state == State.Intermediate) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        int progressStatus = params.getInt("percent_complete");
-                        int count = params.getInt("chunk_count");
-                        int total = params.getInt("chunk_total");
-                        Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
-                        progressBar.setProgress(progressStatus);
-                        progressText.setText(""+count+"/"+total+" "+progressStatus+"%");
-                    }
-                });
-            }
-            if(state == State.Final) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        progressBar.setProgress(progressBar.getMax());
-                        rootLayout.removeView(camera_window);
-                    }
-                });
-            }
-
-            if(state == State.Fail) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        new AlertDialog.Builder(activity).
-                                setMessage(R.string.receive_failedTxt).
-                                setPositiveButton(R.string.receive_buttonOkTxt, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        resume();
-                                    }
-                                }).
-                                show();
-                    }
-                });
+            switch (state) {
+                case Fail:
+                    // Add a slight delay so messages from this handler can
+                    // be removed when onPause() but also allow user to see them
+                    // whenever cancel button is pressed.
+                    this.postDelayed(runShowRxFailedDialog, 100);
+                    break;
+                case Intermediate:
+                    this.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (progressBar != null && progressText != null) {
+                                int progressStatus = params.getInt("percent_complete");
+                                int count = params.getInt("chunk_count");
+                                int total = params.getInt("chunk_total");
+                                Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
+                                progressBar.setProgress(progressStatus);
+                                progressText.setText("" + count + "/" + total + " " + progressStatus + "%");
+                            }
+                        }
+                    });
+                    break;
+                case Final:
+                    this.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (progressBar != null && progressText != null) {
+                                progressBar.setProgress(progressBar.getMax());
+                                progressText.setText("100%");
+                            }
+                        }
+                    });
+                    break;
+                default:
+                    break;
             }
         }
     };
@@ -150,6 +157,19 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         progressBar = (ProgressBar) rootView.findViewById(R.id.progressbar);
         progressText = (TextView) rootView.findViewById(R.id.progresstext);
 
+        // Setup the alert dialog in case we need it to report Rx errors to the user.
+        alertDialog = new AlertDialog.Builder(activity).
+                setMessage(R.string.receive_failedTxt).
+                setPositiveButton(R.string.receive_buttonOkTxt,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Log.e(Constants.APP_TAG, "AlertDialog OK pressed, about to resume()");
+                                resetUI();
+                                startPipe(progress);
+                            }
+                }).create();
+
         // TODO We'll want to apply the same listener to the cancel button in ticket-49
         ImageButton progressButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
         progressButton.setOnClickListener(new OnClickListener() {
@@ -160,6 +180,21 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         });
 
         return rootView;
+    }
+
+    @Override
+    public void onStart() {
+        // Execution order: onStart() then onResume(), onCreateView() may occur before onStart
+        Log.e(Constants.APP_TAG, "onStart");
+        resetUI();
+        super.onStart();
+    }
+
+    @Override
+    public void onStop() {
+        Log.e(Constants.APP_TAG, "onStop");
+        clearPendingAlertMessages();
+        super.onStop();
     }
 
     @Override
@@ -225,12 +260,23 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private void resetUI() {
         progressBar.setProgress(0);
         progressText.setText("");
+
+        if (alertDialog.isShowing()) {
+            alertDialog.dismiss();
+        }
+    }
+
+    private void clearPendingAlertMessages() {
+        // Dispose of cancellation messages that are no longer relevant.
+        displayUpdate.removeCallbacks(runShowRxFailedDialog);
+        alertDialog.dismiss();
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         Log.d(Constants.APP_TAG, "surfaceDestroyed");
         hasSurface = false;
+        clearPendingAlertMessages();
     }
 
     @Override
@@ -309,6 +355,9 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera.release();
 
         camera = null;
+
+        // Dispose of cancellation messages that are no longer relevant.
+        displayUpdate.removeCallbacks(runShowRxFailedDialog);
     }
 
 
