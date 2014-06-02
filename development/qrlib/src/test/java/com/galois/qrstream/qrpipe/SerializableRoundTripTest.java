@@ -27,6 +27,7 @@ import static com.google.common.collect.Iterables.transform;
 import static org.junit.Assert.assertTrue;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
@@ -46,6 +47,7 @@ import com.galois.qrstream.image.YuvImage;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
+import com.google.common.io.Files;
 import com.google.zxing.DecodeHintType;
 
 public class SerializableRoundTripTest {
@@ -172,18 +174,21 @@ public class SerializableRoundTripTest {
   
   @Test
   public void testRoundTrip() {
-    Receive rx  = new Receive(1500, 1500, 500, new EchoProgress("test"));
+    //Receive rx  = new Receive(1500, 1500, 500, new EchoProgress("test"));
+    Receive rx  = new Receive(1024, 1024, 500, new EchoProgress("test"));
     // ZXing can incorrectly identify black blobs in image as finder
     // square and render it invalid code: https://code.google.com/p/zxing/issues/detail?id=1262
     // The suggestion was to tell ZXing when you just have QR code in image and nothing else.
     Map<DecodeHintType, Object> hints = Receive.getDecodeHints();
-    hints.remove(DecodeHintType.TRY_HARDER);
+    //hints.remove(DecodeHintType.TRY_HARDER);
+    hints.put(DecodeHintType.PURE_BARCODE, Boolean.TRUE);
     int errors = 0;
     int num = 0;
     
     for (TestSerializable expected : generate(COUNT)) {
       Object actual;
       try {
+
         actual = rx.decodeQRSerializable(encode(expected));
         if ( ! expected.equals(actual) ) {
           System.err.println("Data did not round-trip: seed="+seed+" Object count="+num);
@@ -230,8 +235,29 @@ public class SerializableRoundTripTest {
             transform(tx.encodeQRCodes(expected), addImageBG),
             transform(tx.encodeQRCodes(expected), rotateAddBg)));
     
+    //saveImages(expected, tx);
+
+    yuvCodes = transform(tx.encodeQRCodes(expected), compose(buffToYuv, toBufferedImage));
     // Include the unchanged qr codes:
     BlockingQueue<YuvImage> yuvQueue = Queues.newLinkedBlockingQueue(yuvCodes);
     return yuvQueue;
+  }
+
+  private void saveImages(Serializable expected, Transmit tx)
+      throws TransmitException {
+    try {
+      File dir = Files.createTempDir();
+      System.out.println("Writing files to: " + dir.getCanonicalPath());
+
+      int count = 1;
+      for (BufferedImage bi : transform(tx.encodeQRCodes(expected),
+          toBufferedImage)) {
+        ImageIO.write(bi, "png", new File(dir, count + ".png"));
+        count++;
+      }
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
   }
 }
