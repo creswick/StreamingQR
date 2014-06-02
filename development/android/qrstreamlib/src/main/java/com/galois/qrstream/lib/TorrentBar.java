@@ -61,7 +61,7 @@ public class TorrentBar extends View {
         } else {
             paint = offPaint;
         }
-        canvas.drawOval(
+        canvas.drawRect(
                 cellBounds,
                 paint
         );
@@ -77,8 +77,19 @@ public class TorrentBar extends View {
         return bounds;
     }
 
-    public void setProgress(int progressStatus) {
-        onoffs[progressStatus] = true;
+    /**
+     * Mark the given chunk as received
+     * @param chunkId chunk id (1-based counting)
+     */
+    public void setProgress(int chunkId) {
+        onoffs[chunkId-1] = true;
+        invalidate();
+    }
+
+    public void setComplete() {
+        for(int i=0; i < cellCount; i++) {
+            onoffs[i] = true;
+        }
         invalidate();
     }
 
