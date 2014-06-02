@@ -50,8 +50,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
     // Help QRlib manage the camera preview requests
     private CameraManager cameraManager;
-    private boolean hasSurface = false;
-
 
     // Used to show cancellation message on UI thread
     // The dialog is setup in onCreateView since fragment context is available
@@ -145,15 +143,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     public @Nullable View onCreateView(@NotNull LayoutInflater inflater,
                                        ViewGroup container,
                                        @NotNull Bundle savedInstanceState) {
-        // Will have surface after onSurfaceCreated called
-        hasSurface = false;
         View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
         rootLayout = (RelativeLayout)rootView.findViewById(R.id.receive_layout);
         rootLayout.setKeepScreenOn(true);
-        camera_window = (SurfaceView)rootLayout.findViewWithTag("camera_window");
         /* remember the camera_window details for rebuilding later */
+        camera_window = (SurfaceView)rootLayout.findViewById(R.id.camera_window);
         camera_window_params = camera_window.getLayoutParams();
         setCameraWindowCallback();
+
         progressBar = (ProgressBar) rootView.findViewById(R.id.progressbar);
         progressText = (TextView) rootView.findViewById(R.id.progresstext);
 
@@ -199,53 +196,64 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
     @Override
     public void onPause(){
-        Log.d(Constants.APP_TAG, "onPause");
+        Log.e(Constants.APP_TAG, "onPause with Thread #" + Thread.currentThread().getId());
+        // The camera preview cannot be shown until a fully initialized SurfaceHolder exists.
+        // We setup/release camera in the SurfaceHolder callbacks (surfaceDestroyed, surfaceCreated).
+        // It would be nice if those methods setup the camera fully, opening and releasing the
+        // resource.
+        // Most of the time, the app lifecycle will trigger the surfaceDestroyed callback.
+        // However, pushing the POWER button to exit when the app is running, does not trigger
+        // the callback.  We could either,
+        //   1) remove SurfaceView ourselves to ensure the callbacks will be run, OR
+        //   2) manually track whether we have surface and check that if we have surface
+        //      in onResume, that we open camera again.
+
+        // Remove the camera preview surface from display, so that
+        // the surface will get destroyed and camera will get released
+        cameraManager.stopRunning();
+        camera_window.setVisibility(View.INVISIBLE);
         super.onPause();
-        isVisible = false;
-        disposeCamera();
     }
 
     @Override
     public void onResume() {
-        Log.d(Constants.APP_TAG, "onResume");
-        super.onResume();
-        isVisible = true;
-        resume();
-    }
 
-    private void resume() {
-        // Make sure that camera resources had been released
-        disposeCamera();
-        resetUI();
-
-        /* In some cases, onPause will destroy the camera_window */
+        // TODO Check with donp to figure out if this is necessary? I think it's no longer needed.
+        /* In some cases, onPause will destroy the camera_window. This reestablishes it. */
         SurfaceView previewSurface = (SurfaceView) rootLayout.findViewWithTag("camera_window");
         if(previewSurface == null) {
             Log.d(Constants.APP_TAG, "Resume: camera_window is null");
-            replaceCameraWindow();
+            throw new RuntimeException("TODO: make call to replaceCameraWindow() here");
+            //replaceCameraWindow();
         }
-
-        if (hasSurface) {
-            // The fragment was paused but not stopped. Happens when power button is pressed
-            // instead of exiting through back button, opening settings fragment, or pushing
-            // home button. When this happens, the surface still exists and surfaceCreated callback
-            // won't be invoked. Therefore, we need to init the camera here.
-            initCamera(camera_window.getHolder());
-            startPipe(camera.getParameters(), progress, cameraManager);
-        }else{
-            // Install the callback and wait for surfaceCreated() to init the camera.
-            Log.i(Constants.APP_TAG, "ReceiveFragment:onResume: has NO surface.");
-            setCameraWindowCallback();
-        }
+        // Setting the visibility here will cause the surfaceCreated callback
+        // to be invoked prompting the camera to be acquired and DecodeThread to start
+        camera_window.setVisibility(View.VISIBLE);
+        super.onResume();
     }
 
     /*
-     * rebuild the camera window as the first element in rootLayout
+     * (Re)build the camera window as the first element in rootLayout
      */
+    // TODO: Maybe delete this after checking that it is not needed in onResume()
     private void replaceCameraWindow() {
-        camera_window = new SurfaceView(rootLayout.getContext());
-        camera_window.setTag("camera_window");
-        rootLayout.addView(camera_window, 0, camera_window_params);
+        SurfaceView previewSurface = (SurfaceView)rootLayout.findViewWithTag("camera_window");
+        if (previewSurface != null) {
+            camera_window = previewSurface;
+            camera_window_params = camera_window.getLayoutParams();
+        } else {
+            // Since we destroy the SurfaceView each time we pause the application
+            // we need to rebuild the layout.
+            if(camera_window == null) {
+                Log.e(Constants.APP_TAG,
+                        "Unable to find camera_window view, and camera_window == null");
+                camera_window = new SurfaceView(rootLayout.getContext());
+                camera_window.setTag("camera_window");
+                // TODO discover if this case ever happens? Expect that it doesn't because onCreateView sets up camera_window
+                throw new RuntimeException("Unable to find camera_window view, and camera_window == null");
+            }
+            rootLayout.addView(camera_window, 0, camera_window_params);
+        }
         setCameraWindowCallback();
     }
 
@@ -274,8 +282,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.d(Constants.APP_TAG, "surfaceDestroyed");
-        hasSurface = false;
+        Log.e(Constants.APP_TAG, "surfaceDestroyed");
+        disposeCamera();
         clearPendingAlertMessages();
     }
 
@@ -285,11 +293,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         if (holder == null) {
             Log.e(Constants.APP_TAG, "*** WARNING *** surfaceCreated() gave us a null surface!");
         } else {
-            if (!hasSurface) {
-                hasSurface = true;
-                initCamera(holder);
-                startPipe(camera.getParameters(), progress, cameraManager);
-            }
+            initCamera(holder);
+            startPipe(progress);
         }
     }
 
