@@ -24,7 +24,6 @@ import android.widget.Toast;
 import android.widget.ImageButton;
 
 import com.galois.qrstream.qrpipe.IProgress;
-import com.galois.qrstream.qrpipe.Receive;
 import com.galois.qrstream.qrpipe.State;
 
 import org.jetbrains.annotations.NotNull;
@@ -66,16 +65,13 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
         @Override
         public void handleMessage(Message msg) {
-            final Bundle params = msg.getData();
-            State state = (State)params.getSerializable("state");
-            Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
-            // Keep track of visibility of Rx fragment so that we can dispose of
-            // cancellation messages that are not relevant.  The activity.isFinishing()
-            // does not trigger onPause() only onDestroy().
-            if(!isVisible || activity.isFinishing()) {
-                Log.d(Constants.APP_TAG, "ignoring displayUpdate message. Fragment is not visible.");
-            } else {
+            if (msg.what == R.id.progress_update) {
+                final Bundle params = msg.getData();
+                State state = (State) params.getSerializable("state");
+                Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
                 dispatchState(params, state);
+            } else {
+                Log.w(Constants.APP_TAG, "displayUpdate handler received unknown request");
             }
         }
 
