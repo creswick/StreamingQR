@@ -48,7 +48,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private Activity activity;
 
     // Help QRlib manage the camera preview requests
-    private final CameraManager cameraManager = CameraManager.getInstance();
+    private CameraManager cameraManager;
     private boolean hasSurface = false;
 
     // Keep track of visibility of Rx fragment so that we can dispose of
@@ -274,8 +274,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             camera.setPreviewDisplay(surfaceHolder);
             camera.startPreview();
 
-            Camera.Parameters params = camera.getParameters();
-            cameraManager.startRunning(camera, new Preview(params.getPreviewSize()));
         } catch (RuntimeException re) {
             // TODO handle this more elegantly.
             Toast.makeText(getActivity(), "Unable to open camera", Toast.LENGTH_LONG).show();
@@ -310,10 +308,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             return;
         }
 
-        cameraManager.stopRunning();
 
         camera.stopPreview();
-        camera.setPreviewCallback(null);
         camera.release();
 
         camera = null;
@@ -354,11 +350,12 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      * Create a worker thread for decoding the preview frames
      * using the qrlib receiver.
      */
-    public void startPipe(Camera.Parameters params, IProgress progress, CameraManager fm) {
+    public void startPipe(IProgress progress) {
         Log.d(Constants.APP_TAG, "startPipe");
         if(decodeThread != null) {
             if(decodeThread.isAlive()) {
                 Log.e(Constants.APP_TAG, "startPipe Error: DecodeThread already running");
+                Log.e(Constants.APP_TAG, "startPipe Error: DecodeThread state= " + decodeThread.getState());
             } else {
                 Log.d(Constants.APP_TAG, "startPipe dropping dead thread");
                 // drop dead thread
@@ -368,16 +365,15 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
         if(decodeThread == null) {
             Log.d(Constants.APP_TAG, "startPipe building new decodeThread");
-            Camera.Size previewSize = params.getPreviewSize();
-            Receive receiveQrpipe = new Receive(previewSize.height,
-                                        previewSize.width,
-                                        Constants.RECEIVE_TIMEOUT_MS,
-                                        progress);
 
-            // Cannot start up this thread yet.  We need to make sure that the
-            // camera preview is available for decodeThread to request frames.
-            cameraManager.startRunning(camera, new Preview(params.getPreviewSize()));
-            decodeThread = new DecodeThread(getActivity(), receiveQrpipe, fm);
+            // If we get this far, the camera preview is available for
+            // decodeThread to begin requesting frames.  Make sure that
+            // the decodeThread has a new instance of the cameraManager so that it starts in the
+            // running state.
+            if (cameraManager == null || !cameraManager.isRunning()) {
+                cameraManager = new CameraManager(camera);
+            }
+            decodeThread = new DecodeThread(getActivity(), progress, cameraManager);
             decodeThread.start();
         }
     }

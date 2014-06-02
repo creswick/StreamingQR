@@ -16,9 +16,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * CameraManager services requests for a preview frame from the camera
  */
-public class CameraManager implements ICaptureFrame {
-
-    private static final CameraManager INSTANCE = new CameraManager();
+public final class CameraManager implements ICaptureFrame, Camera.PreviewCallback {
 
     private static final BlockingQueue<YuvImage> currentFrame = Queues.newSynchronousQueue();
 
@@ -26,58 +24,43 @@ public class CameraManager implements ICaptureFrame {
     // and any decoding of QR in progress should be stopped.
     private boolean isRunning = false;
 
-    private Camera camera;
-    private Preview previewCallback;
+    private final Camera camera;
+    private final int displayWidth;
+    private final int displayHeight;
 
-    public static CameraManager getInstance() { return INSTANCE; }
+    public CameraManager(@NotNull Camera camera) {
+        Camera.Size previewSize = camera.getParameters().getPreviewSize();
 
-    private CameraManager () {}
+        // For now we assume that the camera is initialized elsewhere, is open, and preview is running
+        this.camera = camera;
+        this.displayWidth = previewSize.width;
+        this.displayHeight = previewSize.height;
+        this.isRunning = true;
+    }
 
-
-    // Handler is bound to the same thread that created the CameraManager
-    // i.e. the UI thread.  Perhaps this should get moved?
-    private static final Handler frameHandler = new Handler() {
-
-        @Override
-        public void handleMessage(Message msg) {
-            if (msg.obj != null) {
-                if(currentFrame.offer((YuvImage) msg.obj)) {
-                    Log.d(Constants.APP_TAG, "CameraManager set currentFrame.");
-                }else {
-                    Log.e(Constants.APP_TAG, "CameraManager tried to set currentFrame before successful read.");
-                }
-            }else{
-                // Probably not a big deal as it would just cause qrlib to stop decoding QR codes
-                Log.d(Constants.APP_TAG, "CameraManager asked to handle NULL message.");
-            }
-        }
-    };
+    public int getDisplayWidth() {
+        return displayWidth;
+    }
+    public int getDisplayHeight() {
+        return displayHeight;
+    }
 
     @Override
-    public Object clone() throws CloneNotSupportedException {
-        throw new CloneNotSupportedException("Cannot clone CameraManager");
+    public void onPreviewFrame(@NotNull byte[] data, @NotNull Camera camera) {
+
+        // Camera.PreviewCallback requests get handled on the same thread that opened the camera.
+        // It so happens that the camera was opened on a separate thread from the main UI thread.
+        if (currentFrame.offer(new YuvImage(data, displayWidth, displayHeight))) {
+            Log.d(Constants.APP_TAG, "CameraManager set currentFrame.");
+        } else {
+            Log.e(Constants.APP_TAG, "CameraManager tried to set currentFrame before successful read.");
+        }
     }
 
-    public void startRunning(@NotNull Camera camera,
-                             @NotNull Preview previewCallback) {
-        this.camera = camera;
-        this.previewCallback = previewCallback;
-        this.isRunning = true;
-
-        camera.setPreviewCallback(null);
-    }
-
-    public void stopRunning() {
-        Log.e(Constants.APP_TAG, "CameraManager stopRunning called.");
+    public synchronized void stopRunning() {
         // Release camera and callback
         isRunning = false;
-        if (camera != null) {
-            camera.setPreviewCallback(null);
-            camera = null;
-        }
-        if (previewCallback != null) {
-            previewCallback = null;
-        }
+        camera.setPreviewCallback(null);
     }
 
     // When isRunning is false, it signals that camera and preview callback are not valid
@@ -87,6 +70,9 @@ public class CameraManager implements ICaptureFrame {
         return isRunning;
     }
 
+    // Requests for preview frame originate from the QRlib Rx.decodeQRCodes method
+    // We want that thread to fire off a preview callback request from camera
+    // and then block until the result gets inserted into the currentFrame.
     @Override
     public synchronized YuvImage captureFrameFromCamera() {
         // Only one thread at a time can request a frame from the camera
@@ -94,34 +80,33 @@ public class CameraManager implements ICaptureFrame {
         return getFrame();
     }
 
-    // Waits for preview frame from frameHandler before returning.
+    /**
+     * If the camera is running, getFrame will block and waits for
+     * the Camera.PreviewCallback to give it a frame. It will return
+     * {@code null} if the PreviewCallback does not get a frame within
+     * {@code Constants.RECEIVE_TIMEOUT_MS} milliseconds, or camera
+     * has been asked to stop running.
+     */
     private synchronized YuvImage getFrame() {
         YuvImage img = null;
-        try {
-            img = currentFrame.poll(Constants.RECEIVE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-            // Interrupted while waiting for image. Log interruption and return null frame.
-            Log.v(Constants.APP_TAG, "CameraManager interrupted while waiting for image.");
-        }
-        if(img == null) {
-            Log.v(Constants.APP_TAG, "CameraManager received null preview frame.");
+        if (isRunning) {
+            try {
+                img = currentFrame.poll(Constants.RECEIVE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                // Interrupted while waiting for image. Log interruption and return null frame.
+                Log.v(Constants.APP_TAG, "CameraManager interrupted while waiting for image.");
+            }
         }
         return img;
     }
 
     // Setup camera callback to handle next preview frame
     private synchronized void setupOneShotPreviewCallback() {
-        if ((camera != null) && (previewCallback != null)) {
-            previewCallback.setHandler(frameHandler);
-            camera.setOneShotPreviewCallback(previewCallback);
-        } else {
-            if (camera == null) {
-                Log.e(Constants.APP_TAG, "Cannot request preview frame when camera is not initialized.");
-            }
-            if (previewCallback == null) {
-                Log.e(Constants.APP_TAG, "Cannot request preview frame from camera without " +
-                        "first specifying a handler for the preview frames.");
-            }
+        if (isRunning) {
+            camera.setOneShotPreviewCallback(this);
+        }else{
+            Log.e(Constants.APP_TAG, "setupPreviewCallback called but " +
+                    "CameraManager NOT running, Thread #" + Thread.currentThread().getId());
         }
     }
 }

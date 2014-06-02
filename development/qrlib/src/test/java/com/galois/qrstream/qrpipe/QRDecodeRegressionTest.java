@@ -71,7 +71,7 @@ public class QRDecodeRegressionTest {
     YuvImage img = new YuvImage(YuvUtilities.toYUV(bi),
                                 width, height);
 
-    Receive receive = new Receive(height, width, 100,
+    Receive receive = new Receive(height, width,
         RandomQRDecodeTest.NULL_PROGRESS);
 
     byte[] result = null;

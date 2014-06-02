@@ -24,7 +24,6 @@ import com.google.zxing.common.HybridBinarizer;
  *
  * We may find it necessary to add context to the transmission. For example,
  *  - resulting image dimension (px) (DONE)
- *  - timeout (in milliseconds) for receiver to wait for incoming image data
  *  - density of QR code
  *  - others?
  */
@@ -34,9 +33,6 @@ public class Receive {
   private final int height;
   private final int width;
 
-  /* Number of milliseconds to wait before timeout */
-  private final int milliseconds;
-
   /* Track progress of decoding */
   private final IProgress progress;
 
@@ -44,15 +40,12 @@ public class Receive {
    * Initializes receiver of QR code stream.
    * @param height The height of the received images.
    * @param width The width of the received images.
-   * @param milliseconds The number of milliseconds to wait for incoming image
-   * data before timing out.
    * @param progress The object used in tracking the progress of the message
    * transmission.
    */
-  public Receive(int height, int width, int milliseconds, IProgress progress) {
+  public Receive(int height, int width, IProgress progress) {
     this.height = height;
     this.width = width;
-    this.milliseconds = milliseconds;
     this.progress = progress;
   }
 

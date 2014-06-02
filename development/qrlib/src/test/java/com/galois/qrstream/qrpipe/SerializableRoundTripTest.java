@@ -154,7 +154,7 @@ public class SerializableRoundTripTest {
 
   @Test
   public void testRoundTrip() {
-    Receive rx  = new Receive(1500, 1500, 500, new EchoProgress("test"));
+    Receive rx  = new Receive(1500, 1500, new EchoProgress("test"));
     // ZXing can incorrectly identify black blobs in image as finder
     // square and render it invalid code: https://code.google.com/p/zxing/issues/detail?id=1262
     // The suggestion was to tell ZXing when you just have QR code in image and nothing else.

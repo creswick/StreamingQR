@@ -86,7 +86,7 @@ public class ReceiveTest {
     YuvImage yuvImage = new YuvImage(yuvData, image.getWidth(), image.getHeight());
 
     // Use receive to decode this qr code:
-    Receive receive = new Receive(image.getHeight(), image.getWidth(), 100, NULL_MONITOR);
+    Receive receive = new Receive(image.getHeight(), image.getWidth(), NULL_MONITOR);
 
     byte[] actual = receive.decodeQRCodes(new EchoFrame(yuvImage));
     byte[] expected = PartialMessage.createFromResult(result).getPayload();
@@ -104,13 +104,11 @@ public class ReceiveTest {
   @Ignore("Not sure that camera callback should cause timeout")
   @Test(timeout=400, expected=ReceiveException.class)
   public void testDecodeQRThrowsOnEmptyQueue() throws ReceiveException {
-    // The receiver should wait 100ms for a new frame:
-    int timeout = 100;
 
     // dummy image data:
     YuvImage filler = new YuvImage(new byte[640 * 480], 640, 480);
 
-    Receive receiver = new Receive(640, 480, timeout, NULL_MONITOR);
+    Receive receiver = new Receive(640, 480, NULL_MONITOR);
 
     byte[] message = receiver.decodeQRCodes(new EchoFrame(filler));
     System.out.println("length: message=" + message.length);
