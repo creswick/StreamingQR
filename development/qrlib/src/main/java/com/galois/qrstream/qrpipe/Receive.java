@@ -19,6 +19,7 @@ package com.galois.qrstream.qrpipe;
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,6 +34,7 @@ import com.google.zxing.NotFoundException;
 import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
+import com.google.zxing.multi.qrcode.QRCodeMultiReader;
 
 /**
  * Class provides API for interfacing with Android application. It
@@ -209,6 +211,25 @@ public class Receive {
                                        Map<DecodeHintType,?> hints) throws NotFoundException {
     BinaryBitmap bmap = toBinaryBitmap(lumSrc);
     return new MultiFormatReader().decode(bmap, hints);
+  }
+
+  /**
+   * Detects and decode multiple QR codes from a single luminance image.
+   * Collection of results may be empty if no QR codes were detected.
+   *
+   * @param lumSrc The luminance image containing QR codes to decode.
+   * @throws ReceiveException if there was problem detecting or decoding QR
+   * codes from image {@source lumSrc}.
+   */
+  protected static Collection<Result> decodeMultiple(LuminanceSource lumSrc) throws ReceiveException {
+    Result rawResult[] = null;
+    BinaryBitmap bmap = toBinaryBitmap(lumSrc);
+    try {
+      rawResult = new QRCodeMultiReader().decodeMultiple(bmap, Receive.getDecodeHints());
+    } catch (NotFoundException e) {
+      throw new ReceiveException(e.getMessage());
+    }
+    return Arrays.asList(rawResult);
   }
 
   /**
