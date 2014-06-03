@@ -2,7 +2,7 @@ package com.galois.qrstream.qrpipe;
 
 import com.galois.qrstream.image.YuvImage;
 
-public interface ICaptureFrame {
+public interface IImageProvider {
   /**
    * Return the YUV image data from an android camera.
    *
