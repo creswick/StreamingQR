@@ -76,7 +76,7 @@ public class QRDecodeRegressionTest {
 
     byte[] result = null;
     try {
-      result = receive.decodeQRCodes(new EchoFrame(img));
+      result = receive.decodeQRCodes(new FrameProvider(img));
     } catch (ReceiveException e) {
       // this should only happen if receive was expecting more than one QR code:
       if (!e.getMessage().startsWith("Transmission failed")) {
@@ -86,28 +86,4 @@ public class QRDecodeRegressionTest {
 
     return result;
   }
-
-  /**
-   * Placeholder CaptureFrame manager for testing.
-   */
-  public static class EchoFrame implements ICaptureFrame {
-    private final YuvImage img;
-    private boolean running = true;
-    public EchoFrame(YuvImage img) {
-      this.img = img;
-    }
-
-    // Allows image to be decoded only once before exiting
-    @Override
-    public YuvImage captureFrameFromCamera() {
-      running = false;
-      return this.img;
-    }
-
-    @Override
-    public boolean isRunning() {
-      return running;
-    }
-  };
-
 }

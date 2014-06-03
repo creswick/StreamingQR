@@ -17,7 +17,6 @@ import java.util.Iterator;
 import java.util.List;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.galois.qrstream.image.BitmapImage;
@@ -39,29 +38,6 @@ public class ReceiveTest {
     @Override
     public void changeState(DecodeState state) {
     }};
-
-  /**
-   * Placeholder CaptureFrame manager for testing.
-   */
-  public static class EchoFrame implements ICaptureFrame {
-    private final YuvImage img;
-    private boolean running = true;
-    public EchoFrame(YuvImage img) {
-      this.img = img;
-    }
-
-    // Allows image to be decoded only once before exiting
-    @Override
-    public YuvImage captureFrameFromCamera() {
-      running = false;
-      return this.img;
-    }
-
-    @Override
-    public boolean isRunning() {
-      return running;
-    }
-  };
 
   @BeforeClass
   public static void testSetup() {}
@@ -88,29 +64,25 @@ public class ReceiveTest {
     // Use receive to decode this qr code:
     Receive receive = new Receive(image.getHeight(), image.getWidth(), NULL_MONITOR);
 
-    byte[] actual = receive.decodeQRCodes(new EchoFrame(yuvImage));
+    byte[] actual = receive.decodeQRCodes(new FrameProvider(yuvImage));
     byte[] expected = PartialMessage.createFromResult(result).getPayload();
 
     assertArrayEquals("Yuv data generated different results", expected, actual);
   }
 
   /**
-   * Check that Recieve.decodeQRCodes(...) can time out and throw an exception
+   * Check that Recieve.decodeQRCodes(...) can throw an exception
    * if no more data arrives.  This test fails if no exception is thrown within
    * 400ms.
    *
    * @throws ReceiveException
    */
-  @Ignore("Not sure that camera callback should cause timeout")
   @Test(timeout=400, expected=ReceiveException.class)
   public void testDecodeQRThrowsOnEmptyQueue() throws ReceiveException {
 
-    // dummy image data:
-    YuvImage filler = new YuvImage(new byte[640 * 480], 640, 480);
-
     Receive receiver = new Receive(640, 480, NULL_MONITOR);
 
-    byte[] message = receiver.decodeQRCodes(new EchoFrame(filler));
+    byte[] message = receiver.decodeQRCodes(FrameProvider.INVALID_COLLECTION);
     System.out.println("length: message=" + message.length);
   }
 

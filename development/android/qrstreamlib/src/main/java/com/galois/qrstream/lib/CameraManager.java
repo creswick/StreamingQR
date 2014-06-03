@@ -8,7 +8,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import com.galois.qrstream.image.YuvImage;
-import com.galois.qrstream.qrpipe.ICaptureFrame;
+import com.galois.qrstream.qrpipe.IImageProvider;
 import com.google.common.collect.Queues;
 
 import org.jetbrains.annotations.NotNull;
@@ -16,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * CameraManager services requests for a preview frame from the camera
  */
-public final class CameraManager implements ICaptureFrame, Camera.PreviewCallback {
+public final class CameraManager implements IImageProvider, Camera.PreviewCallback {
 
     private static final BlockingQueue<YuvImage> currentFrame = Queues.newSynchronousQueue();
 

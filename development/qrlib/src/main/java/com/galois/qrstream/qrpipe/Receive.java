@@ -56,7 +56,7 @@ public class Receive {
    * @return
    * @throws ReceiveException
    */
-  public Object decodeQRSerializable(ICaptureFrame frameManager)
+  public Object decodeQRSerializable(IImageProvider frameManager)
      throws ReceiveException {
     byte[] buf = decodeQRCodes(frameManager);
 
@@ -87,7 +87,7 @@ public class Receive {
    * images to complete the data transmission.
    */
 
-  public byte[] decodeQRCodes (ICaptureFrame frameManager) throws ReceiveException {
+  public byte[] decodeQRCodes (IImageProvider frameManager) throws ReceiveException {
     // The received data and track transmission status.
     DecodedMessage message = new DecodedMessage(progress);
 
