@@ -202,14 +202,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     @Override
     public void onStart() {
         // Execution order: onStart() then onResume(), onCreateView() may occur before onStart
-        Log.e(Constants.APP_TAG, "onStart");
+        Log.e(Constants.APP_TAG, "ReceiveFragment onStart");
         resetUI();
         super.onStart();
     }
 
     @Override
     public void onStop() {
-        Log.e(Constants.APP_TAG, "onStop");
+        Log.e(Constants.APP_TAG, "ReceiveFragment onStop");
 
         // Dispose of UI update messages that are no longer relevant.
         // With 'null' as parameter, it removes all pending messages on UI thread.
