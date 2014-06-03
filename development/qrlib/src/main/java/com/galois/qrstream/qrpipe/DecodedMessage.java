@@ -43,6 +43,14 @@ public class DecodedMessage {
   }
 
   /**
+   * Returns true when whole message has been received,
+   * otherwise it returns false.
+   */
+  public boolean isComplete() {
+    return (decodeState != null && (decodeState.getState() == State.Final));
+  }
+
+  /**
    * Returns the whole transmitted message whenever it is available, otherwise
    * it returns an empty message to indicate only partial message received.
    */

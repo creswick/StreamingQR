@@ -23,9 +23,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
-
 import com.galois.qrstream.image.YuvImage;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
@@ -43,7 +40,6 @@ import com.google.zxing.common.HybridBinarizer;
  *
  * We may find it necessary to add context to the transmission. For example,
  *  - resulting image dimension (px) (DONE)
- *  - timeout (in milliseconds) for receiver to wait for incoming image data
  *  - density of QR code
  *  - others?
  */
@@ -53,9 +49,6 @@ public class Receive {
   private final int height;
   private final int width;
 
-  /* Number of milliseconds to wait before timeout */
-  private final int milliseconds;
-
   /* Track progress of decoding */
   private final IProgress progress;
 
@@ -63,29 +56,26 @@ public class Receive {
    * Initializes receiver of QR code stream.
    * @param height The height of the received images.
    * @param width The width of the received images.
-   * @param milliseconds The number of milliseconds to wait for incoming image
-   * data before timing out.
    * @param progress The object used in tracking the progress of the message
    * transmission.
    */
-  public Receive(int height, int width, int milliseconds, IProgress progress) {
+  public Receive(int height, int width, IProgress progress) {
     this.height = height;
     this.width = width;
-    this.milliseconds = milliseconds;
     this.progress = progress;
   }
 
   /**
    * Decode an object from an incoming stream of QR codes.
-   * 
+   *
    * @param qrCodeImages
    * @return
    * @throws ReceiveException
    */
-  public Object decodeQRSerializable(BlockingQueue<YuvImage> qrCodeImages)
+  public Object decodeQRSerializable(IImageProvider frameManager)
      throws ReceiveException {
-    byte[] buf = decodeQRCodes(qrCodeImages);
-    
+    byte[] buf = decodeQRCodes(frameManager);
+
     ByteArrayInputStream bais = new ByteArrayInputStream(buf);
 
     try {
@@ -93,10 +83,16 @@ public class Receive {
       Object res = ois.readObject();
       return res;
     } catch (Exception e) {
+      // 'buf' will have zero length when qrlib was unable to decode
+      // all qr codes or was canceled in the middle of transmission.
+      // This causes ObjectInputStream to throw EOFException
+      // in 'readObject'.
+      // TODO Be consistent with how receiver handles failed transmission/decoding.
+      // Either always throw exception, return null, or empty objects.
       throw new ReceiveException(e);
     }
   }
-  
+
   /**
    * Detects and decodes QR codes found within a collection of
    * YUV images. Designed to interface with QRStream Android application.
@@ -106,46 +102,43 @@ public class Receive {
    * @throws ReceiveException If {@code qrCodeImages} failed to receive enough
    * images to complete the data transmission.
    */
-  public byte[] decodeQRCodes (BlockingQueue<YuvImage> qrCodeImages) throws ReceiveException {
+
+  public byte[] decodeQRCodes (IImageProvider frameManager) throws ReceiveException {
     // The received data and track transmission status.
     DecodedMessage message = new DecodedMessage(progress);
-    while(true) {
-        // Wait for incoming image for number of specified `milliseconds`,
-        // if we receive one, try to read the QR code contained within it.
-        YuvImage img = null;
-        try {
-          img = qrCodeImages.poll(milliseconds,TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-          // Interrupted while waiting for image.
-          // Log interruption for now and try waiting for another image.
-          System.out.print("decodeQRCodes: Encountered InterruptedException");
-          if (e.getMessage() != null) {
-            System.out.print(e.getMessage());
-          }
-          System.out.print('\n');
-          continue;
+
+    // Try decoding frames only while external application
+    // is running and waiting for a response.
+    while( frameManager.isRunning() ) {
+      // TODO Try improving performance by spawning new thread run each image decoding
+      YuvImage img = frameManager.captureFrameFromCamera();
+      if (img == null) {
+        // Communicate failed state to progress indicator.
+        System.out.println("decodeQRCodes: received invalid frame (null)");
+        message.setFailedDecoding();
+        throw new ReceiveException("Transmission failed to receive a valid frame from the camera");
+      }
+      try {
+        Result res = decodeSingleQRCode(img.getYuvData());
+        State s = saveMessageAndUpdateProgress(res, message);
+
+        if(s == State.Final) {
+          System.out.println("decodeQRCodes: Hit final state");
+          break;
         }
-        if (img == null) {
-          // Communicate failed state to progress indicator.
-          message.setFailedDecoding();
-          throw new ReceiveException("Transmission failed before message could be read.");
-        }
-        try {
-          // TODO Try improving performance by spawning new thread run each image decoding
-          Result res = decodeSingleQRCode(img.getYuvData());
-          State s = saveMessageAndUpdateProgress(res, message);
-          
-          if(s == State.Final) {
-            System.out.println("decodeQRCodes: Hit final state");
-            break;
-          }
-        } catch (NotFoundException e) {
-          // Unable to detect QR in this image, try next one.
-          continue;
-        } catch (ReceiveException e) {
-          // Encountered invalid QR code during parsing, try next image.
-          continue;
-        }
+      } catch (NotFoundException e) {
+        // Unable to detect QR in this image, try next one.
+        continue;
+      } catch (ReceiveException e) {
+        // Encountered invalid QR code during parsing, try next image.
+        continue;
+      }
+    }
+    // Either message complete or received partial message
+    // and asked to stop the decoding process.
+    if (!message.isComplete()) {
+      //Transmission shut down before full message could be read.
+      message.setFailedDecoding();
     }
     return message.getEntireMessage();
   }

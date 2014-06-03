@@ -35,8 +35,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.BlockingQueue;
-
 import javax.imageio.ImageIO;
 
 import org.junit.Test;
@@ -45,7 +43,6 @@ import com.galois.qrstream.image.BitmapImage;
 import com.galois.qrstream.image.YuvImage;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Queues;
 import com.google.zxing.DecodeHintType;
 
 public class SerializableRoundTripTest {
@@ -56,38 +53,38 @@ public class SerializableRoundTripTest {
    * The number of tests to create:
    */
   private static final int COUNT = 10;
-  
+
   /**
    * The maximum percentage of failing tests that is acceptable.
-   * 
+   *
    * This is set based on rough estimations of the behavior of zxing at the time
    * this test was written.
    */
   private static final double FAIL_LIMIT = 0.40;
-  
+
   private static final BufferedImage sampleImage;
   private static final BufferedImage whiteImage;
   private static final long seed;
   private static final Random rand;
-  
+
   static {
     sampleImage = loadResourceImg("/samplePhoneImage.png");
     whiteImage = loadResourceImg("/white1500.png");
     seed = System.currentTimeMillis();
     rand = new Random(seed);
   }
-  
+
   /**
    * Test object for serialization.  It's important that it implements a correct
    * equals() method, or the tests may succeed incorrectly.
-   * 
+   *
    * @author creswick
    *
    */
   private static class TestSerializable implements Serializable {
     private static final long serialVersionUID = -3366234227007383657L;
     private byte[] data;
-    
+
     public TestSerializable(byte[] data) {
       super();
       this.data = data.clone();
@@ -122,19 +119,19 @@ public class SerializableRoundTripTest {
 
   /**
    * Placeholder progress monitor for testing.
-   * 
+   *
    * @author creswick
    *
    */
   public static class EchoProgress implements IProgress {
-    
+
     @SuppressWarnings("unused")
     private String id;
-    
+
     public EchoProgress(String id) {
       this.id = id;
     }
-    
+
     @Override
     public void changeState(DecodeState state) {
 //      System.out.println(this.id + " " + state.getState() + ": "
@@ -153,13 +150,13 @@ public class SerializableRoundTripTest {
 
       data.add(new TestSerializable(bytes));
     }
-    
+
     return data;
   }
 
   private static BufferedImage loadResourceImg(String fileLoc) {
     InputStream imgStream =
-        SerializableRoundTripTest.class.getResourceAsStream(fileLoc);  
+        SerializableRoundTripTest.class.getResourceAsStream(fileLoc);
       try {
         BufferedImage img = ImageIO.read(imgStream);
         return img;
@@ -169,10 +166,10 @@ public class SerializableRoundTripTest {
         throw new IllegalStateException(e);
       }
   }
-  
+
   @Test
   public void testRoundTrip() {
-    Receive rx  = new Receive(1500, 1500, 500, new EchoProgress("test"));
+    Receive rx  = new Receive(1500, 1500, new EchoProgress("test"));
     // ZXing can incorrectly identify black blobs in image as finder
     // square and render it invalid code: https://code.google.com/p/zxing/issues/detail?id=1262
     // The suggestion was to tell ZXing when you just have QR code in image and nothing else.
@@ -180,11 +177,11 @@ public class SerializableRoundTripTest {
     hints.remove(DecodeHintType.TRY_HARDER);
     int errors = 0;
     int num = 0;
-    
+
     for (TestSerializable expected : generate(COUNT)) {
       Object actual;
       try {
-        actual = rx.decodeQRSerializable(encode(expected));
+        actual = rx.decodeQRSerializable(new FrameProvider(buildTestFrames(expected)));
         if ( ! expected.equals(actual) ) {
           System.err.println("Data did not round-trip: seed="+seed+" Object count="+num);
           errors++;
@@ -197,15 +194,20 @@ public class SerializableRoundTripTest {
         num++;
       }
     }
-    
+
     // fail if more than FAIL_LIMIT % of the tests failed.
     assertTrue("Too many failures detected: "+errors+" out of "+num,
         errors < (num * FAIL_LIMIT));
   }
 
-  private BlockingQueue<YuvImage> encode(Serializable expected)
+  /**
+   * Builds set of sample QR codes embedded in images to use for decoding.
+   * @throws TransmitException
+   */
+  private Iterable<YuvImage> buildTestFrames(Serializable expected)
       throws TransmitException {
-    Transmit tx = new Transmit(1024, 1024);
+    final Transmit tx = new Transmit(1024, 1024);
+
     // Build up a transformation function that will:
     //   - create a BufferedImage from a BitmapImage
     //   - superimpose that on a background image
@@ -213,25 +215,22 @@ public class SerializableRoundTripTest {
     Function<BitmapImage, YuvImage> addImageBG = compose(
         buffToYuv, compose( addBackground(sampleImage),
                             toBufferedImage));
-    
+
     Function<BitmapImage, YuvImage> addWhiteBG = compose(
         buffToYuv, compose( addBackground(whiteImage),
                             toBufferedImage));
-        
+
     Function<BitmapImage, YuvImage> rotateAddBg = compose(
         buffToYuv, compose( addBackground(sampleImage),
-                            compose( rotate(3), toBufferedImage)));    
+                            compose( rotate(3), toBufferedImage)));
+
 
     // Now apply (lazily) the transformer to the incoming stream of BitmapImages
     // to get a stream of YuvImages we can extract QR codes from.
-    Iterable<YuvImage> yuvCodes = concat(
-        transform(tx.encodeQRCodes(expected), addWhiteBG),
+    return concat(
+            transform(tx.encodeQRCodes(expected), addWhiteBG),
         concat(
             transform(tx.encodeQRCodes(expected), addImageBG),
             transform(tx.encodeQRCodes(expected), rotateAddBg)));
-    
-    // Include the unchanged qr codes:
-    BlockingQueue<YuvImage> yuvQueue = Queues.newLinkedBlockingQueue(yuvCodes);
-    return yuvQueue;
   }
 }

@@ -31,9 +31,6 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -81,19 +78,16 @@ public class ReceiveTest {
     YuvImage yuvImage = new YuvImage(yuvData, image.getWidth(), image.getHeight());
 
     // Use receive to decode this qr code:
-    Receive receive = new Receive(image.getHeight(), image.getWidth(), 100, NULL_MONITOR);
+    Receive receive = new Receive(image.getHeight(), image.getWidth(), NULL_MONITOR);
 
-    BlockingQueue<YuvImage> queue = new ArrayBlockingQueue<YuvImage>(1);
-    queue.add(yuvImage);
-
-    byte[] actual = receive.decodeQRCodes(queue);
+    byte[] actual = receive.decodeQRCodes(new FrameProvider(yuvImage));
     byte[] expected = PartialMessage.createFromResult(result).getPayload();
 
     assertArrayEquals("Yuv data generated different results", expected, actual);
   }
 
   /**
-   * Check that Recieve.decodeQRCodes(...) can time out and throw an exception
+   * Check that Recieve.decodeQRCodes(...) can throw an exception
    * if no more data arrives.  This test fails if no exception is thrown within
    * 400ms.
    *
@@ -101,18 +95,11 @@ public class ReceiveTest {
    */
   @Test(timeout=400, expected=ReceiveException.class)
   public void testDecodeQRThrowsOnEmptyQueue() throws ReceiveException {
-    // The receiver should wait 100ms for a new frame:
-    int timeout = 100;
 
-    // dummy image data:
-    YuvImage filler = new YuvImage(new byte[640 * 480], 640, 480);
+    Receive receiver = new Receive(640, 480, NULL_MONITOR);
 
-    Receive receiver = new Receive(640, 480, timeout, NULL_MONITOR);
-
-    BlockingQueue<YuvImage> queue = new ArrayBlockingQueue<YuvImage>(2);
-    queue.add(filler);
-
-    receiver.decodeQRCodes(queue);
+    byte[] message = receiver.decodeQRCodes(FrameProvider.INVALID_COLLECTION);
+    System.out.println("length: message=" + message.length);
   }
 
   /**

@@ -34,6 +34,10 @@ public class DecodeState {
 	// True if transmission of QR codes stops before entire message received
 	private boolean hasTransmissionFailed;
 
+	// True if encountered frame without QR code or with one that couldn't be read
+	// Indicates to receiver that it needs another frame.
+	private boolean hasFrameFailed;
+
 	/**
 	 * Initialize DecodeState with the number of QR codes that it expects
 	 * in the stream. The caller should have decoded at least one QR code to
@@ -48,6 +52,7 @@ public class DecodeState {
 		this.capacity = capacity;
 		this.data = new BitSet(capacity);
 		this.hasTransmissionFailed = false;
+		this.hasFrameFailed = false;
 	}
 
 	/**
@@ -94,6 +99,11 @@ public class DecodeState {
 			                                    ", is out of bounds");
 		}
 		data.set(chunkId - 1);
+		// Reset failed frame tag if it was set because this method
+		// indicates successful QR code reading
+		if (hasFrameFailed) {
+		  hasFrameFailed = false;
+		}
 	}
 
 	/**
@@ -106,6 +116,16 @@ public class DecodeState {
 			this.hasTransmissionFailed = true;
 		}
 	}
+
+	/**
+   * Indicate that frame failed and we expect more QR codes
+   * to decode.
+   */
+  public void markFailedFrame() {
+    if (!allBitsSet()) {
+      this.hasFrameFailed = true;
+    }
+  }
 
 	/**
 	 * Get a deep copy of the underlying bitset.
@@ -135,7 +155,7 @@ public class DecodeState {
 
 	/**
 	 * Returns the capacity
-	*/
+	 */
 	public int getCapacity() {
     // BitSet capacity is rounded up to nearest 64, that's why
     // we do not want to return data.getCapacity()
@@ -144,7 +164,7 @@ public class DecodeState {
 
 	/**
 	 * Returns the number of QR codes that have been received and decoded
-	*/
+	 */
 	public int getTotalFramesDecoded() {
 		//Note, this call will take O(n) time.
 		return data.cardinality();
