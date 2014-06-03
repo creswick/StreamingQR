@@ -194,7 +194,16 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     @Override
     public void onStop() {
         Log.e(Constants.APP_TAG, "onStop");
-        clearPendingAlertMessages();
+
+        // Dispose of UI update messages that are no longer relevant.
+        // With 'null' as parameter, it removes all pending messages on UI thread.
+        // Ok because camera callbacks are not handled on UI thread anymore.
+        // We should be able to run this command to remove the alert dialog
+        //   displayUpdate.removeCallbacks(runShowRxFailedDialog);
+        // However, it's causing the alert dialog to show whenever we navigate to
+        // the settings fragment.
+        displayUpdate.removeCallbacksAndMessages(null);
+        alertDialog.dismiss();
         super.onStop();
     }
 
@@ -346,8 +355,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     }
 
     // CameraHandlerThread is not using the looper of the main UI thread.
-    // and so it does not need to be static handler.
-    private class CameraHandlerThread extends HandlerThread {
+    // and so it does not need to be static handler, but being static doesn't hurt.
+    private static class CameraHandlerThread extends HandlerThread {
         Handler mHandler = null;
 
         CameraHandlerThread() {
@@ -416,7 +425,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
         // Wait for camera to handle queue of PreviewCallback requests
         // so that the camera can released safely
-        mThread.quitSafely(); // or should we use? mThread.quit();
+        mThread.quit(); // should this be interrupted()? (Investigate if we see issues relating to camera shutdown / cleanup?)
         mThread = null;
 
         camera.stopPreview();
