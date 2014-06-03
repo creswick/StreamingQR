@@ -16,13 +16,17 @@
  */
 package com.galois.qrstream.lib;
 
+import android.app.ActionBar;
 import android.os.Bundle;
 import android.preference.PreferenceFragment;
+import android.widget.FrameLayout;
 
 /**
  * Created by donp on 4/8/14.
  */
 public class SettingsFragment extends PreferenceFragment {
+
+    private CharSequence previousTitle;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -35,14 +39,19 @@ public class SettingsFragment extends PreferenceFragment {
     @Override
     public void onResume() {
         super.onResume();
-        getActivity().getActionBar().setDisplayHomeAsUpEnabled(true);
+        ActionBar bar = getActivity().getActionBar();
+        bar.setDisplayHomeAsUpEnabled(true);
+        previousTitle = bar.getTitle();
+        bar.setTitle(R.string.settings_actionbar_title);
         getActivity().invalidateOptionsMenu();
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        getActivity().getActionBar().setDisplayHomeAsUpEnabled(false);
+        ActionBar bar = getActivity().getActionBar();
+        bar.setDisplayHomeAsUpEnabled(false);
+        bar.setTitle(previousTitle);
         getActivity().invalidateOptionsMenu();
     }
 }
