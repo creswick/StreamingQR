@@ -6,7 +6,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 
 public class TorrentBar extends View {
@@ -15,7 +14,7 @@ public class TorrentBar extends View {
     private int width;
     private int height;
     private int cellWidth;
-    private boolean[] onoffs;
+    private boolean[] toggles;
 
     public TorrentBar(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -31,7 +30,7 @@ public class TorrentBar extends View {
 
     public void setCellCount(int total) {
         this.cellCount = total;
-        onoffs = new boolean[total];
+        toggles = new boolean[total];
         recomputeCellWidth();
     }
 
@@ -53,9 +52,9 @@ public class TorrentBar extends View {
 
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if(onoffs != null) {
+        if(toggles != null) {
             for (int i = 0; i < cellCount; i++) {
-                drawCell(canvas, i, onoffs[i]);
+                drawCell(canvas, i, toggles[i]);
             }
         }
     }
@@ -89,13 +88,13 @@ public class TorrentBar extends View {
      * @param chunkId chunk id (1-based counting)
      */
     public void setProgress(int chunkId) {
-        onoffs[chunkId-1] = true;
+        toggles[chunkId-1] = true;
         invalidate();
     }
 
     public void setComplete() {
         for(int i=0; i < cellCount; i++) {
-            onoffs[i] = true;
+            toggles[i] = true;
         }
         invalidate();
     }
