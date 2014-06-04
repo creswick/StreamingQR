@@ -32,7 +32,6 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -170,7 +169,7 @@ public class SerializableRoundTripTest {
 
   @Test
   public void testRoundTrip() {
-    Receive rx  = new Receive(1500, 1500, 500, new EchoProgress("test"));
+    Receive rx  = new Receive(1500, 1500, new EchoProgress("test"));
     // ZXing can incorrectly identify black blobs in image as finder
     // square and render it invalid code: https://code.google.com/p/zxing/issues/detail?id=1262
     // The suggestion was to tell ZXing when you just have QR code in image and nothing else.
@@ -182,7 +181,7 @@ public class SerializableRoundTripTest {
     for (TestSerializable expected : generate(COUNT)) {
       Object actual;
       try {
-        actual = rx.decodeQRSerializable(new FrameManager(expected));
+        actual = rx.decodeQRSerializable(new FrameProvider(buildTestFrames(expected)));
         if ( ! expected.equals(actual) ) {
           System.err.println("Data did not round-trip: seed="+seed+" Object count="+num);
           errors++;
@@ -202,51 +201,36 @@ public class SerializableRoundTripTest {
   }
 
   /**
-   * Placeholder CaptureFrame manager for testing.
+   * Builds set of sample QR codes embedded in images to use for decoding.
+   * @throws TransmitException
    */
-  public static class FrameManager implements ICaptureFrame {
-    private final Transmit tx = new Transmit(1024, 1024);
-    private final Iterable<YuvImage> yuvCodes;
-    private final Iterator<YuvImage> yuvIter;
+  private Iterable<YuvImage> buildTestFrames(Serializable expected)
+      throws TransmitException {
+    final Transmit tx = new Transmit(1024, 1024);
 
-    public FrameManager(Serializable expected) throws TransmitException {
-      // Build up a transformation function that will:
-      //   - create a BufferedImage from a BitmapImage
-      //   - superimpose that on a background image
-      //   - build a YUV image from the composite.
-      Function<BitmapImage, YuvImage> addImageBG = compose(
-          buffToYuv, compose( addBackground(sampleImage),
-                              toBufferedImage));
+    // Build up a transformation function that will:
+    //   - create a BufferedImage from a BitmapImage
+    //   - superimpose that on a background image
+    //   - build a YUV image from the composite.
+    Function<BitmapImage, YuvImage> addImageBG = compose(
+        buffToYuv, compose( addBackground(sampleImage),
+                            toBufferedImage));
 
-      Function<BitmapImage, YuvImage> addWhiteBG = compose(
-          buffToYuv, compose( addBackground(whiteImage),
-                              toBufferedImage));
+    Function<BitmapImage, YuvImage> addWhiteBG = compose(
+        buffToYuv, compose( addBackground(whiteImage),
+                            toBufferedImage));
 
-      Function<BitmapImage, YuvImage> rotateAddBg = compose(
-          buffToYuv, compose( addBackground(sampleImage),
-                              compose( rotate(3), toBufferedImage)));
+    Function<BitmapImage, YuvImage> rotateAddBg = compose(
+        buffToYuv, compose( addBackground(sampleImage),
+                            compose( rotate(3), toBufferedImage)));
 
-      // Now apply (lazily) the transformer to the incoming stream of BitmapImages
-      // to get a stream of YuvImages we can extract QR codes from.
-      yuvCodes = concat(
-          transform(tx.encodeQRCodes(expected), addWhiteBG),
-          concat(
-              transform(tx.encodeQRCodes(expected), addImageBG),
-              transform(tx.encodeQRCodes(expected), rotateAddBg)));
-      yuvIter = yuvCodes.iterator();
 
-    }
-    @Override
-    public YuvImage captureFrameFromCamera() {
-      if(yuvIter.hasNext()) {
-        return yuvIter.next();
-      }
-      return null;
-    }
-
-    @Override
-    public boolean isRunning() {
-      return (yuvIter != null && yuvIter.hasNext());
-    }
-  };
+    // Now apply (lazily) the transformer to the incoming stream of BitmapImages
+    // to get a stream of YuvImages we can extract QR codes from.
+    return concat(
+            transform(tx.encodeQRCodes(expected), addWhiteBG),
+        concat(
+            transform(tx.encodeQRCodes(expected), addImageBG),
+            transform(tx.encodeQRCodes(expected), rotateAddBg)));
+  }
 }

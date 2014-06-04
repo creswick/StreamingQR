@@ -57,8 +57,8 @@ public class Progress implements IProgress {
                                         " " +percent_complete + "%");
         }
 
-        Message stateChange = Message.obtain();
+        Message stateChange = handler.obtainMessage(R.id.progress_update);
         stateChange.setData(changeMsg);
-        handler.dispatchMessage(stateChange);
+        stateChange.sendToTarget();
     }
 }

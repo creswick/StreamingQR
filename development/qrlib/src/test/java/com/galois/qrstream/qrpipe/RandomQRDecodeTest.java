@@ -37,6 +37,7 @@ import org.junit.runners.Parameterized.Parameters;
 import com.google.common.collect.Lists;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 import static com.galois.qrstream.qrpipe.TestUtils.nextNatural;
 
@@ -70,7 +71,7 @@ public class RandomQRDecodeTest {
       int width = 200 + (nextNatural(rand) % 7) * 100;
 
       Transmit t = new Transmit(height, width);
-      BitMatrix bmap = t.bytesToQRCode(bytes);
+      BitMatrix bmap = t.bytesToQRCode(bytes, ErrorCorrectionLevel.L);
 
       BufferedImage newCode = MatrixToImageWriter.toBufferedImage(bmap);
 

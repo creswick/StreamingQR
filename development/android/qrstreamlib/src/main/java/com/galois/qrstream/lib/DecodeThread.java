@@ -20,6 +20,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import com.galois.qrstream.qrpipe.IProgress;
 import com.galois.qrstream.qrpipe.Receive;
 import com.galois.qrstream.qrpipe.ReceiveException;
 
@@ -39,10 +40,13 @@ public class DecodeThread extends Thread {
     private final CameraManager cameraManager;
     private final Context context;
 
-    public DecodeThread(Context ctx, Receive receiver, CameraManager cameraManager) {
+    public DecodeThread(Context ctx, IProgress progress, CameraManager cameraManager) {
         this.context = ctx;
-        this.receiver = receiver;
         this.cameraManager = cameraManager;
+        this.receiver = new Receive(
+                cameraManager.getDisplayHeight(),
+                cameraManager.getDisplayWidth(),
+                progress);
     }
 
     @Override

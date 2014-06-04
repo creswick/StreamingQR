@@ -21,8 +21,10 @@ import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.DialogInterface;
 import android.hardware.Camera;
+import android.hardware.Camera.CameraInfo;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -37,7 +39,6 @@ import android.widget.Toast;
 import android.widget.ImageButton;
 
 import com.galois.qrstream.qrpipe.IProgress;
-import com.galois.qrstream.qrpipe.Receive;
 import com.galois.qrstream.qrpipe.State;
 
 import org.jetbrains.annotations.NotNull;
@@ -50,6 +51,10 @@ import java.io.IOException;
  */
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
+    // Need static references for handler to process camera messages
+    // off the UI thread.
+    private Camera camera;
+
     private SurfaceView camera_window;
     private ViewGroup.LayoutParams camera_window_params;
     private RelativeLayout rootLayout;
@@ -57,89 +62,96 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private TextView progressText;
     private ImageButton progressButton;
 
-    private Camera camera;
     private DecodeThread decodeThread;
     private Activity activity;
 
     // Help QRlib manage the camera preview requests
-    private CameraManager cameraManager = new CameraManager();
-    private boolean hasSurface = false;
+    private CameraManager cameraManager;
 
-    // Keep track of visibility of Rx fragment so that we can dispose of
-    // cancellation messages that are not relevant.  The activity.isFinishing()
-    // does not trigger onPause() only onDestroy().
-    private boolean isVisible = false;
-
-    // Sometimes the main thread tries to start the DecodeThread
-    // twice -- if tries twice in quick succession the
-    // decodeThread.isAlive() may yield false negative
-    private boolean hasDecodeThreadStarted = false;
+    // Used to show cancellation message on UI thread
+    // The dialog is setup in onCreateView since fragment context is available
+    private static AlertDialog alertDialog;
+    private static final Runnable runShowRxFailedDialog = new Runnable () {
+        @Override
+        public void run() {
+            Log.e(Constants.APP_TAG, "About to show failed alert message!");
+            if (alertDialog != null) {
+                alertDialog.show();
+            }
+        }
+    };
 
     /**
      * Handler to process progress updates from the IProgress implementation.
      *
      * This update handler is passed to the Progress object during the UI initialization.
      */
-    private Handler displayUpdate = new Handler() {
-        boolean inProgress = false;
+    private final Handler displayUpdate = new DisplayUpdateHandler(torrentBar, progressText);
+
+    /**
+     * We're using a private static class here instead of an anonymous class because the anonymous
+     * handler could possibly hold on to encompassing resources in the ReceiveFragment instance.
+     *
+     * The instance we get by creating a new DisplayUpdateHandler object can only hold onto the
+     * torrentBar and progressText objects, which it requires.
+     */
+    private static class DisplayUpdateHandler extends Handler {
+        private final TorrentBar torrentBar;
+        private final TextView progressText;
+
+        public DisplayUpdateHandler(TorrentBar tb, TextView pt) {
+            this.torrentBar = tb;
+            this.progressText = pt;
+        }
 
         @Override
         public void handleMessage(Message msg) {
-            final Bundle params = msg.getData();
-            State state = (State)params.getSerializable("state");
-            Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
-            // Keep track of visibility of Rx fragment so that we can dispose of
-            // cancellation messages that are not relevant.  The activity.isFinishing()
-            // does not trigger onPause() only onDestroy().
-            if(!isVisible || activity.isFinishing()) {
-                Log.d(Constants.APP_TAG, "ignoring displayUpdate message. Fragment is not visible.");
-            } else {
+            if (msg.what == R.id.progress_update) {
+                final Bundle params = msg.getData();
+                State state = (State) params.getSerializable("state");
+                Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
                 dispatchState(params, state);
+            } else {
+                Log.w(Constants.APP_TAG, "displayUpdate handler received unknown request");
             }
         }
 
         private void dispatchState(final Bundle params, State state) {
-            if(state == State.Intermediate) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if(!inProgress) {
-                            inProgress = true; // State change
-                            int total = params.getInt("chunk_total");
-                            torrentBar.setCellCount(total);
+            switch (state) {
+                case Fail:
+                    // Add a slight delay so messages from this handler can
+                    // be removed when onPause() but also allow user to see them
+                    // whenever cancel button is pressed.
+                    this.postDelayed(runShowRxFailedDialog, 100);
+                    break;
+                case Intermediate:
+                    this.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (torrentBar != null && progressText != null) {
+                                int progressStatus = params.getInt("percent_complete");
+                                int count = params.getInt("chunk_count");
+                                int total = params.getInt("chunk_total");
+                                Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
+                                torrentBar.setProgress(progressStatus);
+                                progressText.setText("" + count + "/" + total + " " + progressStatus + "%");
+                            }
                         }
-                        int chunk_id = params.getInt("chunk_id");
-                        torrentBar.setProgress(chunk_id);
-                        int count = params.getInt("chunk_count");
-                        progressText.setText(""+count+"/"+torrentBar.getCellCount());
-                    }
-                });
-            }
-            if(state == State.Final) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        torrentBar.setComplete();
-                        rootLayout.removeView(camera_window);
-                    }
-                });
-            }
-
-            if(state == State.Fail) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        new AlertDialog.Builder(activity).
-                                setMessage(R.string.receive_failedTxt).
-                                setPositiveButton(R.string.receive_buttonOkTxt, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        resume();
-                                    }
-                                }).
-                                show();
-                    }
-                });
+                    });
+                    break;
+                case Final:
+                    this.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (torrentBar != null && progressText != null) {
+                                torrentBar.setComplete();
+                                progressText.setText("100%");
+                            }
+                        }
+                    });
+                    break;
+                default:
+                    break;
             }
         }
     };
@@ -164,13 +176,11 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     public @Nullable View onCreateView(@NotNull LayoutInflater inflater,
                                        ViewGroup container,
                                        @NotNull Bundle savedInstanceState) {
-        // Will have surface after onSurfaceCreated called
-        hasSurface = false;
         View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
         rootLayout = (RelativeLayout)rootView.findViewById(R.id.receive_layout);
         rootLayout.setKeepScreenOn(true);
-        camera_window = (SurfaceView)rootLayout.findViewWithTag("camera_window");
         /* remember the camera_window details for rebuilding later */
+        camera_window = (SurfaceView)rootLayout.findViewById(R.id.camera_window);
         camera_window_params = camera_window.getLayoutParams();
         setCameraWindowCallback();
         torrentBar = (TorrentBar) rootView.findViewById(R.id.progressbar);
@@ -179,64 +189,110 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         progressButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                // TODO remove after reducing size of button and determining approach is wanted.
-                Toast.makeText(activity, "Cancel button was clicked!", Toast.LENGTH_SHORT).show();
-                cameraManager.stopRunning();
+              cameraManager.stopRunning();
             }
         });
+
+        // Setup the alert dialog in case we need it to report Rx errors to the user.
+        alertDialog = new AlertDialog.Builder(activity).
+                setMessage(R.string.receive_failedTxt).
+                setPositiveButton(R.string.receive_buttonOkTxt,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                Log.e(Constants.APP_TAG, "AlertDialog OK pressed, about to resume()");
+                                resetUI();
+                                startPipe(progress);
+                            }
+                }).create();
 
         return rootView;
     }
 
     @Override
+    public void onStart() {
+        // Execution order: onStart() then onResume(), onCreateView() may occur before onStart
+        Log.e(Constants.APP_TAG, "onStart");
+        resetUI();
+        super.onStart();
+    }
+
+    @Override
+    public void onStop() {
+        Log.e(Constants.APP_TAG, "onStop");
+
+        // Dispose of UI update messages that are no longer relevant.
+        // With 'null' as parameter, it removes all pending messages on UI thread.
+        // Ok because camera callbacks are not handled on UI thread anymore.
+        // We should be able to run this command to remove the alert dialog
+        //   displayUpdate.removeCallbacks(runShowRxFailedDialog);
+        // However, it's causing the alert dialog to show whenever we navigate to
+        // the settings fragment.
+        displayUpdate.removeCallbacksAndMessages(null);
+        alertDialog.dismiss();
+        super.onStop();
+    }
+
+    @Override
     public void onPause(){
-        Log.d(Constants.APP_TAG, "onPause");
+        Log.e(Constants.APP_TAG, "onPause with Thread #" + Thread.currentThread().getId());
+        // The camera preview cannot be shown until a fully initialized SurfaceHolder exists.
+        // We setup/release camera in the SurfaceHolder callbacks (surfaceDestroyed, surfaceCreated).
+        // It would be nice if those methods setup the camera fully, opening and releasing the
+        // resource.
+        // Most of the time, the app lifecycle will trigger the surfaceDestroyed callback.
+        // However, pushing the POWER button to exit when the app is running, does not trigger
+        // the callback.  We could either,
+        //   1) remove SurfaceView ourselves to ensure the callbacks will be run, OR
+        //   2) manually track whether we have surface and check that if we have surface
+        //      in onResume, that we open camera again.
+
+        // Remove the camera preview surface from display, so that
+        // the surface will get destroyed and camera will get released
+        cameraManager.stopRunning();
+        camera_window.setVisibility(View.INVISIBLE);
         super.onPause();
-        isVisible = false;
-        disposeCamera();
     }
 
     @Override
     public void onResume() {
-        Log.d(Constants.APP_TAG, "onResume");
-        super.onResume();
-        isVisible = true;
-        resume();
-    }
 
-    private void resume() {
-        // Make sure that camera resources had been released
-        disposeCamera();
-        resetUI();
-
-        /* In some cases, onPause will destroy the camera_window */
+        // TODO Check with donp to figure out if this is necessary? I think it's no longer needed.
+        /* In some cases, onPause will destroy the camera_window. This reestablishes it. */
         SurfaceView previewSurface = (SurfaceView) rootLayout.findViewWithTag("camera_window");
         if(previewSurface == null) {
             Log.d(Constants.APP_TAG, "Resume: camera_window is null");
-            replaceCameraWindow();
+            throw new RuntimeException("TODO: make call to replaceCameraWindow() here");
+            //replaceCameraWindow();
         }
-
-        if (hasSurface) {
-            // The fragment was paused but not stopped. Happens when power button is pressed
-            // instead of exiting through back button, opening settings fragment, or pushing
-            // home button. When this happens, the surface still exists and surfaceCreated callback
-            // won't be invoked. Therefore, we need to init the camera here.
-            initCamera(camera_window.getHolder());
-            startPipe(camera.getParameters(), progress, cameraManager);
-        }else{
-            // Install the callback and wait for surfaceCreated() to init the camera.
-            Log.i(Constants.APP_TAG, "ReceiveFragment:onResume: has NO surface.");
-            setCameraWindowCallback();
-        }
+        // Setting the visibility here will cause the surfaceCreated callback
+        // to be invoked prompting the camera to be acquired and DecodeThread to start
+        camera_window.setVisibility(View.VISIBLE);
+        super.onResume();
     }
 
     /*
-     * rebuild the camera window as the first element in rootLayout
+     * (Re)build the camera window as the first element in rootLayout
      */
+    // TODO: Maybe delete this after checking that it is not needed in onResume()
     private void replaceCameraWindow() {
-        camera_window = new SurfaceView(rootLayout.getContext());
-        camera_window.setTag("camera_window");
-        rootLayout.addView(camera_window, 0, camera_window_params);
+        SurfaceView previewSurface = (SurfaceView)rootLayout.findViewWithTag("camera_window");
+        if (previewSurface != null) {
+            camera_window = previewSurface;
+            camera_window_params = camera_window.getLayoutParams();
+        } else {
+            // Since we destroy the SurfaceView each time we pause the application
+            // we need to rebuild the layout.
+            if(camera_window == null) {
+                Log.e(Constants.APP_TAG,
+                        "Unable to find camera_window view, and camera_window == null");
+                camera_window = new SurfaceView(rootLayout.getContext());
+                camera_window.setTag("camera_window");
+                // TODO discover if this case ever happens? Expect that it doesn't because onCreateView sets up camera_window
+                throw new RuntimeException("Unable to find camera_window view, and camera_window == null");
+            }
+            rootLayout.addView(camera_window, 0, camera_window_params);
+        }
         setCameraWindowCallback();
     }
 
@@ -251,13 +307,23 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private void resetUI() {
         torrentBar.reset();
         progressText.setText("");
+
+        if (alertDialog.isShowing()) {
+            alertDialog.dismiss();
+        }
+    }
+
+    private void clearPendingAlertMessages() {
+        // Dispose of cancellation messages that are no longer relevant.
+        displayUpdate.removeCallbacks(runShowRxFailedDialog);
+        alertDialog.dismiss();
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.d(Constants.APP_TAG, "surfaceDestroyed");
+        Log.e(Constants.APP_TAG, "surfaceDestroyed");
         disposeCamera();
-        hasSurface = false;
+        clearPendingAlertMessages();
     }
 
     @Override
@@ -265,13 +331,10 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         Log.e(Constants.APP_TAG, "surfaceCreated");
         if (holder == null) {
             Log.e(Constants.APP_TAG, "*** WARNING *** surfaceCreated() gave us a null surface!");
-        }
-        if (!hasSurface) {
-            hasSurface = true;
+        } else {
             initCamera(holder);
-            startPipe(camera.getParameters(), progress, cameraManager);
+            startPipe(progress);
         }
-
     }
 
     @Override
@@ -282,10 +345,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     /*
      * Reserve the hardware camera and setup a callback for the preview frames
      */
-    private void initCamera (SurfaceHolder surfaceHolder) {
-        if (surfaceHolder == null) {
-            throw new IllegalStateException("No valid SurfaceHolder provided");
-        }
+    private void initCamera (@NotNull SurfaceHolder surfaceHolder) {
         if (camera != null) {
             Log.d(Constants.APP_TAG, "initCamera() while camera already open.");
             return;
@@ -295,22 +355,73 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         int cameraId = requestCameraId();
         try {
             Log.d(Constants.APP_TAG, "initCamera: Trying to open and initialize camera");
-            camera = Camera.open(cameraId);
+            openCamera(cameraId);
             camera.setDisplayOrientation(defaultCameraOrientation(cameraId));
             camera.setPreviewDisplay(surfaceHolder);
             camera.startPreview();
 
-            Camera.Parameters params = camera.getParameters();
-            cameraManager.startRunning(camera, new Preview(params.getPreviewSize()));
         } catch (RuntimeException re) {
             // TODO handle this more elegantly.
             Toast.makeText(getActivity(), "Unable to open camera", Toast.LENGTH_LONG).show();
-            Log.e(Constants.APP_TAG, "Could not open camera from resume(). "+re);
+            Log.e(Constants.APP_TAG, "Could not open camera. "+re);
             re.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+    private CameraHandlerThread mThread = null;
+    private void openCamera(int cameraId) {
+        if (mThread == null) {
+            mThread = new CameraHandlerThread();
+        }
 
+        synchronized (mThread) {
+            mThread.openCamera(cameraId);
+        }
+    }
+
+    // CameraHandlerThread is not using the looper of the main UI thread.
+    // and so it does not need to be static handler.
+    private class CameraHandlerThread extends HandlerThread {
+        private final Handler mHandler;
+
+        CameraHandlerThread() {
+            super("CameraHandlerThread");
+            start();
+            mHandler = new Handler(getLooper());
+            Log.e(Constants.APP_TAG, "CameraHandlerThread Id# " + this.getId());
+        }
+
+        public void openCamera(final int cameraId) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    camera = getCameraInstance(cameraId);
+                    notifyCameraOpened();
+                }
+            });
+
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                Log.w(Constants.APP_TAG, "wait was interrupted");
+            }
+        }
+
+        private synchronized void notifyCameraOpened() {
+            notify();
+        }
+
+        private Camera getCameraInstance(int cameraId) {
+            Camera c = null;
+            try {
+                c = Camera.open(cameraId);
+            }catch (RuntimeException e) {
+                // TODO handle this more elegantly.
+                Log.e(Constants.APP_TAG, "failed to open camera");
+            }
+            return c;
+        }
     }
 
     /*
@@ -321,9 +432,9 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         int cameraId = 0;
         int camerasOnPhone = Camera.getNumberOfCameras();
         for (int i=0; i < camerasOnPhone; i++) {
-            Camera.CameraInfo info = new Camera.CameraInfo();
+            CameraInfo info = new CameraInfo();
             Camera.getCameraInfo(i, info);
-            if (info.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+            if (info.facing == CameraInfo.CAMERA_FACING_BACK) {
                 cameraId = i;
                 break;
             }
@@ -336,13 +447,18 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             return;
         }
 
-        cameraManager.stopRunning();
+        // Wait for camera to handle queue of PreviewCallback requests
+        // so that the camera can released safely
+        mThread.quit(); // should this be interrupted()? (Investigate if we see issues relating to camera shutdown / cleanup?)
+        mThread = null;
 
         camera.stopPreview();
-        camera.setPreviewCallback(null);
         camera.release();
 
         camera = null;
+
+        // Dispose of cancellation messages that are no longer relevant.
+        displayUpdate.removeCallbacks(runShowRxFailedDialog);
     }
 
 
@@ -354,9 +470,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      * @return Rotation in degrees of the camera display.
      */
     private int defaultCameraOrientation(int cameraId) {
-        android.hardware.Camera.CameraInfo info =
-                new android.hardware.Camera.CameraInfo();
-        android.hardware.Camera.getCameraInfo(cameraId, info);
+        CameraInfo info = new CameraInfo();
+        Camera.getCameraInfo(cameraId, info);
         int rotation = getActivity().getWindowManager().getDefaultDisplay()
                 .getRotation();
         int degrees = 0;
@@ -368,7 +483,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         }
 
         int result;
-        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+        if (info.facing == CameraInfo.CAMERA_FACING_FRONT) {
             result = (info.orientation + degrees) % 360;
             result = (360 - result) % 360;  // compensate the mirror
         } else {  // back-facing
@@ -381,11 +496,12 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      * Create a worker thread for decoding the preview frames
      * using the qrlib receiver.
      */
-    public void startPipe(Camera.Parameters params, IProgress progress, CameraManager fm) {
+    public void startPipe(IProgress progress) {
         Log.d(Constants.APP_TAG, "startPipe");
         if(decodeThread != null) {
             if(decodeThread.isAlive()) {
                 Log.e(Constants.APP_TAG, "startPipe Error: DecodeThread already running");
+                Log.e(Constants.APP_TAG, "startPipe Error: DecodeThread state= " + decodeThread.getState());
             } else {
                 Log.d(Constants.APP_TAG, "startPipe dropping dead thread");
                 // drop dead thread
@@ -395,23 +511,16 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
         if(decodeThread == null) {
             Log.d(Constants.APP_TAG, "startPipe building new decodeThread");
-            Camera.Size previewSize = params.getPreviewSize();
-            Receive receiveQrpipe = new Receive(previewSize.height,
-                                        previewSize.width,
-                                        Constants.RECEIVE_TIMEOUT_MS,
-                                        progress);
 
-            // Cannot start up this thread yet.  We need to make sure that the
-            // camera preview is available for decodeThread to request frames.
-            cameraManager.startRunning(camera, new Preview(params.getPreviewSize()));
-            decodeThread = new DecodeThread(getActivity(), receiveQrpipe, fm);
-            hasDecodeThreadStarted = false;
-        }
-
-        if(!hasDecodeThreadStarted) {
-            hasDecodeThreadStarted = true;
+            // If we get this far, the camera preview is available for
+            // decodeThread to begin requesting frames.  Make sure that
+            // the decodeThread has a new instance of the cameraManager so that it starts in the
+            // running state.
+            if (cameraManager == null || !cameraManager.isRunning()) {
+                cameraManager = new CameraManager(camera);
+            }
+            decodeThread = new DecodeThread(getActivity(), progress, cameraManager);
             decodeThread.start();
         }
     }
-
 }

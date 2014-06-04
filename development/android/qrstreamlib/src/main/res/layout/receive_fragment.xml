@@ -10,10 +10,8 @@
         android:gravity="center_horizontal"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:layout_weight="0.9"
         android:tag="camera_window"
         />
-
 
     <LinearLayout android:id="@+id/status_overlay"
         android:layout_width="match_parent"
