@@ -24,9 +24,12 @@ import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
 
+/**
+ *  Android UI Widget for a non-linear progress bar.
+ */
 public class TorrentBar extends View {
-    private int cellCount;
-    private Paint onPaint, offPaint;
+    private final Paint onPaint = new Paint();
+    private final Paint offPaint = new Paint();
     private int width;
     private int height;
     private int cellWidth;
@@ -34,30 +37,33 @@ public class TorrentBar extends View {
 
     public TorrentBar(Context context, AttributeSet attrs) {
         super(context, attrs);
-        paintInit();
+        brushSetup();
     }
 
-    private void paintInit() {
-        onPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private void brushSetup() {
+        onPaint.setFlags(Paint.ANTI_ALIAS_FLAG);
         onPaint.setColor(Color.YELLOW);
-        offPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        offPaint.setFlags(Paint.ANTI_ALIAS_FLAG);
         offPaint.setColor(Color.BLUE);
     }
 
+    /**
+     * Set the number of total cells.
+     * @param total
+     */
     public void setCellCount(int total) {
-        this.cellCount = total;
         toggles = new boolean[total];
         recomputeCellWidth();
     }
 
     public void recomputeCellWidth() {
-        if(this.cellCount > 0) {
-            this.cellWidth = width / this.cellCount;
+        if(toggles.length > 0) {
+            this.cellWidth = width / toggles.length;
         }
     }
 
     public int getCellCount() {
-        return this.cellCount;
+        return toggles.length;
     }
 
     protected void onSizeChanged (int w, int h, int oldw, int oldh) {
@@ -69,7 +75,7 @@ public class TorrentBar extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         if(toggles != null) {
-            for (int i = 0; i < cellCount; i++) {
+            for (int i = 0; i < toggles.length; i++) {
                 drawCell(canvas, i, toggles[i]);
             }
         }
@@ -100,16 +106,19 @@ public class TorrentBar extends View {
     }
 
     /**
-     * Mark the given chunk as received
-     * @param chunkId chunk id (1-based counting)
+     * Mark the given cell as completed
+     * @param cellId cell id (1-based counting)
      */
-    public void setProgress(int chunkId) {
-        toggles[chunkId-1] = true;
+    public void setProgress(int cellId) {
+        toggles[cellId-1] = true;
         invalidate();
     }
 
+    /**
+     * Set all cells as completed
+     */
     public void setComplete() {
-        for(int i=0; i < cellCount; i++) {
+        for(int i=0; i < toggles.length; i++) {
             toggles[i] = true;
         }
         invalidate();
