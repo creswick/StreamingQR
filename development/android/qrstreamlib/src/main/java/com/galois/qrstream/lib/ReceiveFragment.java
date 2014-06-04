@@ -86,7 +86,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      *
      * This update handler is passed to the Progress object during the UI initialization.
      */
-    private final Handler displayUpdate = new DisplayUpdateHandler(torrentBar, progressText);
+    private final DisplayUpdateHandler displayUpdate = new DisplayUpdateHandler();
 
     /**
      * We're using a private static class here instead of an anonymous class because the anonymous
@@ -96,10 +96,10 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      * torrentBar and progressText objects, which it requires.
      */
     private static class DisplayUpdateHandler extends Handler {
-        private final TorrentBar torrentBar;
-        private final TextView progressText;
+        private TorrentBar torrentBar;
+        private TextView progressText;
 
-        public DisplayUpdateHandler(TorrentBar tb, TextView pt) {
+        public void setupUi(TorrentBar tb, TextView pt) {
             this.torrentBar = tb;
             this.progressText = pt;
         }
@@ -185,6 +185,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         setCameraWindowCallback();
         torrentBar = (TorrentBar) rootView.findViewById(R.id.progressbar);
         progressText = (TextView) rootView.findViewById(R.id.progresstext);
+        displayUpdate.setupUi(torrentBar, progressText);
         progressButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
         progressButton.setOnClickListener(new View.OnClickListener() {
             @Override
