@@ -56,8 +56,11 @@ public class TorrentBar extends View {
         recomputeCellWidth();
     }
 
+    /**
+     * When the layout width changes, adjust the size of the cells
+     */
     public void recomputeCellWidth() {
-        if(toggles.length > 0) {
+        if(toggles != null) {
             this.cellWidth = width / toggles.length;
         }
     }
