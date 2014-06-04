@@ -18,11 +18,30 @@ import org.jetbrains.annotations.NotNull;
  */
 public final class CameraManager implements IImageProvider, Camera.PreviewCallback {
 
-    private static final BlockingQueue<YuvImage> currentFrame = Queues.newSynchronousQueue();
-
     // When isRunning is false it signals that the camera is not available
     // and any decoding of QR in progress should be stopped.
     private boolean isRunning = false;
+
+    private final BlockingQueue<YuvImage> currentFrame = Queues.newSynchronousQueue();
+
+    // Handler is bound to the same thread that created the CameraManager
+    // i.e. the UI thread.  Perhaps this should get moved?
+    private final Handler frameHandler = new Handler() {
+
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.obj != null) {
+                if(currentFrame.offer((YuvImage) msg.obj) == false) {
+                    Log.e(Constants.APP_TAG, "CameraManager tried to set currentFrame before successful read.");
+                }else {
+                    //Log.d(Constants.APP_TAG, "CameraManager set currentFrame.");
+                }
+            }else{
+                // Probably not a big deal as it would just cause qrlib to stop decoding QR codes
+                Log.d(Constants.APP_TAG, "CameraManager asked to handle NULL message.");
+            }
+        }
+    };
 
     private final Camera camera;
     private final int displayWidth;
