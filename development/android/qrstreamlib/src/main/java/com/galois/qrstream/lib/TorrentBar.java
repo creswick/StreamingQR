@@ -116,7 +116,7 @@ public class TorrentBar extends View {
      * Mark the given cell as completed
      * @param cellId cell id (1-based counting)
      */
-    public void setProgress(int cellId) {
+    public void cellReceived(int cellId) {
         int cellIndex = cellId - 1;
         if(cellIndex < toggles.length) {
             toggles[cellIndex] = true;

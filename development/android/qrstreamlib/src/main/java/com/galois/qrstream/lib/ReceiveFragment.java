@@ -132,12 +132,13 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                                 int progressStatus = params.getInt("percent_complete");
                                 int count = params.getInt("chunk_count");
                                 int total = params.getInt("chunk_total");
-                                Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
+                                int cellId = params.getInt("chunk_id");
+                                Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage cellReceived " + cellId);
                                 if(!torrentBar.isConfigured()) {
                                     // First progress message needs to setup the progress bar
                                     torrentBar.setCellCount(total);
                                 }
-                                torrentBar.setProgress(progressStatus);
+                                torrentBar.cellReceived(cellId);
                                 progressText.setText("" + count + "/" + total + " " + progressStatus + "%");
                             }
                         }
