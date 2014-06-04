@@ -60,9 +60,13 @@ public class TorrentBar extends View {
      * When the layout width changes, adjust the size of the cells
      */
     public void recomputeCellWidth() {
-        if(toggles != null) {
+        if(isConfigured()) {
             this.cellWidth = width / toggles.length;
         }
+    }
+
+    public boolean isConfigured() {
+        return toggles != null;
     }
 
     public int getCellCount() {
@@ -77,7 +81,7 @@ public class TorrentBar extends View {
 
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if(toggles != null) {
+        if(isConfigured()) {
             for (int i = 0; i < toggles.length; i++) {
                 drawCell(canvas, i, toggles[i]);
             }
@@ -113,8 +117,13 @@ public class TorrentBar extends View {
      * @param cellId cell id (1-based counting)
      */
     public void setProgress(int cellId) {
-        toggles[cellId-1] = true;
-        invalidate();
+        int cellIndex = cellId - 1;
+        if(cellIndex < toggles.length) {
+            toggles[cellIndex] = true;
+            invalidate();
+        } else {
+            throw new IllegalArgumentException("cellId "+cellId+" is out of range for "+toggles.length);
+        }
     }
 
     /**
@@ -128,6 +137,7 @@ public class TorrentBar extends View {
     }
 
     public void reset() {
+        toggles = null;
         invalidate();
     }
 
