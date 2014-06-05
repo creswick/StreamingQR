@@ -24,6 +24,8 @@ import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
 
+import java.security.InvalidParameterException;
+
 /**
  *  Android UI Widget for a non-linear progress bar.
  */
@@ -49,11 +51,15 @@ public class TorrentBar extends View {
 
     /**
      * Set the number of total cells.
-     * @param total
+     * @param total (positive integer)
      */
     public void setCellCount(int total) {
-        toggles = new boolean[total];
-        recomputeCellWidth();
+        if(total > 0) {
+            toggles = new boolean[total];
+            recomputeCellWidth();
+        } else {
+            throw new InvalidParameterException("total cell count must be 1 or more");
+        }
     }
 
     /**
@@ -117,12 +123,14 @@ public class TorrentBar extends View {
      * @param cellId cell id (1-based counting)
      */
     public void cellReceived(int cellId) {
-        int cellIndex = cellId - 1;
-        if(cellIndex < toggles.length) {
-            toggles[cellIndex] = true;
-            invalidate();
-        } else {
-            throw new IllegalArgumentException("cellId "+cellId+" is out of range for "+toggles.length);
+        if(isConfigured()) {
+            int cellIndex = cellId - 1;
+            if (cellIndex >= 0 && cellIndex < toggles.length) {
+                toggles[cellIndex] = true;
+                invalidate();
+            } else {
+                throw new IllegalArgumentException("cellId " + cellId + " is out of range for " + toggles.length);
+            }
         }
     }
 
