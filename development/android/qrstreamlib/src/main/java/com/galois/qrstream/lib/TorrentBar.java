@@ -22,6 +22,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 
 import java.security.InvalidParameterException;
@@ -55,6 +56,7 @@ public class TorrentBar extends View {
      */
     public void setCellCount(int total) {
         if(total > 0) {
+            Log.d(Constants.APP_TAG, "torrentbar setCellCount " + total);
             toggles = new boolean[total];
             recomputeCellWidth();
         } else {
@@ -66,13 +68,18 @@ public class TorrentBar extends View {
      * When the layout width changes, adjust the size of the cells
      */
     public void recomputeCellWidth() {
-        if(isConfigured()) {
-            this.cellWidth = width / toggles.length;
-        }
+        assertConfigured();
+        this.cellWidth = width / toggles.length;
     }
 
     public boolean isConfigured() {
         return toggles != null;
+    }
+
+    protected void assertConfigured() {
+        if(!isConfigured()) {
+            throw new IllegalStateException("Torrent bar not configured");
+        }
     }
 
     public int getCellCount() {
@@ -81,13 +88,14 @@ public class TorrentBar extends View {
 
     protected void onSizeChanged (int w, int h, int oldw, int oldh) {
         this.width = w;
-        this.height= w/10;
-        recomputeCellWidth();
+        this.height = w / 10;
     }
 
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        // Android can call this at any time, so do nothing if not ready
         if(isConfigured()) {
+            Log.d(Constants.APP_TAG, "torrentbar onDraw drawing "+toggles.length+" of width "+cellWidth);
             for (int i = 0; i < toggles.length; i++) {
                 drawCell(canvas, i, toggles[i]);
             }
@@ -123,14 +131,15 @@ public class TorrentBar extends View {
      * @param cellId cell id (1-based counting)
      */
     public void cellReceived(int cellId) {
-        if(isConfigured()) {
-            int cellIndex = cellId - 1;
-            if (cellIndex >= 0 && cellIndex < toggles.length) {
-                toggles[cellIndex] = true;
-                invalidate();
-            } else {
-                throw new IllegalArgumentException("cellId " + cellId + " is out of range for " + toggles.length);
-            }
+        assertConfigured();
+        Log.d(Constants.APP_TAG, "torrentbar cellReceived " + cellId);
+        int cellIndex = cellId - 1;
+        if (cellIndex >= 0 && cellIndex < toggles.length) {
+            Log.d(Constants.APP_TAG, "torrentbar cellReceived setting true " + cellIndex);
+            toggles[cellIndex] = true;
+            invalidate();
+        } else {
+            throw new IllegalArgumentException("cellId " + cellId + " is out of range for " + toggles.length);
         }
     }
 
@@ -138,6 +147,7 @@ public class TorrentBar extends View {
      * Set all cells as completed
      */
     public void setComplete() {
+        assertConfigured();
         for(int i=0; i < toggles.length; i++) {
             toggles[i] = true;
         }
