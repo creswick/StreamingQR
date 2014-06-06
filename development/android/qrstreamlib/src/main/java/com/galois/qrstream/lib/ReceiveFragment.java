@@ -56,7 +56,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
     // Need static references for handler to process camera messages
     // off the UI thread.
-    private Camera camera;
+    private static Camera camera;
 
     private SurfaceView camera_window;
     private ViewGroup.LayoutParams camera_window_params;
