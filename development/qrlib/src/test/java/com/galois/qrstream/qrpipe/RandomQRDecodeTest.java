@@ -56,6 +56,9 @@ public class RandomQRDecodeTest {
   public static final IProgress NULL_PROGRESS = new IProgress() {
     @Override
     public void changeState(DecodeState state) {
+    }
+    @Override
+    public void drawFinderPoints(float[] pts){
     }};
 
   @Parameters(name = "{0}")

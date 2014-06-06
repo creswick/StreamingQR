@@ -53,6 +53,9 @@ public class ReceiveTest {
   private static final IProgress NULL_MONITOR = new IProgress() {
     @Override
     public void changeState(DecodeState state) {
+    }
+    @Override
+    public void drawFinderPoints(float[] pts){
     }};
 
   @BeforeClass

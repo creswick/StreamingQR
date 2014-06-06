@@ -22,8 +22,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import com.galois.qrstream.image.YuvImage;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Floats;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.DecodeHintType;
@@ -32,6 +36,7 @@ import com.google.zxing.MultiFormatReader;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.Result;
+import com.google.zxing.ResultPoint;
 import com.google.zxing.common.HybridBinarizer;
 
 /**
@@ -51,6 +56,9 @@ public class Receive {
 
   /* Track progress of decoding */
   private final IProgress progress;
+
+  /* Useful to communicate no QR codes found */
+  private static final Iterable<Result> NO_RESULTS = ImmutableList.of();
 
   /**
    * Initializes receiver of QR code stream.
@@ -119,7 +127,8 @@ public class Receive {
         throw new ReceiveException("Transmission failed to receive a valid frame from the camera");
       }
       try {
-        Result res = decodeSingleQRCode(img.getYuvData());
+        Iterable<Result> res = ImmutableList.of(decodeSingleQRCode(img.getYuvData()));
+        displayQRFinderPoints(res);
         State s = saveMessageAndUpdateProgress(res, message);
 
         if(s == State.Final) {
@@ -128,9 +137,11 @@ public class Receive {
         }
       } catch (NotFoundException e) {
         // Unable to detect QR in this image, try next one.
+        displayQRFinderPoints(NO_RESULTS);
         continue;
       } catch (ReceiveException e) {
         // Encountered invalid QR code during parsing, try next image.
+        displayQRFinderPoints(NO_RESULTS);
         continue;
       }
     }
@@ -159,15 +170,69 @@ public class Receive {
    * Identify the chunk of data decoded from the QR code and
    * add its message to the collection of already received chunks.
    *
-   * @param decodedQR The result of decoding QR code from an image
+   * @param decodedQR The result of decoding QR code(s) from an image
    * @param receivedData The data decoded from prior images.
    * @return The {@code State} indicating whether the whole message has been received.
-   * @throws ReceiveException if the decoded QR code has an invalid format
+   * @throws ReceiveException if all of the decoded QR codes have an invalid format
    */
-  protected State saveMessageAndUpdateProgress(Result decodedQR, DecodedMessage receivedData)
+  protected State saveMessageAndUpdateProgress(Iterable<Result> decodedQR, DecodedMessage receivedData)
+      throws ReceiveException {
+    boolean allInvalid = true;
+    String  receiveExceptionMsg = "";
+    State state = State.Initial;
+
+    for (Result qr : decodedQR ) {
+      try {
+        State s = saveMessageAndUpdateProgress(qr, receivedData);
+        if (allInvalid) {
+          // Found at least one valid QR code. Now it's okay to
+          // ignore any other ReceiveException errors since
+          // decodeQRCodes would just skip it and try another frame.
+          allInvalid = false;
+        }
+        if (state != s) {
+          state = s;
+        }
+        // No need to continue with other QR codes if message complete
+        if (state == State.Final) {
+          break;
+        }
+      }catch(ReceiveException e) {
+        // Save one of the errors for later, but try other QR codes
+        receiveExceptionMsg = e.getMessage();
+      }
+    }
+    if (allInvalid) {
+      throw new ReceiveException(receiveExceptionMsg);
+    }
+    return state;
+  }
+
+  private State saveMessageAndUpdateProgress(Result decodedQR, DecodedMessage receivedData)
       throws ReceiveException {
     PartialMessage messagePart = PartialMessage.createFromResult(decodedQR);
     return receivedData.saveMessageChunk(messagePart);
+  }
+
+  /**
+   * Update IProgress with QR finder points that were
+   * found during the QR decoding. It orders the (x,y)
+   * coordinates as follows: [x1,y2,x2,y2...xi,yi...].
+   */
+  private void displayQRFinderPoints(Iterable<Result> decodedQRCodes) {
+    List<Float> list = Lists.newArrayList();
+    for (Result qr : decodedQRCodes) {
+      ResultPoint[] points = qr.getResultPoints();
+      if(points != null) {
+        for (ResultPoint point : points) {
+          if (point != null) {
+            list.add(point.getX());
+            list.add(point.getY());
+          }
+        }
+      }
+    }
+    progress.drawFinderPoints(Floats.toArray(list));
   }
 
   /**
@@ -211,7 +276,7 @@ public class Receive {
     return new MultiFormatReader().decode(bmap, hints);
   }
 
-  /**
+  /*
    * Convert luminance image to ZXing's BinaryBitmap type.
    * The ZXing decoders require input as BinaryBitmap.
    *

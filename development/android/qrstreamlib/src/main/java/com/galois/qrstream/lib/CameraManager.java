@@ -48,6 +48,7 @@ public final class CameraManager implements IImageProvider, Camera.PreviewCallba
     private final int displayHeight;
 
     public CameraManager(@NotNull Camera camera) {
+        // The preview mode is always in 'Landscape' mode (ex. h=720, w=1280)
         Camera.Size previewSize = camera.getParameters().getPreviewSize();
 
         // For now we assume that the camera is initialized elsewhere, is open, and preview is running

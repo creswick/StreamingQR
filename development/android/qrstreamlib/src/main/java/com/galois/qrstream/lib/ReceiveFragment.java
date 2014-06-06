@@ -51,6 +51,9 @@ import java.io.IOException;
  */
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
+    // Need static reference to overlay view for drawing qr finder points
+    private static QRFoundPointsView cameraOverlay;
+
     // Need static references for handler to process camera messages
     // off the UI thread.
     private Camera camera;
@@ -81,6 +84,29 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         }
     };
 
+    private static final class DrawFinderPointsRunnable implements Runnable {
+        private final float[] points;
+
+        public DrawFinderPointsRunnable() {
+            this.points = new float[0];
+        }
+        public DrawFinderPointsRunnable(@NotNull float[] points) {
+            if (points.length % 2 != 0) {
+                throw new IllegalArgumentException("Expected QR finder points to have even length");
+            }
+            this.points = points.clone();
+        }
+        public void run() {
+            if (points.length > 0) {
+                cameraOverlay.setPoints(points);
+                cameraOverlay.setVisibility(View.VISIBLE);
+            }else{
+                cameraOverlay.setVisibility(View.INVISIBLE);
+            }
+            cameraOverlay.invalidate();
+        }
+    }
+
     /**
      * Handler to process progress updates from the IProgress implementation.
      *
@@ -106,11 +132,21 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
         @Override
         public void handleMessage(Message msg) {
+            final Bundle params = msg.getData();
+
             if (msg.what == R.id.progress_update) {
-                final Bundle params = msg.getData();
                 State state = (State) params.getSerializable("state");
                 Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
                 dispatchState(params, state);
+            } else if (msg.what == R.id.draw_qr_points) {
+                float[] points = params.getFloatArray("points");
+                Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage, draw_qr_points");
+                Log.d(Constants.APP_TAG, "draw_qr_points: pts length=" + points.length);
+                if (camera != null) {
+                    this.post(new DrawFinderPointsRunnable(points));
+                }else{
+                    this.post(new DrawFinderPointsRunnable());
+                }
             } else {
                 Log.w(Constants.APP_TAG, "displayUpdate handler received unknown request");
             }
@@ -199,6 +235,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             }
         });
 
+        cameraOverlay = (QRFoundPointsView) rootView.findViewById(R.id.camera_overlay);
+
         // Setup the alert dialog in case we need it to report Rx errors to the user.
         alertDialog = new AlertDialog.Builder(activity).
                 setMessage(R.string.receive_failedTxt).
@@ -255,8 +293,12 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
         // Remove the camera preview surface from display, so that
         // the surface will get destroyed and camera will get released
-        cameraManager.stopRunning();
+        if (cameraManager != null) {
+            // Expect cameraManager to be null only if camera failed to initialize
+            cameraManager.stopRunning();
+        }
         camera_window.setVisibility(View.INVISIBLE);
+        cameraOverlay.setVisibility(View.INVISIBLE);
         super.onPause();
     }
 
@@ -274,6 +316,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         // Setting the visibility here will cause the surfaceCreated callback
         // to be invoked prompting the camera to be acquired and DecodeThread to start
         camera_window.setVisibility(View.VISIBLE);
+        cameraOverlay.setVisibility(View.VISIBLE);
         super.onResume();
     }
 
@@ -362,9 +405,12 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         try {
             Log.d(Constants.APP_TAG, "initCamera: Trying to open and initialize camera");
             openCamera(cameraId);
-            camera.setDisplayOrientation(defaultCameraOrientation(cameraId));
+            int rotation = defaultCameraOrientation(cameraId);
+            camera.setDisplayOrientation(rotation);
             camera.setPreviewDisplay(surfaceHolder);
             camera.startPreview();
+            cameraOverlay.setCameraPreviewSize(camera.getParameters().getPreviewSize());
+            cameraOverlay.setCameraRotation(rotation);
 
         } catch (RuntimeException re) {
             // TODO handle this more elegantly.

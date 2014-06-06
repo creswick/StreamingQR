@@ -5,13 +5,25 @@
     android:layout_height="fill_parent"
     android:layout_width="fill_parent" >
 
-    <SurfaceView
-        android:id="@+id/camera_window"
-        android:gravity="center_horizontal"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:tag="camera_window"
-        />
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <SurfaceView
+            android:id="@+id/camera_window"
+            android:gravity="center_horizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:tag="camera_window"
+            />
+
+        <com.galois.qrstream.lib.QRFoundPointsView
+            android:id="@+id/camera_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"/>
+
+    </FrameLayout>
 
     <LinearLayout android:id="@+id/status_overlay"
         android:layout_width="match_parent"

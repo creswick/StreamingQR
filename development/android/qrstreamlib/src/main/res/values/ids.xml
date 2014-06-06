@@ -2,4 +2,5 @@
 <resources>
     <item type="id" name="decode"/>
     <item type="id" name="progress_update"/>
+    <item type="id" name="draw_qr_points"/>
 </resources>
