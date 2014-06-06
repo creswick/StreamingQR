@@ -155,10 +155,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         private void dispatchState(final Bundle params, State state) {
             switch (state) {
                 case Fail:
-                    // Add a slight delay so messages from this handler can
-                    // be removed when onPause() but also allow user to see them
-                    // whenever cancel button is pressed.
-                    this.postDelayed(runShowRxFailedDialog, 100);
+                    this.post(runShowRxFailedDialog);
                     break;
                 case Intermediate:
                     this.post(new Runnable() {
