@@ -205,12 +205,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         cancelButton.setOnClickListener(this);
         displayUpdate.setupUi(torrentBar, progressText, statusFooter);
         progressButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
-        progressButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-              cameraManager.stopRunning();
-            }
-        });
+        progressButton.setOnClickListener(this);
 
         // Setup the alert dialog in case we need it to report Rx errors to the user.
         alertDialog = new AlertDialog.Builder(activity).
@@ -549,5 +544,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
     @Override
     public void onClick(View v) {
         // signal the qrlib.Receiver to stop
+        cameraManager.stopRunning();
     }
 }
