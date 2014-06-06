@@ -1,3 +1,19 @@
+/**
+ *    Copyright 2014 Galois, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package com.galois.qrstream.qrpipe;
 
 import java.awt.image.BufferedImage;
@@ -6,9 +22,6 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-
 import javax.imageio.ImageIO;
 
 import org.junit.Test;
@@ -57,12 +70,12 @@ public class QRDecodeRegressionTest {
     // If this does not throw an exception, everything is fine:
     decodeImage(bi);
   }
-  
+
   /**
    * Decode a qr code from a buffered image.
-   * 
+   *
    * Catches transmission failure exceptions, and returns null.
-   * 
+   *
    * @param bi The buffered image to decode.
    * @return
    * @throws ReceiveException
@@ -74,23 +87,19 @@ public class QRDecodeRegressionTest {
     YuvImage img = new YuvImage(YuvUtilities.toYUV(bi),
                                 width, height);
 
-    BlockingQueue<YuvImage> queue = new ArrayBlockingQueue<YuvImage>(2);
-    queue.add(img);
-
-    Receive receive = new Receive(height, width, 100,
+    Receive receive = new Receive(height, width,
         RandomQRDecodeTest.NULL_PROGRESS);
 
     byte[] result = null;
     try {
-      result = receive.decodeQRCodes(queue);
+      result = receive.decodeQRCodes(new FrameProvider(img));
     } catch (ReceiveException e) {
-      System.out.println(e.getMessage());
       // this should only happen if receive was expecting more than one QR code:
       if (!e.getMessage().startsWith("Transmission failed")) {
         throw e;
       }
     }
-    
+
     return result;
   }
 }

@@ -5,6 +5,8 @@
     <string name="transmit_sendButtonTxt">Send</string>
     <string name="transmit_pauseButtonTxt">Pause</string>
     <string name="transmit_chunkTxt">, chunk:</string>
+    <string name="receive_buttonOkTxt">@android:string/ok</string>
+    <string name="receive_failedTxt">Receive failed</string>
 
     <string name="preference_title_qr_density">QR Code Density</string>
     <string name="preference_description_qr_density">Set the relative capacity of each QR code used</string>

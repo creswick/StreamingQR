@@ -1,3 +1,19 @@
+/**
+ *    Copyright 2014 Galois, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package com.galois.qrstream.lib;
 
 import android.os.Bundle;
@@ -33,6 +49,7 @@ public class Progress implements IProgress {
             int num_frames_decoded = state.getTotalFramesDecoded();
             int percent_complete = (int)((num_frames_decoded / (float)total_frame_count)*100);
             changeMsg.putSerializable("chunk_count", num_frames_decoded);
+            changeMsg.putSerializable("chunk_id", state.getMostRecentChunkId());
             changeMsg.putSerializable("chunk_total", total_frame_count);
             changeMsg.putSerializable("percent_complete", percent_complete);
             Log.d(Constants.APP_TAG, "changeState handler, " + num_frames_decoded +
@@ -40,8 +57,8 @@ public class Progress implements IProgress {
                                         " " +percent_complete + "%");
         }
 
-        Message stateChange = Message.obtain();
+        Message stateChange = handler.obtainMessage(R.id.progress_update);
         stateChange.setData(changeMsg);
-        handler.dispatchMessage(stateChange);
+        stateChange.sendToTarget();
     }
 }

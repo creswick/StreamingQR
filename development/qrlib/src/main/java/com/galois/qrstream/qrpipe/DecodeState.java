@@ -1,3 +1,19 @@
+/**
+ *    Copyright 2014 Galois, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package com.galois.qrstream.qrpipe;
 
 import java.text.NumberFormat;
@@ -14,9 +30,14 @@ public class DecodeState {
 
 	private final BitSet data;
 	private final int capacity;
-
+        private int lastChunkId;
+  
 	// True if transmission of QR codes stops before entire message received
 	private boolean hasTransmissionFailed;
+
+	// True if encountered frame without QR code or with one that couldn't be read
+	// Indicates to receiver that it needs another frame.
+	private boolean hasFrameFailed;
 
 	/**
 	 * Initialize DecodeState with the number of QR codes that it expects
@@ -32,6 +53,7 @@ public class DecodeState {
 		this.capacity = capacity;
 		this.data = new BitSet(capacity);
 		this.hasTransmissionFailed = false;
+		this.hasFrameFailed = false;
 	}
 
 	/**
@@ -78,6 +100,12 @@ public class DecodeState {
 			                                    ", is out of bounds");
 		}
 		data.set(chunkId - 1);
+                lastChunkId = chunkId;
+		// Reset failed frame tag if it was set because this method
+		// indicates successful QR code reading
+		if (hasFrameFailed) {
+		  hasFrameFailed = false;
+		}
 	}
 
 	/**
@@ -90,6 +118,16 @@ public class DecodeState {
 			this.hasTransmissionFailed = true;
 		}
 	}
+
+	/**
+   * Indicate that frame failed and we expect more QR codes
+   * to decode.
+   */
+  public void markFailedFrame() {
+    if (!allBitsSet()) {
+      this.hasFrameFailed = true;
+    }
+  }
 
 	/**
 	 * Get a deep copy of the underlying bitset.
@@ -119,7 +157,7 @@ public class DecodeState {
 
 	/**
 	 * Returns the capacity
-	*/
+	 */
 	public int getCapacity() {
     // BitSet capacity is rounded up to nearest 64, that's why
     // we do not want to return data.getCapacity()
@@ -128,7 +166,7 @@ public class DecodeState {
 
 	/**
 	 * Returns the number of QR codes that have been received and decoded
-	*/
+	 */
 	public int getTotalFramesDecoded() {
 		//Note, this call will take O(n) time.
 		return data.cardinality();
@@ -142,5 +180,12 @@ public class DecodeState {
 	private boolean allBitsSet() {
 		return (data.cardinality() == this.capacity);
 	}
+
+        /**
+         * Most recent successful chunkId
+         */
+        public int getMostRecentChunkId() {
+	        return lastChunkId;
+        }
 
 }
