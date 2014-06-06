@@ -64,7 +64,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
     private RelativeLayout rootLayout;
     private TorrentBar torrentBar;
     private TextView progressText;
-    private RelativeLayout statusFooter;
+    private View statusFooter;
+    private View statusHeader;
     private ImageButton progressButton;
 
     private DecodeThread decodeThread;
@@ -103,11 +104,13 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
     private static class DisplayUpdateHandler extends Handler {
         private TorrentBar torrentBar;
         private TextView progressText;
-        private RelativeLayout statusFooter;
+        private View statusFooter;
+        private View statusHeader;
 
-        public void setupUi(TorrentBar tb, TextView pt, RelativeLayout statusFooter) {
+        public void setupUi(TorrentBar tb, TextView pt, View statusHeader, View statusFooter) {
             this.torrentBar = tb;
             this.progressText = pt;
+            this.statusHeader = statusHeader;
             this.statusFooter = statusFooter;
         }
 
@@ -144,6 +147,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
                                 if(!torrentBar.isConfigured()) {
                                     // First progress message needs to setup the progress bar
                                     torrentBar.setCellCount(total);
+                                    statusHeader.setVisibility(View.VISIBLE);
                                     statusFooter.setVisibility(View.VISIBLE);
                                 }
                                 torrentBar.cellReceived(cellId);
@@ -199,11 +203,11 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         setCameraWindowCallback();
         torrentBar = (TorrentBar) rootView.findViewById(R.id.progressbar);
         progressText = (TextView) rootView.findViewById(R.id.progresstext);
-        statusFooter = (RelativeLayout)rootLayout.findViewById(R.id.status_overlay_footer);
-        statusFooter.setVisibility(View.GONE);
+        statusHeader = (ViewGroup)rootLayout.findViewById(R.id.status_overlay);
+        statusFooter = (ViewGroup)rootLayout.findViewById(R.id.status_overlay_footer);
         Button cancelButton = (Button)rootLayout.findViewById(R.id.cancel_button);
         cancelButton.setOnClickListener(this);
-        displayUpdate.setupUi(torrentBar, progressText, statusFooter);
+        displayUpdate.setupUi(torrentBar, progressText, statusHeader, statusFooter);
         progressButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
         progressButton.setOnClickListener(this);
 
@@ -220,6 +224,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
                             }
                 }).create();
 
+        resetUI();
         return rootView;
     }
 
@@ -319,6 +324,9 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
      * Reset the UI elements to an initial state.
      */
     private void resetUI() {
+        statusHeader.setVisibility(View.GONE);
+        statusFooter.setVisibility(View.GONE);
+
         torrentBar.reset();
         progressText.setText("");
 
