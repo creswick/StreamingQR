@@ -146,16 +146,6 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    public boolean onPrepareOptionsMenu(Menu menu) {
-        super.onPrepareOptionsMenu(menu);
-        MenuItem settingsButton = menu.findItem(R.id.action_settings);
-        if(currentFragment == settingsFragment) {
-            menu.removeItem(R.id.action_settings);
-        }
-        return true;
-    }
-
     private String getNameFromURI(Uri uri) {
         String name;
         Cursor metadata = getContentResolver().query(uri,
