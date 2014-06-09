@@ -247,14 +247,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     @Override
     public void onResume() {
 
-        // TODO Check with donp to figure out if this is necessary? I think it's no longer needed.
-        /* In some cases, onPause will destroy the camera_window. This reestablishes it. */
-        SurfaceView previewSurface = (SurfaceView) rootLayout.findViewWithTag("camera_window");
-        if(previewSurface == null) {
-            Log.d(Constants.APP_TAG, "Resume: camera_window is null");
-            throw new RuntimeException("TODO: make call to replaceCameraWindow() here");
-            //replaceCameraWindow();
-        }
         // Setting the visibility here will cause the surfaceCreated callback
         // to be invoked prompting the camera to be acquired and DecodeThread to start
         camera_window.setVisibility(View.VISIBLE);
