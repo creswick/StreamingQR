@@ -134,7 +134,10 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         int id = item.getItemId();
         if (id == R.id.action_settings) {
             showFragment(settingsFragment, true);
+            // remove the delayed hideUI
             getWindow().getDecorView().getHandler().removeCallbacksAndMessages(HANDLER_TOKEN_HIDE_UI);
+            // Hide now
+            hideUI();
             return true;
         }
         if(currentFragment == settingsFragment && id == android.R.id.home) {
