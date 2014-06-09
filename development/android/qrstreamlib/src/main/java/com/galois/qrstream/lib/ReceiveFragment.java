@@ -60,7 +60,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private RelativeLayout rootLayout;
     private TorrentBar torrentBar;
     private TextView progressText;
-    private ImageButton progressButton;
 
     private DecodeThread decodeThread;
     private Activity activity;
@@ -191,11 +190,11 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         torrentBar = (TorrentBar) rootView.findViewById(R.id.progressbar);
         progressText = (TextView) rootView.findViewById(R.id.progresstext);
         displayUpdate.setupUi(torrentBar, progressText);
-        progressButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
-        progressButton.setOnClickListener(new View.OnClickListener() {
+        ImageButton progressCancelButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
+        progressCancelButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-              cameraManager.stopRunning();
+                cameraManager.stopRunning();
             }
         });
 
