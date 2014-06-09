@@ -122,6 +122,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                     // be removed when onPause() but also allow user to see them
                     // whenever cancel button is pressed.
                     this.postDelayed(runShowRxFailedDialog, 100);
+                    torrentBar.reset();
                     break;
                 case Intermediate:
                     this.post(new Runnable() {
