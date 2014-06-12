@@ -47,7 +47,7 @@ public class TorrentBar extends View {
         onPaint.setFlags(Paint.ANTI_ALIAS_FLAG);
         onPaint.setColor(Color.YELLOW);
         offPaint.setFlags(Paint.ANTI_ALIAS_FLAG);
-        offPaint.setColor(Color.BLUE);
+        offPaint.setColor(Color.GRAY);
     }
 
     /**

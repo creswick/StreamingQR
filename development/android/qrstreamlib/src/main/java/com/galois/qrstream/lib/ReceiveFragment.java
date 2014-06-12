@@ -133,6 +133,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
                     // be removed when onPause() but also allow user to see them
                     // whenever cancel button is pressed.
                     this.postDelayed(runShowRxFailedDialog, 100);
+                    torrentBar.reset();
                     break;
                 case Intermediate:
                     this.post(new Runnable() {
@@ -208,8 +209,13 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         Button cancelButton = (Button)rootLayout.findViewById(R.id.cancel_button);
         cancelButton.setOnClickListener(this);
         displayUpdate.setupUi(torrentBar, progressText, statusHeader, statusFooter);
-        progressButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
-        progressButton.setOnClickListener(this);
+        ImageButton progressCancelButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
+        progressCancelButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                cameraManager.stopRunning();
+            }
+        });
 
         // Setup the alert dialog in case we need it to report Rx errors to the user.
         alertDialog = new AlertDialog.Builder(activity).
