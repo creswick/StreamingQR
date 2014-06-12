@@ -52,8 +52,7 @@ import java.io.IOException;
 /**
  * Created by donp on 2/11/14.
  */
-public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
-                                                         OnClickListener {
+public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
     // Need static references for handler to process camera messages
     // off the UI thread.
@@ -191,6 +190,13 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         this.activity = activity;
     }
 
+    View.OnClickListener cancelListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            cameraManager.stopRunning();
+        }
+    };
+
     @Override
     public @Nullable View onCreateView(@NotNull LayoutInflater inflater,
                                        ViewGroup container,
@@ -207,15 +213,10 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         statusHeader = (ViewGroup)rootLayout.findViewById(R.id.status_overlay);
         statusFooter = (ViewGroup)rootLayout.findViewById(R.id.status_overlay_footer);
         Button cancelButton = (Button)rootLayout.findViewById(R.id.cancel_button);
-        cancelButton.setOnClickListener(this);
+        cancelButton.setOnClickListener(cancelListener);
         displayUpdate.setupUi(torrentBar, progressText, statusHeader, statusFooter);
         ImageButton progressCancelButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
-        progressCancelButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                cameraManager.stopRunning();
-            }
-        });
+        progressCancelButton.setOnClickListener(cancelListener);
 
         // Setup the alert dialog in case we need it to report Rx errors to the user.
         alertDialog = new AlertDialog.Builder(activity).
@@ -552,12 +553,4 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback,
         }
     }
 
-    /**
-     * Click listener for cancel button
-     */
-    @Override
-    public void onClick(View v) {
-        // signal the qrlib.Receiver to stop
-        cameraManager.stopRunning();
-    }
 }
