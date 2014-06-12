@@ -54,18 +54,12 @@ public class DecodeThread extends Thread {
         Job message;
         try {
             message = (Job)receiver.decodeQRSerializable(cameraManager);
-            Log.w(Constants.APP_TAG, "DecodeThread read message of length: " + message.getData().length);
-            Log.w(Constants.APP_TAG, "DecodeThread heard " + message.toString());
+            Log.w(Constants.APP_TAG, "DecodeThread received " + message.getData().length + " bytes " +
+                                     message.getMimeType());
+            Log.w(Constants.APP_TAG, "DecodeThread heard " + new String(message.getData()));
 
 
-            Intent i = new Intent();
-            i.setAction(Intent.ACTION_SEND);
-            i.addCategory(Intent.CATEGORY_DEFAULT);
-            i.setType(message.getMimeType());
-
-            // this should conditionally use a URI if the payload is too large.
-            URI dataLoc = storeData(message);
-            i.putExtra(Intent.EXTRA_STREAM, dataLoc);
+            Intent i = buildIntent(message);
 
             // TODO integrate with ZXing
 
@@ -75,6 +69,24 @@ public class DecodeThread extends Thread {
         } catch (IOException e) {
             Log.e(Constants.APP_TAG, "Could not store data to temp file." + e.getMessage());
         }
+    }
+
+    private Intent buildIntent(Job message) throws IOException {
+        Intent i = new Intent();
+        i.setAction(Intent.ACTION_SEND);
+        i.addCategory(Intent.CATEGORY_DEFAULT);
+        String mimeType = message.getMimeType();
+        i.setType(mimeType);
+
+        if(mimeType.equals("text/plain")) {
+            String msg = new String(message.getData());
+            i.putExtra(Intent.EXTRA_TEXT, msg);
+        } else {
+            // this should conditionally use a URI if the payload is too large.
+            URI dataLoc = storeData(message);
+            i.putExtra(Intent.EXTRA_STREAM, dataLoc);
+        }
+        return i;
     }
 
     private @NotNull URI storeData(Job message) throws IOException {
