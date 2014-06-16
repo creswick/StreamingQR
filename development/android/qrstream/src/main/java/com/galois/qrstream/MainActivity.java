@@ -193,12 +193,12 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
 
         Uri dataUrl = (Uri) intent.getExtras().getParcelable(Intent.EXTRA_STREAM);
         if(dataUrl != null) {
-            if (dataUrl.getScheme().equals("content")) {
+            name = getNameFromURI(dataUrl);
+            if (dataUrl.getScheme().equals("content") ||
+                dataUrl.getScheme().equals("file")) {
                 try {
-                    name = getNameFromURI(dataUrl);
                     bytes = readFileUri(dataUrl);
                 } catch (IOException e) {
-                    // todo: Handle IO error
                     e.printStackTrace();
                 }
             }
