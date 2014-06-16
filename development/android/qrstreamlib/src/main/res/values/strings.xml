@@ -9,6 +9,7 @@
     <string name="receive_failedTxt">Receive failed</string>
     <string name="cancel">Cancel</string>
 
+    <string name="settings_actionbar_title">Settings</string>
     <string name="preference_title_qr_density">QR Code Density</string>
     <string name="preference_description_qr_density">Set the relative capacity of each QR code used</string>
     <string name="preference_title_frame_time">Frame time</string>

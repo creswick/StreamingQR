@@ -134,23 +134,16 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         int id = item.getItemId();
         if (id == R.id.action_settings) {
             showFragment(settingsFragment, true);
+            // remove the delayed hideUI
             getWindow().getDecorView().getHandler().removeCallbacksAndMessages(HANDLER_TOKEN_HIDE_UI);
+            // Hide now
+            hideUI();
             return true;
         }
         if(currentFragment == settingsFragment && id == android.R.id.home) {
             showFragment(lastFragment, true);
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public boolean onPrepareOptionsMenu(Menu menu) {
-        super.onPrepareOptionsMenu(menu);
-        MenuItem settingsButton = menu.findItem(R.id.action_settings);
-        if(currentFragment == settingsFragment) {
-            menu.removeItem(R.id.action_settings);
-        }
-        return true;
     }
 
     private String getNameFromURI(Uri uri) {
@@ -235,22 +228,5 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
                 View.SYSTEM_UI_FLAG_LOW_PROFILE
          );
     }
-
-    /**
-     * A placeholder fragment containing a simple view.
-     */
-    public static class PlaceholderFragment extends Fragment {
-
-        public PlaceholderFragment() {
-        }
-
-        @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                                 Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-            return rootView;
-        }
-    }
-
 
 }
