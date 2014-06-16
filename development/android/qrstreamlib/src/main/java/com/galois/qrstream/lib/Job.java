@@ -27,6 +27,10 @@ public class Job implements Serializable {
     private String mimeType;
 
     public Job(String title, byte[] data, String mimeType) {
+        if(data == null) {
+            throw new IllegalArgumentException("data must not be null");
+        }
+
         this.title = title;
         this.data = data;
         this.mimeType = mimeType;
