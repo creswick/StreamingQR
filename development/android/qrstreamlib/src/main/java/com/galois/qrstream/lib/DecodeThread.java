@@ -87,6 +87,7 @@ public class DecodeThread extends Thread {
                 JSONObject note = new JSONObject(json);
                 i.putExtra(Intent.EXTRA_TEXT, note.getString(Intent.EXTRA_TEXT));
                 i.putExtra(Intent.EXTRA_SUBJECT, note.getString(Intent.EXTRA_SUBJECT));
+                i.setType("text/plain");
             } catch (JSONException e) {
                 e.printStackTrace();
             }
