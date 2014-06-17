@@ -48,6 +48,9 @@ import com.galois.qrstream.lib.ReceiveFragment;
 import com.galois.qrstream.lib.SettingsFragment;
 import com.galois.qrstream.lib.TransmitFragment;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -199,12 +202,30 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         } else {
             // fall back to content in extras (mime type dependent)
             if(type.equals("text/plain")) {
-                String body = extras.getString(Intent.EXTRA_SUBJECT) +
-                              extras.getString(Intent.EXTRA_TEXT);
-                bytes = body.getBytes();
+                String subject = extras.getString(Intent.EXTRA_SUBJECT);
+                String text = extras.getString(Intent.EXTRA_TEXT);
+                bytes = encodeSubjectAndText(subject, text);
             }
         }
         return new Job(name, bytes, type);
+    }
+
+    private byte[] encodeSubjectAndText(String subject, String text) {
+        if(text == null) {
+            throw new IllegalArgumentException("Text must exist");
+        }
+        String msg = text;
+        if(subject != null) {
+            JSONObject o = new JSONObject();
+            try {
+                o.put(Intent.EXTRA_SUBJECT, subject);
+                o.put(Intent.EXTRA_TEXT, text);
+                msg = o.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return msg.getBytes();
     }
 
     private void setupUI() {
@@ -233,7 +254,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         View rootView = findViewById(R.id.container);
         rootView.setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LOW_PROFILE
-         );
+        );
     }
 
     /**
