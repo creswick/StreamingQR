@@ -201,6 +201,8 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+            } else {
+                Log.d(Constants.APP_TAG, "unsupported url: "+dataUrl);
             }
         } else {
             // fall back to content in extras (mime type dependent)
