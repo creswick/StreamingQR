@@ -22,9 +22,5 @@ android {
 dependencies {
     compile fileTree(dir: 'libs', include: '*.jar')
     compile 'commons-lang:commons-lang:2.6'
-<<<<<<< HEAD
     compile 'com.intellij:annotations:+@jar'
-=======
-    compile 'com.google.guava:guava:16.+'
->>>>>>> d44a22dee1d6ef777cf15bbcc156efd4bd7867d7
 }
