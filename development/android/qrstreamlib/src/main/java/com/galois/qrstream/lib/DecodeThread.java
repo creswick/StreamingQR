@@ -16,6 +16,7 @@
  */
 package com.galois.qrstream.lib;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
@@ -25,6 +26,8 @@ import com.galois.qrstream.qrpipe.Receive;
 import com.galois.qrstream.qrpipe.ReceiveException;
 
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -60,9 +63,6 @@ public class DecodeThread extends Thread {
 
 
             Intent i = buildIntent(message);
-
-            // TODO integrate with ZXing
-
             context.startActivity(Intent.createChooser(i, "Open with"));
         } catch(ReceiveException e) {
             Log.e(Constants.APP_TAG, "DecodeThread failed to read message. " + e.getMessage());
@@ -81,6 +81,15 @@ public class DecodeThread extends Thread {
         if(mimeType.equals("text/plain")) {
             String msg = new String(message.getData());
             i.putExtra(Intent.EXTRA_TEXT, msg);
+        } else if (mimeType.equals(Constants.MIME_TYPE_TEXT_NOTE)) {
+            String json = new String(message.getData());
+            try {
+                JSONObject note = new JSONObject(json);
+                i.putExtra(Intent.EXTRA_TEXT, note.getString(Intent.EXTRA_TEXT));
+                i.putExtra(Intent.EXTRA_SUBJECT, note.getString(Intent.EXTRA_SUBJECT));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         } else {
             // this should conditionally use a URI if the payload is too large.
             URI dataLoc = storeData(message);
