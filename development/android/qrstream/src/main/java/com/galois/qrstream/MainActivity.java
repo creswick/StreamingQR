@@ -204,28 +204,26 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
             if(type.equals("text/plain")) {
                 String subject = extras.getString(Intent.EXTRA_SUBJECT);
                 String text = extras.getString(Intent.EXTRA_TEXT);
-                bytes = encodeSubjectAndText(subject, text);
+                if(subject == null) {
+                    bytes = text.getBytes();
+                } else {
+                    bytes = encodeSubjectAndText(subject, text);
+                    type = Constants.MIME_TYPE_TEXT_NOTE;
+                }
             }
         }
         return new Job(name, bytes, type);
     }
 
     private byte[] encodeSubjectAndText(String subject, String text) {
-        if(text == null) {
-            throw new IllegalArgumentException("Text must exist");
+        JSONObject o = new JSONObject();
+        try {
+            o.put(Intent.EXTRA_SUBJECT, subject);
+            o.put(Intent.EXTRA_TEXT, text);
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
-        String msg = text;
-        if(subject != null) {
-            JSONObject o = new JSONObject();
-            try {
-                o.put(Intent.EXTRA_SUBJECT, subject);
-                o.put(Intent.EXTRA_TEXT, text);
-                msg = o.toString();
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-        return msg.getBytes();
+        return o.toString().getBytes();
     }
 
     private void setupUI() {

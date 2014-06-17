@@ -22,6 +22,7 @@ package com.galois.qrstream.lib;
 public final class Constants {
     public static final String APP_TAG = "qrstream";
     public static final int RECEIVE_TIMEOUT_MS = 10000;
+    public static final String MIME_TYPE_TEXT_NOTE = "application/x-vnd.galois.qrstream.text-note";
 
     // Do not allow class to be instantiated.
     // Reference constants by Constants.APP_TAG
