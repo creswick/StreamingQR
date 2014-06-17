@@ -89,7 +89,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         if (savedInstanceState == null) {
             Intent startingIntent = getIntent();
             Log.d(Constants.APP_TAG, "startingIntent  " + startingIntent.getAction());
-            if(startingIntent.getAction() == Intent.ACTION_SEND) {
+            if(startingIntent.getAction().equals(Intent.ACTION_SEND)) {
                 Job job = buildJobFromIntent(startingIntent);
                 Bundle bundle = new Bundle();
                 bundle.putSerializable("job", job);
