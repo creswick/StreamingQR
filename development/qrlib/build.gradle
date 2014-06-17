@@ -9,18 +9,28 @@ targetCompatibility = 1.6
 // Library version
 version = '0.1'
 
+// Set heap size for the test JVM(s) equal to
+// standard max heap for android phone
+maxHeapSize = "16m"
+
 // Look for external dependencies in these repositories
 repositories {
     mavenCentral()
+}
+
+
+configurations {
+  exported
+  compile.extendsFrom exported
 }
 
 // By default, Gradle includes all of the compile time dependencies at
 // runtime.
 dependencies {
     // ZXing core, i.e. the QR code library
-    compile "com.google.zxing:core:2.3.0"
+    exported "com.google.zxing:core:2.3.0"
 
-    // Guava library
+    // Guava library -- do not export
     compile group: 'com.google.guava', name: 'guava', version: '16.+'
 
     // functions to export images
@@ -31,11 +41,14 @@ dependencies {
 }
 
 jar {
+    // Want transitive dependencies to get resolved properly.
+    // Not sure this is best way to show dependency on external library.
     manifest {
-        attributes 'Implementation-Version': version
+      attributes ('Implementation-Version': version,
+                  'Class-Path': (configurations.runtime - configurations.exported).collect { it.getName() }.join(' '))
     }
     // Add compilation dependencies in generated Jar
-    from { configurations.compile.collect {it.isDirectory() ? it : zipTree(it) } }
+    from { configurations.exported.collect {it.isDirectory() ? it : zipTree(it) } }
 }
 
 uploadArchives {
