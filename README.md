@@ -37,6 +37,6 @@ From this location, run:
 This will build both the Android library and the Android
 application. After the build completes, the android application will
 be located at:
-`StreamingQR/development/android/qrstream/build/apk/qrstream-debug-unaligned.apk`
+`StreamingQR/development/android/qrstream/build/outputs/apk/qrstream-debug-unaligned.apk`
 
 
