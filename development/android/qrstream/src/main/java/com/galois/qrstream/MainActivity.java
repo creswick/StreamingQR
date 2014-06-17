@@ -169,7 +169,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         ContentResolver contentResolver = getContentResolver();
         AssetFileDescriptor fd = contentResolver.openAssetFileDescriptor(uri, "r");
         long fileLength = fd.getLength();
-        Log.d("qrstream","fd length "+fileLength);
+        Log.d(Constants.APP_TAG, "fd length "+fileLength);
         DataInputStream istream = new DataInputStream(contentResolver.openInputStream(uri));
         byte[] buf = new byte[(int)fileLength];
         istream.readFully(buf);
@@ -179,7 +179,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
     private Job buildJobFromIntent(Intent intent) throws IllegalArgumentException {
         String type = intent.getType();
         Bundle extras = intent.getExtras();
-        Log.d("qrstream", "** received type "+type);
+        Log.d(Constants.APP_TAG, "** received type "+type);
 
         String name = "";
         byte[] bytes = null;

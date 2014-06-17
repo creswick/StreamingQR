@@ -23,6 +23,14 @@ public final class Constants {
     public static final String APP_TAG = "qrstream";
     public static final int RECEIVE_TIMEOUT_MS = 10000;
 
+    /**
+     * The maximum number of QR codes that we expect to need during a reasonable transmission.
+     *
+     * Our fastest transmission is currently showing a new frame every 200ms, or 5 fps.  If we assume
+     * a  maximum transmission time of 10 min, we end up with the following number of chunks:
+     */
+    public static final int MAX_CHUNKS = (1000 / 200) * 60 * 10;
+
     // Do not allow class to be instantiated.
     // Reference constants by Constants.APP_TAG
     private Constants() {

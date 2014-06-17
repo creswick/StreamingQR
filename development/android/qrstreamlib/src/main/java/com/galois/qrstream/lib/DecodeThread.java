@@ -46,6 +46,7 @@ public class DecodeThread extends Thread {
         this.receiver = new Receive(
                 cameraManager.getDisplayHeight(),
                 cameraManager.getDisplayWidth(),
+                Constants.MAX_CHUNKS,
                 progress);
     }
 
@@ -79,7 +80,7 @@ public class DecodeThread extends Thread {
 
     private @NotNull URI storeData(Job message) throws IOException {
         File cacheDir = context.getCacheDir();
-        File tmpFile = File.createTempFile("qrstream","", cacheDir);
+        File tmpFile = File.createTempFile(Constants.APP_TAG, "", cacheDir);
 
         // make tmpFile world-readable:
         tmpFile.setReadable(true, false);

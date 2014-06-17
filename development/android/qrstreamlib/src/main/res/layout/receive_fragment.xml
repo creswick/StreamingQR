@@ -21,7 +21,6 @@
         android:alpha="0.7"
         android:orientation="horizontal"
         android:layout_alignBottom="@id/camera_window"
-
         >
 
         <Button
