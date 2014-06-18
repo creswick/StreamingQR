@@ -41,6 +41,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import com.galois.qrstream.lib.Constants;
 import com.galois.qrstream.lib.Job;
@@ -93,11 +94,16 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
             Intent startingIntent = getIntent();
             Log.d(Constants.APP_TAG, "startingIntent  " + startingIntent.getAction());
             if(startingIntent.getAction().equals(Intent.ACTION_SEND)) {
-                Job job = buildJobFromIntent(startingIntent);
-                Bundle bundle = new Bundle();
-                bundle.putSerializable("job", job);
-                transmitFragment.setArguments(bundle);
-                showFragment(transmitFragment);
+                try {
+                    Job job = buildJobFromIntent(startingIntent);
+                    Bundle bundle = new Bundle();
+                    bundle.putSerializable("job", job);
+                    transmitFragment.setArguments(bundle);
+                    showFragment(transmitFragment);
+                } catch (IllegalArgumentException e) {
+                    Toast.makeText(this, "Unsupported media type.", Toast.LENGTH_LONG).show();
+                    finish();
+                }
             } else {
                 showFragment(receiveFragment);
             }
@@ -137,23 +143,16 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         int id = item.getItemId();
         if (id == R.id.action_settings) {
             showFragment(settingsFragment, true);
+            // remove the delayed hideUI
             getWindow().getDecorView().getHandler().removeCallbacksAndMessages(HANDLER_TOKEN_HIDE_UI);
+            // Hide now
+            hideUI();
             return true;
         }
         if(currentFragment == settingsFragment && id == android.R.id.home) {
             showFragment(lastFragment, true);
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public boolean onPrepareOptionsMenu(Menu menu) {
-        super.onPrepareOptionsMenu(menu);
-        MenuItem settingsButton = menu.findItem(R.id.action_settings);
-        if(currentFragment == settingsFragment) {
-            menu.removeItem(R.id.action_settings);
-        }
-        return true;
     }
 
     private String getNameFromURI(Uri uri) {
@@ -180,7 +179,7 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         return buf;
     }
 
-    private Job buildJobFromIntent(Intent intent) {
+    private Job buildJobFromIntent(Intent intent) throws IllegalArgumentException {
         String type = intent.getType();
         Bundle extras = intent.getExtras();
         Log.d("qrstream", "** received type "+type);
@@ -190,14 +189,16 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
 
         Uri dataUrl = (Uri) intent.getExtras().getParcelable(Intent.EXTRA_STREAM);
         if(dataUrl != null) {
-            if (dataUrl.getScheme().equals("content")) {
+            name = getNameFromURI(dataUrl);
+            if (dataUrl.getScheme().equals("content") ||
+                dataUrl.getScheme().equals("file")) {
                 try {
-                    name = getNameFromURI(dataUrl);
                     bytes = readFileUri(dataUrl);
                 } catch (IOException e) {
-                    // todo: Handle IO error
                     e.printStackTrace();
                 }
+            } else {
+                Log.d(Constants.APP_TAG, "unsupported url: "+dataUrl);
             }
         } else {
             // fall back to content in extras (mime type dependent)
@@ -254,22 +255,5 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
                 View.SYSTEM_UI_FLAG_LOW_PROFILE
         );
     }
-
-    /**
-     * A placeholder fragment containing a simple view.
-     */
-    public static class PlaceholderFragment extends Fragment {
-
-        public PlaceholderFragment() {
-        }
-
-        @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                                 Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-            return rootView;
-        }
-    }
-
 
 }
