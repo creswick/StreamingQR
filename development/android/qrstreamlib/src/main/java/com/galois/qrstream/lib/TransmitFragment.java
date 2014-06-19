@@ -33,6 +33,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import java.util.Iterator;
@@ -112,8 +113,8 @@ public class TransmitFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.transmit_fragment, container, false);
 
-        LinearLayout ll = (LinearLayout)rootView.findViewById(R.id.transmit_layout);
-        ll.setKeepScreenOn(true);
+        RelativeLayout rootLayout = (RelativeLayout)rootView.findViewById(R.id.transmit_layout);
+        rootLayout.setKeepScreenOn(true);
 
         send_window = (ImageView)rootView.findViewById(R.id.send_window);
         send_window.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {

@@ -31,7 +31,7 @@
             android:text="@string/cancel"
             />
 
-    </RelativeLayout>>
+    </RelativeLayout>
 
     <LinearLayout android:id="@+id/status_overlay"
         android:layout_width="match_parent"

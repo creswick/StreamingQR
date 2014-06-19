@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/transmit_layout"
     android:orientation="vertical"
     android:layout_width="match_parent"
@@ -21,8 +21,16 @@
     <ImageView
         android:id="@+id/send_window"
         android:layout_width="fill_parent"
-        android:layout_height="0dp"
-        android:layout_weight="0.9"
+        android:layout_height="fill_parent"
+        />
+
+    <Button
+        android:id="@+id/send_button"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:text="Send"
+        android:tag="send"
         />
 
     <TextView
@@ -32,11 +40,7 @@
         android:gravity="center_horizontal"
         android:textSize="13pt"
         android:textColor="#00ff00"
+        android:layout_above="@id/send_button"
         />
 
-    <Button
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text="Send"
-        android:tag="send"/>
-</LinearLayout>
+</RelativeLayout>
