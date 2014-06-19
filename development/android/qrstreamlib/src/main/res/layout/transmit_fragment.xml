@@ -4,8 +4,9 @@
     android:id="@+id/transmit_layout"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="520dp"
+    android:layout_height="match_parent"
     android:layout_gravity="center_vertical"
+    android:background="#ffffff"
     >
 
     <TextView
@@ -15,7 +16,7 @@
         android:layout_height="wrap_content"
         android:gravity="center_horizontal"
         android:textSize="13pt"
-        android:textColor="#00ff00"
+        android:textColor="#000000"
         />
 
     <ImageView
@@ -39,7 +40,7 @@
         android:layout_height="wrap_content"
         android:gravity="center_horizontal"
         android:textSize="13pt"
-        android:textColor="#00ff00"
+        android:textColor="#ffffff"
         android:layout_above="@id/send_button"
         />
 
