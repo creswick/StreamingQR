@@ -53,6 +53,7 @@ public class TransmitFragment extends Fragment {
     private ImageView send_window;
     private Button sendButton;
     private Transmit transmitter;
+    private boolean transmitPaused;
 
     // Allows us to step through QR code transmission
     private Iterable<BitmapImage> qrCodes;
@@ -254,6 +255,7 @@ public class TransmitFragment extends Fragment {
     private void pauseTransmission() {
         handleFrameUpdate.removeCallbacks(runThroughFrames);
         sendButton.setText(getString(R.string.transmit_sendButtonTxt));
+        transmitPaused = true;
     }
     /*
      * Resume iterating through the QR codes
@@ -261,6 +263,18 @@ public class TransmitFragment extends Fragment {
     private void resumeTransmission() {
         sendButton.setText(getString(R.string.transmit_pauseButtonTxt));
         handleFrameUpdate.post(runThroughFrames);
+        transmitPaused = false;
+    }
+
+    /**
+     *  Start or Stop transmission
+     */
+    public void toggleTransmission() {
+        if(transmitPaused == true) {
+            resumeTransmission();
+        } else {
+            pauseTransmission();
+        }
     }
 
     private class CaptureClick implements View.OnClickListener {
