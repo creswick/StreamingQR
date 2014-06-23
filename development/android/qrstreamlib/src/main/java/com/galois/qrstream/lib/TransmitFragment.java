@@ -125,7 +125,8 @@ public class TransmitFragment extends Fragment {
                 if (transmitter == null) {
                     Log.d(Constants.APP_TAG, "onLayoutChange Transmitter created for width " +
                             send_window.getWidth() + " height " + send_window.getHeight());
-                    transmitter = new Transmit(send_window.getWidth(), send_window.getHeight());
+                    int size = smallestDimention(send_window.getWidth(), send_window.getHeight());
+                    transmitter = new Transmit(size, size);
                     sendJob();
                 }
             }
@@ -135,6 +136,14 @@ public class TransmitFragment extends Fragment {
         sendButton = (Button)rootView.findViewWithTag("send");
         sendButton.setOnClickListener(new CaptureClick());
         return rootView;
+    }
+
+    private int smallestDimention(int w, int h) {
+        if(w>=h) {
+            return h;
+        } else {
+            return w;
+        }
     }
 
     private void sendJob() {
