@@ -9,16 +9,6 @@
     android:background="#ffffff"
     >
 
-    <TextView
-        android:id="@+id/transmit_title"
-        android:text="@string/transmit_title"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:textSize="13pt"
-        android:textColor="#000000"
-        />
-
     <Button
         android:id="@+id/send_button"
         android:layout_width="fill_parent"
