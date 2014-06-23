@@ -19,15 +19,34 @@
         android:textColor="#000000"
         />
 
-    <Button
-        android:id="@+id/send_button"
+    <LinearLayout
+        android:id="@+id/bottom_row"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="5dp"
-        android:text="Send"
-        android:tag="send"
-        />
+        >
+
+        <ImageView
+            android:id="@+id/move_left"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_menu_back"
+            />
+        <Button
+            android:id="@+id/send_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.8"
+            android:text="Send"
+            android:tag="send"
+            />
+        <ImageView
+            android:id="@+id/move_right"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_menu_forward"
+            />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/data_title"
@@ -36,7 +55,7 @@
         android:gravity="center_horizontal"
         android:textSize="13pt"
         android:textColor="#000000"
-        android:layout_above="@id/send_button"
+        android:layout_above="@id/bottom_row"
         />
 
     <ImageView
