@@ -89,6 +89,9 @@ public class TorrentBar extends View {
     protected void onSizeChanged (int w, int h, int oldw, int oldh) {
         this.width = w;
         this.height = w / 10;
+        if(isConfigured()) {
+            recomputeCellWidth(); // handle size changes after torrentBar is configured
+        }
     }
 
     protected void onDraw(Canvas canvas) {

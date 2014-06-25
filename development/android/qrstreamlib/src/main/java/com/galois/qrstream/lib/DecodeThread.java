@@ -16,6 +16,7 @@
  */
 package com.galois.qrstream.lib;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
@@ -25,6 +26,8 @@ import com.galois.qrstream.qrpipe.Receive;
 import com.galois.qrstream.qrpipe.ReceiveException;
 
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -46,6 +49,7 @@ public class DecodeThread extends Thread {
         this.receiver = new Receive(
                 cameraManager.getDisplayHeight(),
                 cameraManager.getDisplayWidth(),
+                Constants.MAX_CHUNKS,
                 progress);
     }
 
@@ -54,21 +58,12 @@ public class DecodeThread extends Thread {
         Job message;
         try {
             message = (Job)receiver.decodeQRSerializable(cameraManager);
-            Log.w(Constants.APP_TAG, "DecodeThread read message of length: " + message.getData().length);
-            Log.w(Constants.APP_TAG, "DecodeThread heard " + message.toString());
+            Log.w(Constants.APP_TAG, "DecodeThread received " + message.getData().length + " bytes " +
+                                     message.getMimeType());
+            Log.w(Constants.APP_TAG, "DecodeThread heard " + new String(message.getData()));
 
 
-            Intent i = new Intent();
-            i.setAction(Intent.ACTION_SEND);
-            i.addCategory(Intent.CATEGORY_DEFAULT);
-            i.setType(message.getMimeType());
-
-            // this should conditionally use a URI if the payload is too large.
-            URI dataLoc = storeData(message);
-            i.putExtra(Intent.EXTRA_STREAM, dataLoc);
-
-            // TODO integrate with ZXing
-
+            Intent i = buildIntent(message);
             context.startActivity(Intent.createChooser(i, "Open with"));
         } catch(ReceiveException e) {
             Log.e(Constants.APP_TAG, "DecodeThread failed to read message. " + e.getMessage());
@@ -77,9 +72,37 @@ public class DecodeThread extends Thread {
         }
     }
 
+    private Intent buildIntent(Job message) throws IOException {
+        Intent i = new Intent();
+        i.setAction(Intent.ACTION_SEND);
+        i.addCategory(Intent.CATEGORY_DEFAULT);
+        String mimeType = message.getMimeType();
+        i.setType(mimeType);
+
+        if(mimeType.equals("text/plain")) {
+            String msg = new String(message.getData());
+            i.putExtra(Intent.EXTRA_TEXT, msg);
+        } else if (mimeType.equals(Constants.MIME_TYPE_TEXT_NOTE)) {
+            String json = new String(message.getData());
+            try {
+                JSONObject note = new JSONObject(json);
+                i.putExtra(Intent.EXTRA_TEXT, note.getString(Intent.EXTRA_TEXT));
+                i.putExtra(Intent.EXTRA_SUBJECT, note.getString(Intent.EXTRA_SUBJECT));
+                i.setType("text/plain");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else {
+            // this should conditionally use a URI if the payload is too large.
+            URI dataLoc = storeData(message);
+            i.putExtra(Intent.EXTRA_STREAM, dataLoc);
+        }
+        return i;
+    }
+
     private @NotNull URI storeData(Job message) throws IOException {
         File cacheDir = context.getCacheDir();
-        File tmpFile = File.createTempFile("qrstream","", cacheDir);
+        File tmpFile = File.createTempFile(Constants.APP_TAG, "", cacheDir);
 
         // make tmpFile world-readable:
         tmpFile.setReadable(true, false);

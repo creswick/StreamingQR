@@ -31,7 +31,10 @@ import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View.OnClickListener;
 import android.view.View;
+import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -63,6 +66,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private RelativeLayout rootLayout;
     private TorrentBar torrentBar;
     private TextView progressText;
+    private View statusFooter;
+    private View statusHeader;
     private ImageButton progressButton;
 
     private DecodeThread decodeThread;
@@ -124,10 +129,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private static class DisplayUpdateHandler extends Handler {
         private TorrentBar torrentBar;
         private TextView progressText;
+        private View statusFooter;
+        private View statusHeader;
 
-        public void setupUi(TorrentBar tb, TextView pt) {
+        public void setupUi(TorrentBar tb, TextView pt, View statusHeader, View statusFooter) {
             this.torrentBar = tb;
             this.progressText = pt;
+            this.statusHeader = statusHeader;
+            this.statusFooter = statusFooter;
         }
 
         @Override
@@ -156,6 +165,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             switch (state) {
                 case Fail:
                     this.post(runShowRxFailedDialog);
+                    torrentBar.reset();
                     break;
                 case Intermediate:
                     this.post(new Runnable() {
@@ -170,6 +180,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                                 if(!torrentBar.isConfigured()) {
                                     // First progress message needs to setup the progress bar
                                     torrentBar.setCellCount(total);
+                                    statusHeader.setVisibility(View.VISIBLE);
+                                    statusFooter.setVisibility(View.VISIBLE);
                                 }
                                 torrentBar.cellReceived(cellId);
                                 progressText.setText("" + count + "/" + total + " " + progressStatus + "%");
@@ -184,6 +196,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                             if (torrentBar != null && progressText != null) {
                                 torrentBar.setComplete();
                                 progressText.setText("100%");
+                                statusFooter.setVisibility(View.GONE);
                             }
                         }
                     });
@@ -210,6 +223,13 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         this.activity = activity;
     }
 
+    View.OnClickListener cancelListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            cameraManager.stopRunning();
+        }
+    };
+
     @Override
     public @Nullable View onCreateView(@NotNull LayoutInflater inflater,
                                        ViewGroup container,
@@ -223,14 +243,13 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         setCameraWindowCallback();
         torrentBar = (TorrentBar) rootView.findViewById(R.id.progressbar);
         progressText = (TextView) rootView.findViewById(R.id.progresstext);
-        displayUpdate.setupUi(torrentBar, progressText);
-        progressButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
-        progressButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-              cameraManager.stopRunning();
-            }
-        });
+        statusHeader = (ViewGroup)rootLayout.findViewById(R.id.status_overlay);
+        statusFooter = (ViewGroup)rootLayout.findViewById(R.id.status_overlay_footer);
+        Button cancelButton = (Button)rootLayout.findViewById(R.id.cancel_button);
+        cancelButton.setOnClickListener(cancelListener);
+        displayUpdate.setupUi(torrentBar, progressText, statusHeader, statusFooter);
+        ImageButton progressCancelButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
+        progressCancelButton.setOnClickListener(cancelListener);
 
         cameraOverlay = (QRFoundPointsView) rootView.findViewById(R.id.camera_overlay);
 
@@ -247,20 +266,21 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                             }
                 }).create();
 
+        resetUI();
         return rootView;
     }
 
     @Override
     public void onStart() {
         // Execution order: onStart() then onResume(), onCreateView() may occur before onStart
-        Log.e(Constants.APP_TAG, "onStart");
+        Log.e(Constants.APP_TAG, "ReceiveFragment onStart");
         resetUI();
         super.onStart();
     }
 
     @Override
     public void onStop() {
-        Log.e(Constants.APP_TAG, "onStop");
+        Log.e(Constants.APP_TAG, "ReceiveFragment onStop");
 
         // Dispose of UI update messages that are no longer relevant.
         // With 'null' as parameter, it removes all pending messages on UI thread.
@@ -302,14 +322,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     @Override
     public void onResume() {
 
-        // TODO Check with donp to figure out if this is necessary? I think it's no longer needed.
-        /* In some cases, onPause will destroy the camera_window. This reestablishes it. */
-        SurfaceView previewSurface = (SurfaceView) rootLayout.findViewWithTag("camera_window");
-        if(previewSurface == null) {
-            Log.d(Constants.APP_TAG, "Resume: camera_window is null");
-            throw new RuntimeException("TODO: make call to replaceCameraWindow() here");
-            //replaceCameraWindow();
-        }
         // Setting the visibility here will cause the surfaceCreated callback
         // to be invoked prompting the camera to be acquired and DecodeThread to start
         camera_window.setVisibility(View.VISIBLE);
@@ -351,6 +363,9 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      * Reset the UI elements to an initial state.
      */
     private void resetUI() {
+        statusHeader.setVisibility(View.GONE);
+        statusFooter.setVisibility(View.GONE);
+
         torrentBar.reset();
         progressText.setText("");
 
@@ -572,4 +587,5 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             decodeThread.start();
         }
     }
+
 }
