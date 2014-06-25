@@ -17,8 +17,6 @@
 package com.galois.qrstream.lib;
 
 import android.hardware.Camera;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -39,25 +37,6 @@ public final class CameraManager implements IImageProvider, Camera.PreviewCallba
     private boolean isRunning = false;
 
     private final BlockingQueue<YuvImage> currentFrame = Queues.newSynchronousQueue();
-
-    // Handler is bound to the same thread that created the CameraManager
-    // i.e. the UI thread.  Perhaps this should get moved?
-    private final Handler frameHandler = new Handler() {
-
-        @Override
-        public void handleMessage(Message msg) {
-            if (msg.obj != null) {
-                if(currentFrame.offer((YuvImage) msg.obj) == false) {
-                    Log.e(Constants.APP_TAG, "CameraManager tried to set currentFrame before successful read.");
-                }else {
-                    //Log.d(Constants.APP_TAG, "CameraManager set currentFrame.");
-                }
-            }else{
-                // Probably not a big deal as it would just cause qrlib to stop decoding QR codes
-                Log.d(Constants.APP_TAG, "CameraManager asked to handle NULL message.");
-            }
-        }
-    };
 
     private final Camera camera;
     private final int displayWidth;
