@@ -57,9 +57,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     // Need static reference to overlay view for drawing qr finder points
     private static QRFoundPointsView cameraOverlay;
 
-    // Need static references for handler to process camera messages
-    // off the UI thread.
-    private static Camera camera;
+    private Camera camera;
 
     private SurfaceView camera_window;
     private ViewGroup.LayoutParams camera_window_params;
@@ -131,6 +129,11 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         private TextView progressText;
         private View statusFooter;
         private View statusHeader;
+        private boolean isCameraOn = false;
+
+        public void setCameraOn(boolean isCameraOn) {
+            this.isCameraOn = isCameraOn;
+        }
 
         public void setupUi(TorrentBar tb, TextView pt, View statusHeader, View statusFooter) {
             this.torrentBar = tb;
@@ -151,7 +154,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                 float[] points = params.getFloatArray("points");
                 Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage, draw_qr_points");
                 Log.d(Constants.APP_TAG, "draw_qr_points: pts length=" + points.length);
-                if (camera != null) {
+                if (isCameraOn) {
                     this.post(new DrawFinderPointsRunnable(points));
                 }else{
                     this.post(new DrawFinderPointsRunnable());
@@ -423,14 +426,17 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             camera.startPreview();
 
             cameraOverlay.setCameraParameters(camera.getParameters().getPreviewSize(), rotation);
+            displayUpdate.setCameraOn(true);
 
         } catch (RuntimeException re) {
             // TODO handle this more elegantly.
             Toast.makeText(getActivity(), "Unable to open camera", Toast.LENGTH_LONG).show();
             Log.e(Constants.APP_TAG, "Could not open camera. "+re);
             re.printStackTrace();
+            displayUpdate.setCameraOn(false);
         } catch (IOException e) {
             e.printStackTrace();
+            displayUpdate.setCameraOn(false);
         }
     }
     private CameraHandlerThread mThread = null;
@@ -511,10 +517,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             return;
         }
 
+        // Alerts DrawFinderPointsRunnable that camera is not on and no points can be shown
+        displayUpdate.setCameraOn(false);
+
         // Wait for camera to handle queue of PreviewCallback requests
         // so that the camera can released safely
         mThread.quit(); // should this be interrupted()? (Investigate if we see issues relating to camera shutdown / cleanup?)
         mThread = null;
+
 
         camera.stopPreview();
         camera.release();
