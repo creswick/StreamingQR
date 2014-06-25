@@ -1,12 +1,10 @@
 package com.galois.qrstream.lib;
 
 import android.content.Context;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Matrix;
-import android.graphics.*;
 import android.hardware.Camera.Size;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -27,10 +25,14 @@ public class QRFoundPointsView extends View {
     private float[] points = new float[0];
     private final Paint paint = new Paint();
 
-    // Dimension of incoming preview frame so that the QR result points can be
-    // displayed in the correct location and orientation as the camera preview frame.
-    private Size previewSize = null;
-    private int cameraRotation = 0;
+    /*
+     * The transformation matrix that will bring the QR finder location points into the camera
+     * coordinate view. This is necessary since the camera preview frame assumes landscape
+     * mode and may have different dimensions than that of the on-screen display.
+     * Initially this starts off as the identity matrix but gets replaced
+     * with the right transformation matrix once the camera previewSize and rotation are known.
+     */
+    private Matrix cameraTransformationMtx = new Matrix();
 
     public QRFoundPointsView(Context context) {
         super(context);
@@ -54,20 +56,22 @@ public class QRFoundPointsView extends View {
         paint.setStyle(Paint.Style.STROKE);
     }
 
+    public void setPoints(@NotNull float[] datapoints) {
+        this.points = datapoints.clone();
+    }
+
     /*
      * Saves dimension of incoming preview frame so that the QR result points can be
      * displayed in the correct location and orientation as the camera preview frame.
+     *
+     * Once this is known, we can also create the transformation matrix that will
+     * bring the QR finder location points into the camera coordinate view.
      */
-    public void setCameraPreviewSize(Size cameraPreviewSize) {
-        this.previewSize = cameraPreviewSize;
-    }
+    public void setCameraParameters(final Size previewSize, int rotation) {
+        int cameraRotation = rotation % 360;
 
-    public void setCameraRotation(int rotation) {
-        this.cameraRotation = rotation % 360;
-    }
-
-    public void setPoints(@NotNull float[] datapoints) {
-        this.points = datapoints.clone();
+        // Reset the transformation matrix to apply to the QR finder points
+        cameraTransformationMtx = buildCameraTransformationMatrix(previewSize, cameraRotation);
     }
 
     @Override
@@ -79,38 +83,56 @@ public class QRFoundPointsView extends View {
         //   3. rotate it by the same degree as the application, and then
         //   4. translate it back to the start location.
 
-
         // The final points to display
         float [] dest = new float[points.length];
 
-        // The transformation matrix to apply to the QR finder points
+        cameraTransformationMtx.mapPoints(dest, points);
+        canvas.drawPoints(dest, paint);
+    }
+
+    /*
+ * Camera preview is always in landscape mode. To display the
+ * QR finder points in the right location on the phone, we need to:
+ *    1. center the frame around the origin,
+ *    2. scale it to match the same width and height as the display,
+ *    3. rotate it by the same degree as the application, and then
+ *    4. translate it back to the start location.
+ */
+    private Matrix buildCameraTransformationMatrix(final Size previewSize, int rotation) {
+        // Reset the transformation matrix to apply to the QR finder points
         Matrix mtx = new Matrix();
 
-        // Desired display dimensions
-        int imgWidth  = getWidth();
-        int imgHeight = getHeight();
+        // Desired display dimensions (i.e. the dimensions of this view)
+        int displayWidth  = getWidth();
+        int displayHeight = getHeight();
 
         // How much to scale the image to get to desired dimensions
         float scaleX = 1.0f;
         float scaleY = 1.0f;
 
+        // This moves the preview image to the origin so that a rotation
+        // can be applied correctly without moving the frame out of view.
         if (previewSize != null) {
-            // TODO what other rotations do we need to handle?
-            if (cameraRotation == 90 ) {
+            // The ReceiveFragment always sets the camera to portrait mode
+            // so we shouldn't need to handle other cases
+            if (rotation == 90 ) {
                 // Scale = desired dimension / actual dimension
-                scaleX = imgHeight / (float) previewSize.width;
-                scaleY = imgWidth / (float) previewSize.height;
+                scaleX = displayHeight / (float) previewSize.width;
+                scaleY = displayWidth / (float) previewSize.height;
+            } else {
+                // TODO what other rotations do we need to handle?
+                Log.e(Constants.APP_TAG, "buildCameraTransformationMatrix received rotation, "+
+                        rotation + ", but expected 90.");
             }
             mtx.setTranslate(-previewSize.width/2,-previewSize.height/2);
         } else {
-            mtx.setTranslate(-imgWidth/2,-imgHeight/2);
+            mtx.setTranslate(-displayWidth/2,-displayHeight/2);
         }
-        mtx.postScale(scaleX,scaleY);
-        mtx.postRotate(cameraRotation);
-        mtx.postTranslate(imgWidth/2,imgHeight/2);
-        mtx.mapPoints(dest, points);
+        mtx.postScale(scaleX, scaleY);
+        mtx.postRotate(rotation);
+        mtx.postTranslate(displayWidth/2,displayHeight/2);
 
-        canvas.drawPoints(dest, paint);
-
+        return mtx;
     }
+
 }

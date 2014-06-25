@@ -421,8 +421,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             camera.setDisplayOrientation(rotation);
             camera.setPreviewDisplay(surfaceHolder);
             camera.startPreview();
-            cameraOverlay.setCameraPreviewSize(camera.getParameters().getPreviewSize());
-            cameraOverlay.setCameraRotation(rotation);
+
+            cameraOverlay.setCameraParameters(camera.getParameters().getPreviewSize(), rotation);
 
         } catch (RuntimeException re) {
             // TODO handle this more elegantly.
