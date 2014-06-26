@@ -61,7 +61,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private TextView progressText;
     private View statusFooter;
     private View statusHeader;
-    private ImageButton progressButton;
 
     private DecodeThread decodeThread;
     private Activity activity;
