@@ -32,8 +32,7 @@
         android:layout_marginTop="5dp"
         android:alpha="0.7"
         android:orientation="horizontal"
-        android:layout_alignBottom="@id/camera_frame_layout"
-        >
+        android:layout_alignBottom="@id/camera_frame_layout">
 
         <Button
             android:id="@+id/cancel_button"
@@ -42,8 +41,7 @@
             android:layout_centerInParent="true"
             android:text="@string/cancel"
             />
-
-    </RelativeLayout>>
+    </RelativeLayout>
 
     <LinearLayout android:id="@+id/status_overlay"
         android:layout_width="match_parent"
