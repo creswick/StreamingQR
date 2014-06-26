@@ -31,10 +31,8 @@ import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View.OnClickListener;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -54,9 +52,6 @@ import java.io.IOException;
  */
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
-    // Need static reference to overlay view for drawing qr finder points
-    private static QRFoundPointsView cameraOverlay;
-
     private Camera camera;
 
     private SurfaceView camera_window;
@@ -74,6 +69,9 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     // Help QRlib manage the camera preview requests
     private CameraManager cameraManager;
 
+    // Helps manage drawing qr finder points
+    private QRFoundPointsView cameraOverlay;
+
     // Used to show cancellation message on UI thread
     // The dialog is setup in onCreateView since fragment context is available
     private static AlertDialog alertDialog;
@@ -89,15 +87,19 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
     private static final class DrawFinderPointsRunnable implements Runnable {
         private final float[] points;
+        private QRFoundPointsView cameraOverlay;
 
-        public DrawFinderPointsRunnable() {
+        public DrawFinderPointsRunnable(QRFoundPointsView cameraOverlay) {
             this.points = new float[0];
+            this.cameraOverlay = cameraOverlay;
+
         }
-        public DrawFinderPointsRunnable(@NotNull float[] points) {
+        public DrawFinderPointsRunnable(@NotNull float[] points, QRFoundPointsView cameraOverlay) {
             if (points.length % 2 != 0) {
                 throw new IllegalArgumentException("Expected QR finder points to have even length");
             }
             this.points = points.clone();
+            this.cameraOverlay = cameraOverlay;
         }
         public void run() {
             if (points.length > 0) {
@@ -129,17 +131,21 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         private TextView progressText;
         private View statusFooter;
         private View statusHeader;
+        private QRFoundPointsView cameraOverlay;
         private boolean isCameraOn = false;
 
         public void setCameraOn(boolean isCameraOn) {
             this.isCameraOn = isCameraOn;
         }
 
-        public void setupUi(TorrentBar tb, TextView pt, View statusHeader, View statusFooter) {
+        public void setupUi(TorrentBar tb, TextView pt,
+                            View statusHeader, View statusFooter,
+                            QRFoundPointsView cameraOverlay) {
             this.torrentBar = tb;
             this.progressText = pt;
             this.statusHeader = statusHeader;
             this.statusFooter = statusFooter;
+            this.cameraOverlay = cameraOverlay;
         }
 
         @Override
@@ -155,9 +161,9 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                 Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage, draw_qr_points");
                 Log.d(Constants.APP_TAG, "draw_qr_points: pts length=" + points.length);
                 if (isCameraOn) {
-                    this.post(new DrawFinderPointsRunnable(points));
+                    this.post(new DrawFinderPointsRunnable(points, cameraOverlay));
                 }else{
-                    this.post(new DrawFinderPointsRunnable());
+                    this.post(new DrawFinderPointsRunnable(cameraOverlay));
                 }
             } else {
                 Log.w(Constants.APP_TAG, "displayUpdate handler received unknown request");
@@ -244,17 +250,17 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera_window = (SurfaceView)rootLayout.findViewById(R.id.camera_window);
         camera_window_params = camera_window.getLayoutParams();
         setCameraWindowCallback();
+        cameraOverlay = (QRFoundPointsView) rootView.findViewById(R.id.camera_overlay);
         torrentBar = (TorrentBar) rootView.findViewById(R.id.progressbar);
         progressText = (TextView) rootView.findViewById(R.id.progresstext);
         statusHeader = (ViewGroup)rootLayout.findViewById(R.id.status_overlay);
         statusFooter = (ViewGroup)rootLayout.findViewById(R.id.status_overlay_footer);
         Button cancelButton = (Button)rootLayout.findViewById(R.id.cancel_button);
         cancelButton.setOnClickListener(cancelListener);
-        displayUpdate.setupUi(torrentBar, progressText, statusHeader, statusFooter);
+        displayUpdate.setupUi(torrentBar, progressText, statusHeader, statusFooter, cameraOverlay);
         ImageButton progressCancelButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
         progressCancelButton.setOnClickListener(cancelListener);
 
-        cameraOverlay = (QRFoundPointsView) rootView.findViewById(R.id.camera_overlay);
 
         // Setup the alert dialog in case we need it to report Rx errors to the user.
         alertDialog = new AlertDialog.Builder(activity).
