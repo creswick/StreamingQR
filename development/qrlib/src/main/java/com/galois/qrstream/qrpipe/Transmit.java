@@ -351,14 +351,6 @@ public class Transmit {
   }
 
   /**
-   * Returns the ZXing QR code writer properties indicating use of
-   * ISO-8859-1 character set and a low level of error correction.
-   */
-  private Map<EncodeHintType, Object> getEncodeHints() {
-    return getEncodeHints(ErrorCorrectionLevel.L);
-  }
-
-  /**
    * Returns the number of {@code desiredChunkSize} servings we can fit
    * into {@code length}. If {@code desiredChunksSize} does not fit
    * evenly, it rounds up to the nearest integer.

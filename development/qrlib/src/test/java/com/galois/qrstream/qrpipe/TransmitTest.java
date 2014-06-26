@@ -176,7 +176,7 @@ public class TransmitTest {
       byte[] fromChunk = new byte[0];
       try {
         Result result = Receive.decodeSingle(lumSrc, hints);
-        fromChunk = PartialMessage.createFromResult(result).getPayload();
+        fromChunk = PartialMessage.createFromResult(result, Integer.MAX_VALUE).getPayload();
       } catch (NotFoundException e) {
         try {
           detectionErrors++;

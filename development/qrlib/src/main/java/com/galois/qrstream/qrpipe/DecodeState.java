@@ -28,9 +28,10 @@ import com.google.common.primitives.Ints;
  */
 public class DecodeState {
 
-	private final BitSet data;
-	private final int capacity;
-
+  private final BitSet data;
+  private final int capacity;
+  private int lastChunkId;
+  
 	// True if transmission of QR codes stops before entire message received
 	private boolean hasTransmissionFailed;
 
@@ -99,6 +100,7 @@ public class DecodeState {
 			                                    ", is out of bounds");
 		}
 		data.set(chunkId - 1);
+                lastChunkId = chunkId;
 		// Reset failed frame tag if it was set because this method
 		// indicates successful QR code reading
 		if (hasFrameFailed) {
@@ -178,5 +180,12 @@ public class DecodeState {
 	private boolean allBitsSet() {
 		return (data.cardinality() == this.capacity);
 	}
+
+        /**
+         * Most recent successful chunkId
+         */
+        public int getMostRecentChunkId() {
+	        return lastChunkId;
+        }
 
 }

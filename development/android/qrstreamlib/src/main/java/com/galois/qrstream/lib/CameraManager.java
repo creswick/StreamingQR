@@ -1,3 +1,19 @@
+/**
+ *    Copyright 2014 Galois, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package com.galois.qrstream.lib;
 
 import android.hardware.Camera;
@@ -18,11 +34,30 @@ import org.jetbrains.annotations.NotNull;
  */
 public final class CameraManager implements IImageProvider, Camera.PreviewCallback {
 
-    private static final BlockingQueue<YuvImage> currentFrame = Queues.newSynchronousQueue();
-
     // When isRunning is false it signals that the camera is not available
     // and any decoding of QR in progress should be stopped.
     private boolean isRunning = false;
+
+    private final BlockingQueue<YuvImage> currentFrame = Queues.newSynchronousQueue();
+
+    // Handler is bound to the same thread that created the CameraManager
+    // i.e. the UI thread.  Perhaps this should get moved?
+    private final Handler frameHandler = new Handler() {
+
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.obj != null) {
+                if(currentFrame.offer((YuvImage) msg.obj) == false) {
+                    Log.e(Constants.APP_TAG, "CameraManager tried to set currentFrame before successful read.");
+                }else {
+                    //Log.d(Constants.APP_TAG, "CameraManager set currentFrame.");
+                }
+            }else{
+                // Probably not a big deal as it would just cause qrlib to stop decoding QR codes
+                Log.d(Constants.APP_TAG, "CameraManager asked to handle NULL message.");
+            }
+        }
+    };
 
     private final Camera camera;
     private final int displayWidth;

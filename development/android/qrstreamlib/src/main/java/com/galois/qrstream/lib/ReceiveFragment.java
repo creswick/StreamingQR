@@ -31,8 +31,9 @@ import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.View;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.view.ViewGroup;
@@ -53,17 +54,18 @@ import java.io.IOException;
  */
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
-    // Need static references so progress bar can be updated from static UI handler.
-    private static ProgressBar progressBar;
-    private static TextView progressText;
-
-    // Need static referneces for handler to process camera messages
+    // Need static references for handler to process camera messages
     // off the UI thread.
-    private static Camera camera;
+    private Camera camera;
 
     private SurfaceView camera_window;
     private ViewGroup.LayoutParams camera_window_params;
     private RelativeLayout rootLayout;
+    private TorrentBar torrentBar;
+    private TextView progressText;
+    private View statusFooter;
+    private View statusHeader;
+    private ImageButton progressButton;
 
     private DecodeThread decodeThread;
     private Activity activity;
@@ -89,7 +91,27 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      *
      * This update handler is passed to the Progress object during the UI initialization.
      */
-    private static final Handler displayUpdate = new Handler() {
+    private final DisplayUpdateHandler displayUpdate = new DisplayUpdateHandler();
+
+    /**
+     * We're using a private static class here instead of an anonymous class because the anonymous
+     * handler could possibly hold on to encompassing resources in the ReceiveFragment instance.
+     *
+     * The instance we get by creating a new DisplayUpdateHandler object can only hold onto the
+     * torrentBar and progressText objects, which it requires.
+     */
+    private static class DisplayUpdateHandler extends Handler {
+        private TorrentBar torrentBar;
+        private TextView progressText;
+        private View statusFooter;
+        private View statusHeader;
+
+        public void setupUi(TorrentBar tb, TextView pt, View statusHeader, View statusFooter) {
+            this.torrentBar = tb;
+            this.progressText = pt;
+            this.statusHeader = statusHeader;
+            this.statusFooter = statusFooter;
+        }
 
         @Override
         public void handleMessage(Message msg) {
@@ -110,17 +132,25 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                     // be removed when onPause() but also allow user to see them
                     // whenever cancel button is pressed.
                     this.postDelayed(runShowRxFailedDialog, 100);
+                    torrentBar.reset();
                     break;
                 case Intermediate:
                     this.post(new Runnable() {
                         @Override
                         public void run() {
-                            if (progressBar != null && progressText != null) {
+                            if (torrentBar != null && progressText != null) {
                                 int progressStatus = params.getInt("percent_complete");
                                 int count = params.getInt("chunk_count");
                                 int total = params.getInt("chunk_total");
-                                Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage setProgress " + progressStatus);
-                                progressBar.setProgress(progressStatus);
+                                int cellId = params.getInt("chunk_id");
+                                Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage cellReceived " + cellId);
+                                if(!torrentBar.isConfigured()) {
+                                    // First progress message needs to setup the progress bar
+                                    torrentBar.setCellCount(total);
+                                    statusHeader.setVisibility(View.VISIBLE);
+                                    statusFooter.setVisibility(View.VISIBLE);
+                                }
+                                torrentBar.cellReceived(cellId);
                                 progressText.setText("" + count + "/" + total + " " + progressStatus + "%");
                             }
                         }
@@ -130,9 +160,10 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                     this.post(new Runnable() {
                         @Override
                         public void run() {
-                            if (progressBar != null && progressText != null) {
-                                progressBar.setProgress(progressBar.getMax());
+                            if (torrentBar != null && progressText != null) {
+                                torrentBar.setComplete();
                                 progressText.setText("100%");
+                                statusFooter.setVisibility(View.GONE);
                             }
                         }
                     });
@@ -159,6 +190,13 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         this.activity = activity;
     }
 
+    View.OnClickListener cancelListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            cameraManager.stopRunning();
+        }
+    };
+
     @Override
     public @Nullable View onCreateView(@NotNull LayoutInflater inflater,
                                        ViewGroup container,
@@ -170,9 +208,15 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera_window = (SurfaceView)rootLayout.findViewById(R.id.camera_window);
         camera_window_params = camera_window.getLayoutParams();
         setCameraWindowCallback();
-
-        progressBar = (ProgressBar) rootView.findViewById(R.id.progressbar);
+        torrentBar = (TorrentBar) rootView.findViewById(R.id.progressbar);
         progressText = (TextView) rootView.findViewById(R.id.progresstext);
+        statusHeader = (ViewGroup)rootLayout.findViewById(R.id.status_overlay);
+        statusFooter = (ViewGroup)rootLayout.findViewById(R.id.status_overlay_footer);
+        Button cancelButton = (Button)rootLayout.findViewById(R.id.cancel_button);
+        cancelButton.setOnClickListener(cancelListener);
+        displayUpdate.setupUi(torrentBar, progressText, statusHeader, statusFooter);
+        ImageButton progressCancelButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
+        progressCancelButton.setOnClickListener(cancelListener);
 
         // Setup the alert dialog in case we need it to report Rx errors to the user.
         alertDialog = new AlertDialog.Builder(activity).
@@ -187,29 +231,21 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                             }
                 }).create();
 
-        // TODO We'll want to apply the same listener to the cancel button in ticket-49
-        ImageButton progressButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
-        progressButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                cameraManager.stopRunning();
-            }
-        });
-
+        resetUI();
         return rootView;
     }
 
     @Override
     public void onStart() {
         // Execution order: onStart() then onResume(), onCreateView() may occur before onStart
-        Log.e(Constants.APP_TAG, "onStart");
+        Log.e(Constants.APP_TAG, "ReceiveFragment onStart");
         resetUI();
         super.onStart();
     }
 
     @Override
     public void onStop() {
-        Log.e(Constants.APP_TAG, "onStop");
+        Log.e(Constants.APP_TAG, "ReceiveFragment onStop");
 
         // Dispose of UI update messages that are no longer relevant.
         // With 'null' as parameter, it removes all pending messages on UI thread.
@@ -247,14 +283,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     @Override
     public void onResume() {
 
-        // TODO Check with donp to figure out if this is necessary? I think it's no longer needed.
-        /* In some cases, onPause will destroy the camera_window. This reestablishes it. */
-        SurfaceView previewSurface = (SurfaceView) rootLayout.findViewWithTag("camera_window");
-        if(previewSurface == null) {
-            Log.d(Constants.APP_TAG, "Resume: camera_window is null");
-            throw new RuntimeException("TODO: make call to replaceCameraWindow() here");
-            //replaceCameraWindow();
-        }
         // Setting the visibility here will cause the surfaceCreated callback
         // to be invoked prompting the camera to be acquired and DecodeThread to start
         camera_window.setVisibility(View.VISIBLE);
@@ -295,7 +323,10 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
      * Reset the UI elements to an initial state.
      */
     private void resetUI() {
-        progressBar.setProgress(0);
+        statusHeader.setVisibility(View.GONE);
+        statusFooter.setVisibility(View.GONE);
+
+        torrentBar.reset();
         progressText.setText("");
 
         if (alertDialog.isShowing()) {
@@ -371,9 +402,9 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     }
 
     // CameraHandlerThread is not using the looper of the main UI thread.
-    // and so it does not need to be static handler, but being static doesn't hurt.
-    private static class CameraHandlerThread extends HandlerThread {
-        Handler mHandler = null;
+    // and so it does not need to be static handler.
+    private class CameraHandlerThread extends HandlerThread {
+        private final Handler mHandler;
 
         CameraHandlerThread() {
             super("CameraHandlerThread");
@@ -390,10 +421,10 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
                     notifyCameraOpened();
                 }
             });
+
             try {
                 wait();
-            }
-            catch (InterruptedException e) {
+            } catch (InterruptedException e) {
                 Log.w(Constants.APP_TAG, "wait was interrupted");
             }
         }
@@ -406,15 +437,13 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             Camera c = null;
             try {
                 c = Camera.open(cameraId);
-            }
-            catch (RuntimeException e) {
+            }catch (RuntimeException e) {
                 // TODO handle this more elegantly.
                 Log.e(Constants.APP_TAG, "failed to open camera");
             }
             return c;
         }
     }
-
 
     /*
      * Returns the id of the first back facing camera if found.
@@ -515,4 +544,5 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             decodeThread.start();
         }
     }
+
 }

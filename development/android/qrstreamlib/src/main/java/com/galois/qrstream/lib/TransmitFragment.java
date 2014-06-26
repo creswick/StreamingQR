@@ -264,13 +264,14 @@ public class TransmitFragment extends Fragment {
     // Imagine it will be most useful for debugging.
     private void updateUI(int chunkId ) {
         String title = dataTitle.getText().toString();
+        String chunkSep = getString(R.string.transmit_chunk_sep);
         String chunkStr = getString(R.string.transmit_chunkTxt);
-        int index = title.indexOf(chunkStr);
+        int index = title.indexOf(chunkSep + chunkStr);
         String newTitle;
         if (index >= 0) {
-            newTitle = title.substring(0, index) + chunkStr + chunkId;
+            newTitle = title.substring(0, index) + chunkSep + chunkStr + chunkId;
         }else{
-            newTitle = title + chunkStr + chunkId;
+            newTitle = chunkStr + chunkId;
         }
         updateUi(newTitle);
     }
