@@ -42,11 +42,6 @@ public final class PartialMessage {
    * @param payload The partial message contains within the QR code.
    */
   private PartialMessage(int chunkId, int totalChunks, byte[] payload) {
-    if (chunkId < 1 || totalChunks < 1) {
-      throw new IllegalArgumentException("Expected message to have positive chunk inputs.");
-    }else if (payload == null) {
-      throw new NullPointerException("Invalid input for msg.");
-    }
     this.chunkId = chunkId;
     this.totalChunks = totalChunks;
     this.payload = payload.clone();
@@ -71,45 +66,54 @@ public final class PartialMessage {
    * the total number of chunks in a sequence of transmitted data
    * ({@code totalChunks}), and the partial message contained within
    * the QR {@code payload}.
-   * 
+   *
+   * If the decoded QR code is not properly formatted streaming QR code
+   * then return {@code null} PartialMessage. We do not throw exceptions
+   * anymore since the upstream code handles the {@code null} message.
+   *
    * @param decodedQR The result from decoding a QR code within an image.
    * @param maxChunks The maximum number of chunks expected for a QR stream.
-   * @throws ReceiveException If the decoded QR code has an invalid format.
    */
   protected static PartialMessage createFromResult(Result decodedQR, int maxChunks) {
     final int chunkId;
     final int totalChunks;
     final byte[] payload;
 
+    // Check that the QR code has enough bytes for extracting
+    // the sequence data needed to identify it as streaming QR.
     byte[] message = getRawData(decodedQR);
     if (message == null || message.length < Utils.getNumberOfReservedBytes()) {
-      throw new ReceiveException("QR code is missing sequence data.");
+      return null;
     }
 
+    // Check that the extracted sequence data is well formed.
     try {
       chunkId = Utils.extractChunkId(message);
       totalChunks = Utils.extractTotalNumberChunks(message);
       payload = Utils.extractPayload(message);
     }catch (IllegalArgumentException e) {
-      throw new ReceiveException("QR code is illformed." + e.getMessage());
-    }
-    
-    if (totalChunks > maxChunks) {
-      throw new ReceiveException("QR code is illformed. "
-          + "Too many chunks expected.");
-    }
-    
-    if (chunkId > totalChunks) {
-      throw new ReceiveException("QR code is illformed, chunkId="+chunkId
-          + " > totalChunks=" + totalChunks);
+      return null;
     }
 
-    try {
-      PartialMessage pm = new PartialMessage(chunkId,totalChunks,payload);
-      return pm;
-    }catch(Exception e){
-      throw new ReceiveException(e);
+    // Ensure positive chunk data
+    if (chunkId < 1 || totalChunks < 1) {
+      return null;
     }
+
+    // Can only stream the QR code if its total chunks is less than threshold.
+    // This is necessary since a BitVector is used to track the chunks
+    // we've seen and it cannot get too large without running out of memory.
+    if (totalChunks > maxChunks) {
+      return null;
+    }
+
+    // Properly formatted streaming QR code must have all chunkIds
+    // less than or equal to the expected totalChunks encoded with the QR code.
+    if (chunkId > totalChunks) {
+      return null;
+    }
+
+    return new PartialMessage(chunkId,totalChunks,payload);
   }
 
   /**

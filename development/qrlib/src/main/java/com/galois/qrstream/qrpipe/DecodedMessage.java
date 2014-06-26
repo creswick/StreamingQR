@@ -91,6 +91,9 @@ public final class DecodedMessage {
    * @return The {@code State} indicating whether the whole message has been received.
    */
   protected State saveMessageChunk(PartialMessage msgPart) {
+    if (msgPart == null) {
+      return State.Fail;
+    }
 
     // Set up message container if this is the first QR code encountered.
     if (decodeState == null) {
@@ -101,10 +104,12 @@ public final class DecodedMessage {
     if (!receivedData.containsKey(msgPart.getChunkId())) {
       receivedData.put(msgPart.getChunkId(), msgPart);
       decodeState.markDataReceived(msgPart.getChunkId());
+      // Only update progress indicator when decoding is successful
+      // and we haven't seen this part of the message before.
       decodeProgress.changeState(decodeState);
-      System.out.println("saveMessageChunk: Saving chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
+      System.out.println("QRLib: Saving chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
     }else{
-      System.out.println("saveMessageChunk: Already saved chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
+      System.out.println("QRLib: Already saved chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
     }
     return decodeState.getState();
   }

@@ -142,25 +142,31 @@ public final class Receive {
         message.setFailedDecoding();
         throw new ReceiveException("Transmission failed to receive a valid frame from the camera");
       }
+      // Decode the QR codes from within the image
+      Iterable<Result> res;
       try {
-        Iterable<Result> res = ImmutableList.of(decodeSingleQRCode(img.getYuvData()));
+        res = ImmutableList.of(decodeSingleQRCode(img.getYuvData()));
         displayQRFinderPoints(res);
-        State s = saveMessageAndUpdateProgress(res, message);
-
-        if(s == State.Final) {
-          System.out.println("decodeQRCodes: Hit final state");
-          break;
-        }
       } catch (NotFoundException e) {
         // Unable to detect QR in this image, try next one.
         displayQRFinderPoints(NO_RESULTS);
         continue;
-      } catch (ReceiveException e) {
-        // Encountered invalid QR code during parsing, try next image.
-        displayQRFinderPoints(NO_RESULTS);
+      }
+      // For the found QR codes, check that they are properly formatted
+      // streaming QR codes, and then save each of their message chunks.
+      State s = saveMessageAndUpdateProgress(res, message);
 
+      if(s == State.Fail) {
+        // All of the QR codes in `res` are not valid streaming QR codes
+        displayQRFinderPoints(NO_RESULTS);
         // TODO treat the QR code as a single QR code here, instead of a stream?
+        // Would only want to treat as single QR code if no other frames
+        // from stream have already decoded.  Then break out of loop if found valid
+        // normal QR code.
         continue;
+      }
+      if(s == State.Final) {
+          break;
       }
     }
     // Either message complete or received partial message
@@ -191,45 +197,32 @@ public final class Receive {
    * @param decodedQR The result of decoding QR code(s) from an image
    * @param receivedData The data decoded from prior images.
    * @return The {@code State} indicating whether the whole message has been received.
-   * @throws ReceiveException if all of the decoded QR codes have an invalid format
+   *         If State.Invalid  is returned, that indicates that the qr codes were
+   *         not formatted properly for this streaming QR library.
    */
-  protected State saveMessageAndUpdateProgress(Iterable<Result> decodedQR, DecodedMessage receivedData)
-      throws ReceiveException {
-    boolean allInvalid = true;
-    String  receiveExceptionMsg = "";
-    State state = State.Initial;
+  protected State saveMessageAndUpdateProgress(Iterable<Result> decodedQR,
+                                               DecodedMessage receivedData){
+    State state = State.Invalid;
 
     for (Result qr : decodedQR ) {
-      try {
-        State s = saveMessageAndUpdateProgress(qr, receivedData);
-        if (allInvalid) {
-          // Found at least one valid QR code. Now it's okay to
-          // ignore any other ReceiveException errors since
-          // decodeQRCodes would just skip it and try another frame.
-          allInvalid = false;
-        }
+
+      // Detect whether found QR code is properly formatted streaming QR code
+      // If it is valid, then save it's portion of the message. Otherwise,
+      // we ignore it and move on to the next detected QR code.
+      PartialMessage messagePart =
+          PartialMessage.createFromResult(qr, maxChunks);
+      if (messagePart != null) {
+        State s = receivedData.saveMessageChunk(messagePart);
         if (state != s) {
           state = s;
         }
-        // No need to continue with other QR codes if message complete
-        if (state == State.Final) {
-          break;
-        }
-      }catch(ReceiveException e) {
-        // Save one of the errors for later, but try other QR codes
-        receiveExceptionMsg = e.getMessage();
+      }
+      // No need to continue with other QR codes if message complete
+      if (state == State.Final) {
+        break;
       }
     }
-    if (allInvalid) {
-      throw new ReceiveException(receiveExceptionMsg);
-    }
     return state;
-  }
-
-  private State saveMessageAndUpdateProgress(Result decodedQR, DecodedMessage receivedData)
-      throws ReceiveException {
-    PartialMessage messagePart = PartialMessage.createFromResult(decodedQR, maxChunks);
-    return receivedData.saveMessageChunk(messagePart);
   }
 
   /**

@@ -158,15 +158,10 @@ public class ReceiveTest {
 
     // Decode the image
     Result result = decodeAndCheckValidQR(filename);
-    PartialMessage m = null;
-    try {
-      m = PartialMessage.createFromResult(result, Integer.MAX_VALUE);
-    } catch (ReceiveException e) {
-      fail("QR code is not formatted for QRLib.");
-    }
+    PartialMessage m = PartialMessage.createFromResult(result, Integer.MAX_VALUE);
 
     // Expect payload to match 'expectedText' and only one QR code in sequence
-    assertNotNull("Message should parse", m);
+    assertNotNull("Expected QR code to be formatted for QRLib", m);
     assertEquals("Should only have 1 chunk" , 1, m.getTotalChunks());
     assertEquals("Unexpected chunkId" , 1, m.getChunkId());
     String actualText = new String (m.getPayload(), Charsets.ISO_8859_1);
@@ -193,15 +188,10 @@ public class ReceiveTest {
     BufferedImage b = UtilsTest.toBufferedImage(encodedQRImage);
     LuminanceSource lumSrc = new BufferedImageLuminanceSource(b);
     Result result = decodeAndCheckValidQR(lumSrc, null);
-    PartialMessage m = null;
-    try {
-      m = PartialMessage.createFromResult(result, Integer.MAX_VALUE);
-    } catch (ReceiveException e) {
-      fail("QR code is not formatted for QRLib.");
-    }
+    PartialMessage m = PartialMessage.createFromResult(result, Integer.MAX_VALUE);
 
     // Expect this small input will generate and decode a single QR code.
-    assertNotNull("Message should parse", m);
+    assertNotNull("Expected QR code to be formatted for QRLib", m);
     assertEquals("Should only have 1 chunk" , 1, m.getTotalChunks());
     assertEquals("Unexpected chunkId" , 1, m.getChunkId());
     assertArrayEquals("Original input does not match decoded result",
