@@ -30,7 +30,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.List;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -41,7 +40,6 @@ import com.google.common.base.Charsets;
 import com.google.zxing.LuminanceSource;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.Result;
-import com.google.zxing.ResultMetadataType;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.client.j2se.ImageReader;
 
