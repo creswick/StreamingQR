@@ -18,7 +18,6 @@ package com.galois.qrstream.qrpipe;
 
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -54,6 +53,9 @@ public class Receive {
   /* Track progress of decoding */
   private final IProgress progress;
 
+  /* Maximum number of chunks to accept in a QR stream. */
+  private final int maxChunks;
+
   /**
    * Initializes receiver of QR code stream.
    * @param height The height of the received images.
@@ -62,9 +64,23 @@ public class Receive {
    * transmission.
    */
   public Receive(int height, int width, IProgress progress) {
+    this(height, width, 3000, progress);
+  }
+
+  /**
+   * Initializes receiver of QR code stream.
+   * @param height The height of the received images.
+   * @param width The width of the received images.
+   * @param maxChunks The maximum number of QR code chunks to accept. Tune this
+   *                  parameter based on the memory available to your receiver.
+   * @param progress The object used in tracking the progress of the message
+   * transmission.
+   */
+  public Receive(int height, int width, int maxChunks, IProgress progress) {
     this.height = height;
     this.width = width;
     this.progress = progress;
+    this.maxChunks = maxChunks;
   }
 
   /**
@@ -133,6 +149,7 @@ public class Receive {
         continue;
       } catch (ReceiveException e) {
         // Encountered invalid QR code during parsing, try next image.
+        // TODO treat the QR code as a single QR code here, instead of a stream?
         continue;
       }
     }
@@ -168,7 +185,7 @@ public class Receive {
    */
   protected State saveMessageAndUpdateProgress(Result decodedQR, DecodedMessage receivedData)
       throws ReceiveException {
-    PartialMessage messagePart = PartialMessage.createFromResult(decodedQR);
+    PartialMessage messagePart = PartialMessage.createFromResult(decodedQR, maxChunks);
     return receivedData.saveMessageChunk(messagePart);
   }
 
@@ -182,7 +199,8 @@ public class Receive {
     hints.put(DecodeHintType.CHARACTER_SET, "ISO-8859-1");
 
     Collection<BarcodeFormat> possibleFormats =
-        new ArrayList<BarcodeFormat>(Collections.singletonList(BarcodeFormat.QR_CODE));
+        Collections.singletonList(BarcodeFormat.QR_CODE);
+
     hints.put(DecodeHintType.POSSIBLE_FORMATS, possibleFormats);
     //TODO: if running to slow then try removing this hint.
     hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);

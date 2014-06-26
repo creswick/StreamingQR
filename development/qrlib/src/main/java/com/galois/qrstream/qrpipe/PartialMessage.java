@@ -65,10 +65,12 @@ public class PartialMessage {
    * the total number of chunks in a sequence of transmitted data
    * ({@code totalChunks}), and the partial message contained within
    * the QR {@code payload}.
+   * 
    * @param decodedQR The result from decoding a QR code within an image.
+   * @param maxChunks The maximum number of chunks expected for a QR stream.
    * @throws ReceiveException If the decoded QR code has an invalid format.
    */
-  public static PartialMessage createFromResult (Result decodedQR) throws ReceiveException {
+  public static PartialMessage createFromResult(Result decodedQR, int maxChunks) throws ReceiveException {
     final int chunkId;
     final int totalChunks;
     final byte[] payload;
@@ -85,12 +87,23 @@ public class PartialMessage {
     }catch (IllegalArgumentException e) {
       throw new ReceiveException("QR code is illformed." + e.getMessage());
     }
+    
+    if (totalChunks > maxChunks) {
+      throw new ReceiveException("QR code is illformed. "
+          + "Too many chunks expected.");
+    }
+    
     if (chunkId > totalChunks) {
       throw new ReceiveException("QR code is illformed, chunkId="+chunkId
           + " > totalChunks=" + totalChunks);
     }
 
-    return new PartialMessage(chunkId,totalChunks,payload);
+    try {
+      PartialMessage pm = new PartialMessage(chunkId,totalChunks,payload);
+      return pm;
+    }catch(Exception e){
+      throw new ReceiveException(e);
+    }
   }
 
   /**

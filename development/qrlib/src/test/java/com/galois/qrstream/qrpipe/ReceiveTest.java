@@ -81,7 +81,7 @@ public class ReceiveTest {
     Receive receive = new Receive(image.getHeight(), image.getWidth(), NULL_MONITOR);
 
     byte[] actual = receive.decodeQRCodes(new FrameProvider(yuvImage));
-    byte[] expected = PartialMessage.createFromResult(result).getPayload();
+    byte[] expected = PartialMessage.createFromResult(result, Integer.MAX_VALUE).getPayload();
 
     assertArrayEquals("Yuv data generated different results", expected, actual);
   }
@@ -159,7 +159,7 @@ public class ReceiveTest {
     Result result = decodeAndCheckValidQR(filename);
     PartialMessage m = null;
     try {
-      m = PartialMessage.createFromResult(result);
+      m = PartialMessage.createFromResult(result, Integer.MAX_VALUE);
     } catch (ReceiveException e) {
       fail("QR code is not formatted for QRLib.");
     }
@@ -194,7 +194,7 @@ public class ReceiveTest {
     Result result = decodeAndCheckValidQR(lumSrc, null);
     PartialMessage m = null;
     try {
-      m = PartialMessage.createFromResult(result);
+      m = PartialMessage.createFromResult(result, Integer.MAX_VALUE);
     } catch (ReceiveException e) {
       fail("QR code is not formatted for QRLib.");
     }
@@ -269,21 +269,6 @@ public class ReceiveTest {
       fail("Cannot read resource file, " + filename + "." + e.getMessage());
     }
     return img;
-  }
-
-  /**
-   * Print the payload of the decoded QR code to stdout.
-   * @param result The {@code Result} of decoding image with QR code
-   */
-  private void printQrPayload(Result result) {
-    // Get the payload from the decoded results and print the result
-    System.out.print("payload from QR code before extracting reserved bits: ");
-    @SuppressWarnings("unchecked")
-    List<byte[]> payloadSegments =
-        (List<byte[]>) result.getResultMetadata().get(ResultMetadataType.BYTE_SEGMENTS);
-    for (byte[] s : payloadSegments) {
-      System.out.println(javax.xml.bind.DatatypeConverter.printHexBinary(s));
-    }
   }
 
 }

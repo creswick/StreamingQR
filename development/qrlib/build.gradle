@@ -7,7 +7,7 @@ sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
 // Library version
-version = '0.1'
+version = '0.2'
 
 // Look for external dependencies in these repositories
 repositories {

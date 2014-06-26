@@ -5,6 +5,7 @@
     android:layout_height="fill_parent"
     android:layout_width="fill_parent" >
 
+
     <SurfaceView
         android:id="@+id/camera_window"
         android:gravity="center_horizontal"
@@ -12,6 +13,25 @@
         android:layout_height="fill_parent"
         android:tag="camera_window"
         />
+
+    <RelativeLayout android:id="@+id/status_overlay_footer"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:alpha="0.7"
+        android:orientation="horizontal"
+        android:layout_alignBottom="@id/camera_window"
+        >
+
+        <Button
+            android:id="@+id/cancel_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="@string/cancel"
+            />
+
+    </RelativeLayout>>
 
     <LinearLayout android:id="@+id/status_overlay"
         android:layout_width="match_parent"

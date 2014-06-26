@@ -28,9 +28,9 @@ import com.google.common.primitives.Ints;
  */
 public class DecodeState {
 
-	private final BitSet data;
-	private final int capacity;
-        private int lastChunkId;
+  private final BitSet data;
+  private final int capacity;
+  private int lastChunkId;
   
 	// True if transmission of QR codes stops before entire message received
 	private boolean hasTransmissionFailed;
