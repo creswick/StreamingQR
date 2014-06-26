@@ -54,6 +54,8 @@ public class TransmitFragment extends Fragment {
     private Button sendButton;
     private Transmit transmitter;
     private boolean transmitPaused;
+    private ImageView moveLeft;
+    private ImageView moveRight;
 
     // Allows us to step through QR code transmission
     private Iterable<BitmapImage> qrCodes;
@@ -134,6 +136,14 @@ public class TransmitFragment extends Fragment {
         dataTitle = (TextView)rootView.findViewById(R.id.data_title);
         sendButton = (Button)rootView.findViewWithTag("send");
         sendButton.setOnClickListener(new CaptureClick());
+        moveLeft = (ImageView)rootView.findViewById(R.id.move_left);
+        moveRight = (ImageView)rootView.findViewById(R.id.move_right);
+        moveRight.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                nextFrame();
+            }
+        });
         return rootView;
     }
 
