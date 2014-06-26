@@ -17,9 +17,15 @@
 package com.galois.qrstream.qrpipe;
 
 import java.util.List;
+import java.util.Map;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Bytes;
 import com.google.zxing.Result;
 import com.google.zxing.ResultMetadataType;
+import com.google.zxing.client.result.ParsedResult;
+import com.google.zxing.client.result.ParsedResultType;
+import com.google.zxing.client.result.ResultParser;
 
 /**
  * Stores data from a single decoded QR code that's part of a larger sequence of QR codes.
@@ -107,22 +113,33 @@ public final class PartialMessage {
   }
 
   /**
-   * Extract raw bytes from decoded QR code.
-   * @throws AssertionError if ZXing library returned more than one array
+   * Extract raw bytes from decoded QR code.  If none can be extracted,
+   * then this method returns {@code null}.
    */
-  protected static byte[] getRawData(final Result decodedQR) {
-    byte[] rawBytes = new byte[0];
+  private static byte[] getRawData(final Result decodedQR) {
+
+    // Whenever the ZXing result metadata is missing or does not
+    // have the BYTE_SEGMENTS object return null to indicate error.
+    // Might happen if we're trying to read a non-streaming type of QR code.
+    Map<ResultMetadataType,?> meta = decodedQR.getResultMetadata();
+    if (meta == null || !meta.containsKey(ResultMetadataType.BYTE_SEGMENTS)) {
+      return null;
+    }
+
+    // Expect any streaming QR codes to have this type
+    // All other qr codes have to be handled in a different way
+    ParsedResult result = ResultParser.parseResult(decodedQR);
+    if (result.getType() != ParsedResultType.TEXT) {
+      return null;
+    }
+
+    ImmutableList.Builder<Byte> msgBuilder = new ImmutableList.Builder<Byte>();
 
     @SuppressWarnings("unchecked")
-    List<byte[]> dataSegments = (List<byte[]>) decodedQR.getResultMetadata().get(ResultMetadataType.BYTE_SEGMENTS);
-    if (!dataSegments.isEmpty()) {
-      // I'm not sure why dataSegments would have more than one entry.
-      if (dataSegments.size() > 1) {
-        System.err.println("Decoded result has "+dataSegments.size()+" elements. We expected just one.");
-        throw new AssertionError();
-      }
-      rawBytes = dataSegments.get(0);
+    List<byte[]> dataSegments = (List<byte[]>) meta.get(ResultMetadataType.BYTE_SEGMENTS);
+    for (byte[] bs : dataSegments) {
+      msgBuilder.addAll(Bytes.asList(bs));
     }
-    return rawBytes;
+    return Bytes.toArray(msgBuilder.build());
   }
 }
