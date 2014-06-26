@@ -24,7 +24,7 @@ import com.google.zxing.ResultMetadataType;
 /**
  * Stores data from a single decoded QR code that's part of a larger sequence of QR codes.
  */
-public class PartialMessage {
+public final class PartialMessage {
   private final int chunkId;
   private final int totalChunks;
   private final byte[] payload;
@@ -70,7 +70,7 @@ public class PartialMessage {
    * @param maxChunks The maximum number of chunks expected for a QR stream.
    * @throws ReceiveException If the decoded QR code has an invalid format.
    */
-  public static PartialMessage createFromResult(Result decodedQR, int maxChunks) throws ReceiveException {
+  protected static PartialMessage createFromResult(Result decodedQR, int maxChunks) {
     final int chunkId;
     final int totalChunks;
     final byte[] payload;

@@ -19,9 +19,9 @@ package com.galois.qrstream.qrpipe;
 /**
  * Covers the range of exceptions which may occur when
  * encoding and transmitting QR codes.
- * 
+ *
  */
-public class TransmitException extends Exception {
+public final class TransmitException extends Exception {
 
   /**
    * Compiler-generated ID. If file undergoes structural

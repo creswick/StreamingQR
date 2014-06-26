@@ -47,7 +47,7 @@ import com.google.zxing.common.HybridBinarizer;
  *  - density of QR code
  *  - others?
  */
-public class Receive {
+public final class Receive {
 
   /* Dimension of received images */
   private final int height;

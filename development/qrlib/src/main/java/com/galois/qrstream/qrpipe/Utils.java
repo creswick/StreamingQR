@@ -25,7 +25,7 @@ import com.google.zxing.qrcode.decoder.Version;
  * This class provides constants and utility functions
  * common between Receive and Transmit Classes.
  */
-public class Utils {
+public final class Utils {
   /* Number of bytes per integer to reserve at the front of QR code
    * payload. They will be used to keep track of the total QR codes
    * encoded as well as the id of the current QR code.
