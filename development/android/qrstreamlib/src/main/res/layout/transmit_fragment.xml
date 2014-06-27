@@ -8,32 +8,14 @@
     android:layout_gravity="center_vertical"
     >
 
-    <TextView
-        android:id="@+id/transmit_title"
-        android:text="@string/transmit_title"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:textSize="13pt"
-        android:textColor="#00ff00"
-        />
-
     <TableLayout
         android:id="@+id/send_window"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_weight=".9"
         android:focusable="true"
-        android:baselineAligned="true" />
-
-    <TextView
-        android:id="@+id/data_title"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:textSize="13pt"
-        android:textColor="#00ff00"
-        />
+        android:baselineAligned="true"
+        android:layout_gravity="center_horizontal|top" />
 
     <Button
         android:layout_width="fill_parent"

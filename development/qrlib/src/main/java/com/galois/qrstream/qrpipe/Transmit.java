@@ -253,7 +253,7 @@ public class Transmit {
     }
     byte[] prependedData = Utils.prependChunkId(chunkedData, chunkId, totalChunks);
     BitMatrix bMat = bytesToQRCode(prependedData, ecLevel);
-    return BitmapImage.createBitmapImage(bMat);
+    return BitmapImage.createBitmapImage(chunkId, totalChunks, bMat);
   }
 
   /**

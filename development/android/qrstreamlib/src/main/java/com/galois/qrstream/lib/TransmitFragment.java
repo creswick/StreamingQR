@@ -28,6 +28,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Gravity;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.graphics.Bitmap;
@@ -51,7 +52,10 @@ import com.galois.qrstream.image.BitmapImage;
  */
 public class TransmitFragment extends Fragment {
 
-    private TextView dataTitle;
+    // Allows easy toggling of background color for debugging frame sizes
+    private final boolean DEBUG_COLOR = false;
+
+
     private TableLayout send_window;
     private Button sendButton;
     private Transmit transmitter;
@@ -129,44 +133,52 @@ public class TransmitFragment extends Fragment {
 
         // Determine the row and columns to display based on settings
         int columnCount = (numQRCodesDisplayed <= 2) ? 1 : 2;
-        int rowCount = numQRCodesDisplayed / columnCount;
+        int rowCount = 2 * (numQRCodesDisplayed / columnCount);
 
         send_window = (TableLayout) rootView.findViewById(R.id.send_window);
-        // TODO Remove after satisfied with layout
-        send_window.setBackgroundColor(Color.CYAN);
 
-        // Calc height and width available to each barcode image
-        // Setup the layout parameters for each row and column in the table
-        for (int r=1; r<=rowCount; r++){
-            TableRow tr = new TableRow(getActivity());
-            // A TableRow must use the layout parameters from its parent, i.e. TableLayout params
-            tr.setLayoutParams(new TableLayout.LayoutParams(
-                    TableLayout.LayoutParams.MATCH_PARENT,
-                    TableLayout.LayoutParams.MATCH_PARENT, 1.0f));
+        // Setup the layout parameters for each row and column in the table.
+        // A row in a table must use the layout parameters from its parent, i.e. TableLayout params
+        TableLayout.LayoutParams tableRowLayout = new TableLayout.LayoutParams(
+                TableLayout.LayoutParams.MATCH_PARENT,
+                TableLayout.LayoutParams.MATCH_PARENT, 1.0f);
+
+        // Items in a TableRow must use the layout parameters from its parent, i.e. TableRow params
+        TableRow.LayoutParams tableColumnLayout = new TableRow.LayoutParams(
+                TableRow.LayoutParams.MATCH_PARENT,
+                TableRow.LayoutParams.MATCH_PARENT, 1.0f);
+
+        // Create placeholder views for each of the QR codes and labels too.
+        for (int r=1; r<=rowCount-1; r+=2){
+            TableRow imgRow = new TableRow(getActivity());
+            TableRow labelRow = new TableRow(getActivity());
+            // The default row layout will set the child width to MATCH_PARENT and
+            // the child height to WRAP_CONTENT. Default is okay for labels but will
+            // not stretch the images very well. Therefore set the layout for the image row only.
+            imgRow.setLayoutParams(tableRowLayout);
             for (int c=1; c<=columnCount; c++){
-                ImageView imgView = new ImageView (getActivity());
-                imgView.setPadding(0, 0, 0, 0); //padding in each image if needed
-                imgView.setLayoutParams( new TableRow.LayoutParams(
-                        TableRow.LayoutParams.MATCH_PARENT,
-                        TableRow.LayoutParams.MATCH_PARENT, 1.0f));
 
-                // TODO Remove after satisfied with layout
-                if (r == 1) {
-                    if (c == 1) {
-                        imgView.setBackgroundColor(Color.MAGENTA);
-                    }else{
-                        imgView.setBackgroundColor(Color.BLUE);
-                    }
-                }else{
-                    if (c == 1) {
-                        imgView.setBackgroundColor(Color.LTGRAY);
-                    }else{
-                        imgView.setBackgroundColor(Color.GREEN);
-                    }
-                }
-                tr.addView(imgView);
+                // Create the text view for each of the QR code labels
+                TextView textView = new TextView (getActivity());
+                textView.setGravity(Gravity.CENTER_HORIZONTAL);
+                textView.setLayoutParams(tableColumnLayout);
+                labelRow.addView(textView);
+
+                // Create the view where each of the QR codes will get displayed
+                ImageView imgView = new ImageView (getActivity());
+
+                // Items in a TableRow must use the layout parameters from its parent, i.e. TableRow params
+                imgView.setLayoutParams(tableColumnLayout);
+                imgRow.addView(imgView);
             }
-            send_window.addView(tr);
+
+            if(IS_LABEL_AFTER) {
+                send_window.addView(imgRow);
+                send_window.addView(labelRow);
+            }else{
+                send_window.addView(labelRow);
+                send_window.addView(imgRow);
+            }
         }
 
 
@@ -179,9 +191,10 @@ public class TransmitFragment extends Fragment {
                     Log.d(Constants.APP_TAG, "onLayoutChange Transmitter created for width " +
                             send_window.getWidth() + " height " + send_window.getHeight());
 
-                    // Calculate the image height and width given the row and column count
+                    // Calculate the image height and width given the row and column count.
+                    // The numRows we divide by two since we added rows for the image labels.
                     int numCols = 1;
-                    int numRows = send_window.getChildCount();
+                    int numRows = send_window.getChildCount() / 2;
                     if (numRows >= 1) {
                         TableRow r = (TableRow) send_window.getChildAt(0);
                         numCols = r.getChildCount();
@@ -194,7 +207,9 @@ public class TransmitFragment extends Fragment {
                     Log.i(Constants.APP_TAG, "onLayoutChange: imgWidth= " + imageWidth +
                             " imgHeight= " + imageHeight);
 
-                    // QRCode size strategy borrowed from ZXing's BarcodeScanner
+                    // Choose smaller dimension so that we reduce the whitespace of
+                    // final image. Otherwise, the taller dimension would just be filled in
+                    // with white pixels.
                     int smallerDimension = imageWidth < imageHeight ? imageWidth : imageHeight;
                     transmitter = new Transmit(smallerDimension, smallerDimension);
 
@@ -203,7 +218,6 @@ public class TransmitFragment extends Fragment {
             }
         });
 
-        dataTitle = (TextView)rootView.findViewById(R.id.data_title);
         sendButton = (Button)rootView.findViewWithTag("send");
         sendButton.setOnClickListener(new CaptureClick());
         return rootView;
@@ -235,7 +249,6 @@ public class TransmitFragment extends Fragment {
         String title = job.getTitle();
         Log.i(Constants.APP_TAG, "Trying to create and transmit QR codes");
         Log.i(Constants.APP_TAG, "transmitData title=" + title + " byte count=" + bytes.length);
-        updateUi(title);
 
         // Retrieve transmission settings before encoding QR codes
         int density = Integer.parseInt(settings.getString("qr_density", "10"));
@@ -253,26 +266,6 @@ public class TransmitFragment extends Fragment {
         } catch (TransmitException e) {
             Log.e(Constants.APP_TAG, e.getMessage());
         }
-    }
-
-    private void updateUi(String title) {
-        dataTitle.setText(title);
-    }
-
-    // Update the title with the QR chunkId being displayed.
-    // Imagine it will be most useful for debugging.
-    private void updateUI(int chunkId ) {
-        String title = dataTitle.getText().toString();
-        String chunkSep = getString(R.string.transmit_chunk_sep);
-        String chunkStr = getString(R.string.transmit_chunkTxt);
-        int index = title.indexOf(chunkSep + chunkStr);
-        String newTitle;
-        if (index >= 0) {
-            newTitle = title.substring(0, index) + chunkSep + chunkStr + chunkId;
-        }else{
-            newTitle = chunkStr + chunkId;
-        }
-        updateUi(newTitle);
     }
 
     private void nextFrame() {
@@ -310,24 +303,39 @@ public class TransmitFragment extends Fragment {
 
         Log.i(Constants.APP_TAG, "Drawing QR Code: " + frame);
         Drawable prevBitmap = null;
+        CharSequence prevLabel = null;
         int nRows = send_window.getChildCount();
-        for (int r = 0; r < nRows; r++) {
-            TableRow row = (TableRow) send_window.getChildAt(r);
-            for (int c = 0; c < row.getChildCount(); c++) {
-                ImageView imgView = (ImageView) row.getChildAt(c);
+        for (int r = 0; r < nRows-1; r+=2) {
+            TableRow imageRow, labelRow;
+            if(IS_LABEL_AFTER) {
+                imageRow = (TableRow) send_window.getChildAt(r);
+                labelRow = (TableRow) send_window.getChildAt(r + 1);
+            }else{
+                imageRow = (TableRow) send_window.getChildAt(r + 1);
+                labelRow = (TableRow) send_window.getChildAt(r);
+            }
+            for (int c = 0; c < imageRow.getChildCount(); c++) {
+                ImageView imgView = (ImageView) imageRow.getChildAt(c);
+                TextView textView = (TextView) labelRow.getChildAt(c);
+                // TODO Make initial pass show unique frames
                 if (prevBitmap == null) {
+                    // Update the label with the correct chunk information
                     prevBitmap = imgView.getDrawable();
+                    prevLabel = textView.getText();
                     Bitmap b = toBitmap(qrCode);
                     imgView.setImageDrawable(new BitmapDrawable(getResources(), b));
+                    textView.setText(qrCode.toString());
                 }else{
                     Drawable current = imgView.getDrawable();
+                    CharSequence label = textView.getText();
                     imgView.setImageDrawable(prevBitmap);
+                    textView.setText(prevLabel);
                     prevBitmap = current;
+                    prevLabel = label;
                 }
             }
         }
 
-        updateUI(frame);
     }
 
     /**
