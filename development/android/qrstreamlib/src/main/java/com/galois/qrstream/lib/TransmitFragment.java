@@ -196,7 +196,6 @@ public class TransmitFragment extends Fragment {
 
                     // QRCode size strategy borrowed from ZXing's BarcodeScanner
                     int smallerDimension = imageWidth < imageHeight ? imageWidth : imageHeight;
-                    smallerDimension = smallerDimension * 7/8;
                     transmitter = new Transmit(smallerDimension, smallerDimension);
 
                     sendJob();

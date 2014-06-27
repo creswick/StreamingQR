@@ -38,6 +38,7 @@ import org.junit.Test;
 import com.galois.qrstream.image.BitmapImage;
 import com.google.common.base.Charsets;
 import com.google.zxing.DecodeHintType;
+import com.google.zxing.EncodeHintType;
 import com.google.zxing.LuminanceSource;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.Result;
@@ -277,7 +278,13 @@ public class TransmitTest {
      */
     String filePrefix = "qr_" + origStr;
     BitMatrix qrActual = null;
-    qrActual = transmitter.bytesToQRCode(utfStr, ErrorCorrectionLevel.L);
+    // Remove margin hint from this encoding since the original image used
+    // the default Margin of 4 modules.
+    Map<EncodeHintType, Object> encodeHints =
+        transmitter.getEncodeHints(ErrorCorrectionLevel.L);
+    encodeHints.remove(EncodeHintType.MARGIN);
+
+    qrActual = transmitter.bytesToQRCode(utfStr, encodeHints);
     assertNotNull("Expected QR encoding of string,"+origStr+", to be successful", qrActual);
 
     /*
