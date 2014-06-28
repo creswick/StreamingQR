@@ -67,7 +67,6 @@ public class TransmitFragment extends Fragment {
     private Iterable<BitmapImage> qrCodes;
     private Iterator<BitmapImage> qrCodeIter;
     private BitmapImage currentQR;
-    private int count = 0;
 
     // Manage shared settings for application
     private SharedPreferences settings;
@@ -102,7 +101,7 @@ public class TransmitFragment extends Fragment {
     private final Runnable runThroughFrames = new Runnable() {
         @Override
         public void run() {
-            nextFrame();
+            displayNextFrame();
             handleFrameUpdate.postDelayed(this,transmitInterval);
         }
     };
@@ -251,7 +250,7 @@ public class TransmitFragment extends Fragment {
         if(bundle != null) {
             Job job = (Job) bundle.getSerializable("job");
             transmitData(job);
-            nextFrame();
+            showInitialFrame();
         }
     }
 
@@ -284,81 +283,130 @@ public class TransmitFragment extends Fragment {
             qrCodes = transmitter.encodeQRCodes(job, density, ecLevel);
             qrCodeIter = qrCodes.iterator();
             currentQR = null;
-            count = 0;
             Log.i(Constants.APP_TAG, "transmitData(), Successful creation of QR codes");
         } catch (TransmitException e) {
             Log.e(Constants.APP_TAG, e.getMessage());
         }
     }
 
-    private void nextFrame() {
-        // Doesn't make sense to go to next frame if there are no qrCodes
+    private void displayNextFrame() {
+        currentQR = getNextFrame();
+        insertFrame(currentQR);
+    }
+
+    // Fill up the display with the number of QR codes set in the preferences
+    private void showInitialFrame() {
+        for (int i=0; i<numQRCodesDisplayed; i++) {
+            currentQR = getNextFrame();
+            insertFrame(currentQR);
+        }
+    }
+
+    // Returns the next BitmapImage in the sequence
+    // when it is available, otherwise, return null.
+    private BitmapImage getNextFrame() {
         if (qrCodes == null) {
-            return;
+            return null;
         }
         // Reset so we can transmit again
         if (qrCodeIter == null || !qrCodeIter.hasNext()) {
             resetQRTransmission();
         }
-        count++;
-        currentQR = qrCodeIter.next();
-        displayImageOnUI(currentQR, count);
+        return qrCodeIter.next();
     }
 
     /**
      * Re-draw a frame with QR codes whenever resume from pause
      */
     private void repeatFrame() {
+        // When a view is full of QR codes, pauses, and then resumes display
+        // this function will not restore multiple QR codes - only the last
+        // one that was displayed.
+        // Probably better to restore full state but not part of this refactor.
+        // TODO: Perhaps save the display state on pause and then restore it on resume
         if (currentQR != null) {
-            displayImageOnUI(currentQR, count);
+            insertFrame(currentQR);
+            for (int i=1; i<numQRCodesDisplayed; i++) {
+                currentQR = getNextFrame();
+                insertFrame(currentQR);
+            }
         }
     }
 
     /**
-     * Draw a frame containing to the phone.
+     * Draw a frame containing QR codes to the phone. This pushes any other
+     * images down to the next location in the view.
      *
      * @param qrCode The image to display on the UI, should contain QR codes.
-     * @param frame Indicates which frame from the stream is being displayed.
      */
-    private void displayImageOnUI(BitmapImage qrCode, int frame) {
-        // Note: setImageDrawable invokes requestLayout() internally
-        //       and emits warning about running another layout pass
+    private void insertFrame(BitmapImage qrCode) {
+        // Push down all of the other frames
+        moveImagesDown();
 
-        Log.i(Constants.APP_TAG, "Drawing QR Code: " + frame);
-        Drawable prevBitmap = null;
+        // Insert frame in the first row and first column of table
+        int r = 0;
+        int c = 0;
+
+        TableRow imageRow = getImageRow(r);
+        TableRow labelRow = getLabelRow(r);
+
+        ImageView imgView = (ImageView) imageRow.getChildAt(c);
+        TextView textView = (TextView) labelRow.getChildAt(c);
+
+        // Insert an empty frame whenever passed an null BitmapImage
+        if (qrCode != null) {
+            Bitmap b = toBitmap(qrCode);
+            imgView.setImageDrawable(new BitmapDrawable(getResources(), b));
+            textView.setText(qrCode.toString());
+        }else{
+            imgView.setImageDrawable(null);
+            textView.setText(null);
+        }
+    }
+
+    // Retrieve the label row in an order agnostic way
+    private TableRow getImageRow(int r) {
+        if(IS_LABEL_AFTER) {
+            return (TableRow) send_window.getChildAt(r);
+        }
+        return (TableRow) send_window.getChildAt(r + 1);
+    }
+
+    // Retrieve the label row in an order agnostic way
+    private TableRow getLabelRow(int r) {
+        if(IS_LABEL_AFTER) {
+            return (TableRow) send_window.getChildAt(r + 1);
+        }
+        return (TableRow) send_window.getChildAt(r);
+    }
+
+    private void moveImagesDown() {
+        Drawable prevImage = null;
         CharSequence prevLabel = null;
+
         int nRows = send_window.getChildCount();
         for (int r = 0; r < nRows-1; r+=2) {
-            TableRow imageRow, labelRow;
-            if(IS_LABEL_AFTER) {
-                imageRow = (TableRow) send_window.getChildAt(r);
-                labelRow = (TableRow) send_window.getChildAt(r + 1);
-            }else{
-                imageRow = (TableRow) send_window.getChildAt(r + 1);
-                labelRow = (TableRow) send_window.getChildAt(r);
-            }
+            TableRow imageRow = getImageRow(r);
+            TableRow labelRow = getLabelRow(r);
+
             for (int c = 0; c < imageRow.getChildCount(); c++) {
-                ImageView imgView = (ImageView) imageRow.getChildAt(c);
+                //Indicates which frame from the stream is being displayed.
                 TextView textView = (TextView) labelRow.getChildAt(c);
-                // TODO Make initial pass show unique frames
-                if (prevBitmap == null) {
-                    // Update the label with the correct chunk information
-                    prevBitmap = imgView.getDrawable();
-                    prevLabel = textView.getText();
-                    Bitmap b = toBitmap(qrCode);
-                    imgView.setImageDrawable(new BitmapDrawable(getResources(), b));
-                    textView.setText(qrCode.toString());
-                }else{
-                    Drawable current = imgView.getDrawable();
-                    CharSequence label = textView.getText();
-                    imgView.setImageDrawable(prevBitmap);
-                    textView.setText(prevLabel);
-                    prevBitmap = current;
-                    prevLabel = label;
-                }
+                ImageView imgView = (ImageView) imageRow.getChildAt(c);
+
+                // Pop off the current frame
+                Drawable tmpImg = imgView.getDrawable();
+                CharSequence tmpText = textView.getText();
+
+                // Replace it with previous frame
+                imgView.setImageDrawable(prevImage);
+                textView.setText(prevLabel);
+
+                // Set the previous frame to saved frame
+                prevImage = tmpImg;
+                prevLabel = tmpText;
             }
         }
-
     }
 
     /**
@@ -368,7 +416,6 @@ public class TransmitFragment extends Fragment {
         if (qrCodes != null) {
             Log.d(Constants.APP_TAG, "Tx: Restarting transmission");
             qrCodeIter = qrCodes.iterator();
-            count = 0;
         }
     }
     /**
