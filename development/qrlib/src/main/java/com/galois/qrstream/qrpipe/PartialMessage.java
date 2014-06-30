@@ -23,9 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 import com.google.zxing.Result;
 import com.google.zxing.ResultMetadataType;
-import com.google.zxing.client.result.ParsedResult;
-import com.google.zxing.client.result.ParsedResultType;
-import com.google.zxing.client.result.ResultParser;
 
 /**
  * Stores data from a single decoded QR code that's part of a larger sequence of QR codes.
@@ -127,13 +124,6 @@ public final class PartialMessage {
     // Might happen if we're trying to read a non-streaming type of QR code.
     Map<ResultMetadataType,?> meta = decodedQR.getResultMetadata();
     if (meta == null || !meta.containsKey(ResultMetadataType.BYTE_SEGMENTS)) {
-      return null;
-    }
-
-    // Expect any streaming QR codes to have this type
-    // All other qr codes have to be handled in a different way
-    ParsedResult result = ResultParser.parseResult(decodedQR);
-    if (result.getType() != ParsedResultType.TEXT) {
       return null;
     }
 
