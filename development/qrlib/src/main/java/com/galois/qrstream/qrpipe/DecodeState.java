@@ -26,12 +26,12 @@ import com.google.common.primitives.Ints;
 /**
  * Used to mark the progress of decoding stream of QR codes.
  */
-public class DecodeState {
+public final class DecodeState {
 
   private final BitSet data;
   private final int capacity;
   private int lastChunkId;
-  
+
 	// True if transmission of QR codes stops before entire message received
 	private boolean hasTransmissionFailed;
 

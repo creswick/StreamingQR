@@ -30,7 +30,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.List;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -41,7 +40,6 @@ import com.google.common.base.Charsets;
 import com.google.zxing.LuminanceSource;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.Result;
-import com.google.zxing.ResultMetadataType;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.client.j2se.ImageReader;
 
@@ -53,6 +51,9 @@ public class ReceiveTest {
   private static final IProgress NULL_MONITOR = new IProgress() {
     @Override
     public void changeState(DecodeState state) {
+    }
+    @Override
+    public void drawFinderPoints(float[] pts){
     }};
 
   @BeforeClass
@@ -157,15 +158,10 @@ public class ReceiveTest {
 
     // Decode the image
     Result result = decodeAndCheckValidQR(filename);
-    PartialMessage m = null;
-    try {
-      m = PartialMessage.createFromResult(result, Integer.MAX_VALUE);
-    } catch (ReceiveException e) {
-      fail("QR code is not formatted for QRLib.");
-    }
+    PartialMessage m = PartialMessage.createFromResult(result, Integer.MAX_VALUE);
 
     // Expect payload to match 'expectedText' and only one QR code in sequence
-    assertNotNull("Message should parse", m);
+    assertNotNull("Expected QR code to be formatted for QRLib", m);
     assertEquals("Should only have 1 chunk" , 1, m.getTotalChunks());
     assertEquals("Unexpected chunkId" , 1, m.getChunkId());
     String actualText = new String (m.getPayload(), Charsets.ISO_8859_1);
@@ -192,15 +188,10 @@ public class ReceiveTest {
     BufferedImage b = UtilsTest.toBufferedImage(encodedQRImage);
     LuminanceSource lumSrc = new BufferedImageLuminanceSource(b);
     Result result = decodeAndCheckValidQR(lumSrc, null);
-    PartialMessage m = null;
-    try {
-      m = PartialMessage.createFromResult(result, Integer.MAX_VALUE);
-    } catch (ReceiveException e) {
-      fail("QR code is not formatted for QRLib.");
-    }
+    PartialMessage m = PartialMessage.createFromResult(result, Integer.MAX_VALUE);
 
     // Expect this small input will generate and decode a single QR code.
-    assertNotNull("Message should parse", m);
+    assertNotNull("Expected QR code to be formatted for QRLib", m);
     assertEquals("Should only have 1 chunk" , 1, m.getTotalChunks());
     assertEquals("Unexpected chunkId" , 1, m.getChunkId());
     assertArrayEquals("Original input does not match decoded result",

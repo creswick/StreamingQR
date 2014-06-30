@@ -20,7 +20,7 @@ package com.galois.qrstream.qrpipe;
  * Covers the range of exceptions which may occur when
  * receiving images and decoding the QR codes within them.
  */
-public class ReceiveException extends Exception {
+public final class ReceiveException extends Exception {
 
   /**
    * Compiler-generated ID. If file undergoes structural

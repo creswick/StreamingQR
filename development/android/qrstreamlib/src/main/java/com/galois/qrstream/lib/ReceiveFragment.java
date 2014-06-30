@@ -31,10 +31,8 @@ import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View.OnClickListener;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -54,8 +52,6 @@ import java.io.IOException;
  */
 public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback {
 
-    // Need static references for handler to process camera messages
-    // off the UI thread.
     private Camera camera;
 
     private SurfaceView camera_window;
@@ -65,13 +61,15 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private TextView progressText;
     private View statusFooter;
     private View statusHeader;
-    private ImageButton progressButton;
 
     private DecodeThread decodeThread;
     private Activity activity;
 
     // Help QRlib manage the camera preview requests
     private CameraManager cameraManager;
+
+    // Helps manage drawing qr finder points
+    private QRFoundPointsView cameraOverlay;
 
     // Used to show cancellation message on UI thread
     // The dialog is setup in onCreateView since fragment context is available
@@ -85,6 +83,33 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             }
         }
     };
+
+    private static final class DrawFinderPointsRunnable implements Runnable {
+        private final float[] points;
+        private QRFoundPointsView cameraOverlay;
+
+        public DrawFinderPointsRunnable(QRFoundPointsView cameraOverlay) {
+            this.points = new float[0];
+            this.cameraOverlay = cameraOverlay;
+
+        }
+        public DrawFinderPointsRunnable(@NotNull float[] points, QRFoundPointsView cameraOverlay) {
+            if (points.length % 2 != 0) {
+                throw new IllegalArgumentException("Expected QR finder points to have even length");
+            }
+            this.points = points.clone();
+            this.cameraOverlay = cameraOverlay;
+        }
+        public void run() {
+            if (points.length > 0) {
+                cameraOverlay.setPoints(points);
+                cameraOverlay.setVisibility(View.VISIBLE);
+            }else{
+                cameraOverlay.setVisibility(View.INVISIBLE);
+            }
+            cameraOverlay.invalidate();
+        }
+    }
 
     /**
      * Handler to process progress updates from the IProgress implementation.
@@ -105,21 +130,40 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         private TextView progressText;
         private View statusFooter;
         private View statusHeader;
+        private QRFoundPointsView cameraOverlay;
+        private boolean isCameraOn = false;
 
-        public void setupUi(TorrentBar tb, TextView pt, View statusHeader, View statusFooter) {
+        public void setCameraOn(boolean isCameraOn) {
+            this.isCameraOn = isCameraOn;
+        }
+
+        public void setupUi(TorrentBar tb, TextView pt,
+                            View statusHeader, View statusFooter,
+                            QRFoundPointsView cameraOverlay) {
             this.torrentBar = tb;
             this.progressText = pt;
             this.statusHeader = statusHeader;
             this.statusFooter = statusFooter;
+            this.cameraOverlay = cameraOverlay;
         }
 
         @Override
         public void handleMessage(Message msg) {
+            final Bundle params = msg.getData();
+
             if (msg.what == R.id.progress_update) {
-                final Bundle params = msg.getData();
                 State state = (State) params.getSerializable("state");
                 Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage " + state);
                 dispatchState(params, state);
+            } else if (msg.what == R.id.draw_qr_points) {
+                float[] points = params.getFloatArray("points");
+                Log.d(Constants.APP_TAG, "DisplayUpdate.handleMessage, draw_qr_points");
+                Log.d(Constants.APP_TAG, "draw_qr_points: pts length=" + points.length);
+                if (isCameraOn) {
+                    this.post(new DrawFinderPointsRunnable(points, cameraOverlay));
+                }else{
+                    this.post(new DrawFinderPointsRunnable(cameraOverlay));
+                }
             } else {
                 Log.w(Constants.APP_TAG, "displayUpdate handler received unknown request");
             }
@@ -128,10 +172,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         private void dispatchState(final Bundle params, State state) {
             switch (state) {
                 case Fail:
-                    // Add a slight delay so messages from this handler can
-                    // be removed when onPause() but also allow user to see them
-                    // whenever cancel button is pressed.
-                    this.postDelayed(runShowRxFailedDialog, 100);
+                    this.post(runShowRxFailedDialog);
                     torrentBar.reset();
                     break;
                 case Intermediate:
@@ -208,15 +249,17 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         camera_window = (SurfaceView)rootLayout.findViewById(R.id.camera_window);
         camera_window_params = camera_window.getLayoutParams();
         setCameraWindowCallback();
+        cameraOverlay = (QRFoundPointsView) rootView.findViewById(R.id.camera_overlay);
         torrentBar = (TorrentBar) rootView.findViewById(R.id.progressbar);
         progressText = (TextView) rootView.findViewById(R.id.progresstext);
         statusHeader = (ViewGroup)rootLayout.findViewById(R.id.status_overlay);
         statusFooter = (ViewGroup)rootLayout.findViewById(R.id.status_overlay_footer);
         Button cancelButton = (Button)rootLayout.findViewById(R.id.cancel_button);
         cancelButton.setOnClickListener(cancelListener);
-        displayUpdate.setupUi(torrentBar, progressText, statusHeader, statusFooter);
+        displayUpdate.setupUi(torrentBar, progressText, statusHeader, statusFooter, cameraOverlay);
         ImageButton progressCancelButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
         progressCancelButton.setOnClickListener(cancelListener);
+
 
         // Setup the alert dialog in case we need it to report Rx errors to the user.
         alertDialog = new AlertDialog.Builder(activity).
@@ -275,8 +318,12 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
         // Remove the camera preview surface from display, so that
         // the surface will get destroyed and camera will get released
-        cameraManager.stopRunning();
+        if (cameraManager != null) {
+            // Expect cameraManager to be null only if camera failed to initialize
+            cameraManager.stopRunning();
+        }
         camera_window.setVisibility(View.INVISIBLE);
+        cameraOverlay.setVisibility(View.INVISIBLE);
         super.onPause();
     }
 
@@ -286,6 +333,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         // Setting the visibility here will cause the surfaceCreated callback
         // to be invoked prompting the camera to be acquired and DecodeThread to start
         camera_window.setVisibility(View.VISIBLE);
+        cameraOverlay.setVisibility(View.VISIBLE);
         super.onResume();
     }
 
@@ -377,17 +425,23 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         try {
             Log.d(Constants.APP_TAG, "initCamera: Trying to open and initialize camera");
             openCamera(cameraId);
-            camera.setDisplayOrientation(defaultCameraOrientation(cameraId));
+            int rotation = defaultCameraOrientation(cameraId);
+            camera.setDisplayOrientation(rotation);
             camera.setPreviewDisplay(surfaceHolder);
             camera.startPreview();
+
+            cameraOverlay.setCameraParameters(camera.getParameters().getPreviewSize(), rotation);
+            displayUpdate.setCameraOn(true);
 
         } catch (RuntimeException re) {
             // TODO handle this more elegantly.
             Toast.makeText(getActivity(), "Unable to open camera", Toast.LENGTH_LONG).show();
             Log.e(Constants.APP_TAG, "Could not open camera. "+re);
             re.printStackTrace();
+            displayUpdate.setCameraOn(false);
         } catch (IOException e) {
             e.printStackTrace();
+            displayUpdate.setCameraOn(false);
         }
     }
     private CameraHandlerThread mThread = null;
@@ -468,10 +522,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             return;
         }
 
+        // Alerts DrawFinderPointsRunnable that camera is not on and no points can be shown
+        displayUpdate.setCameraOn(false);
+
         // Wait for camera to handle queue of PreviewCallback requests
         // so that the camera can released safely
         mThread.quit(); // should this be interrupted()? (Investigate if we see issues relating to camera shutdown / cleanup?)
         mThread = null;
+
 
         camera.stopPreview();
         camera.release();

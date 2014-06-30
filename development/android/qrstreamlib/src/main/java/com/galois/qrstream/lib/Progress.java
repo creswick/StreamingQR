@@ -61,4 +61,14 @@ public class Progress implements IProgress {
         stateChange.setData(changeMsg);
         stateChange.sendToTarget();
     }
+
+    @Override
+    public void drawFinderPoints(@NotNull float[] pts) {
+        Bundle updateView = new Bundle();
+        updateView.putFloatArray("points", pts);
+
+        Message updateViewMessage = handler.obtainMessage(R.id.draw_qr_points);
+        updateViewMessage.setData(updateView);
+        updateViewMessage.sendToTarget();
+    }
 }

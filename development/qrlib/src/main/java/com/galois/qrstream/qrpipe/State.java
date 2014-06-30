@@ -20,5 +20,6 @@ public enum State {
 	Initial,
 	Intermediate,
 	Final,
-	Fail
+	Fail,
+	Invalid
 }
