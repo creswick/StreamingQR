@@ -138,6 +138,9 @@ public class SerializableRoundTripTest {
 //          + state.getData().cardinality()
 //          +"/"+state.getCapacity());
     }
+    @Override
+    public void drawFinderPoints(float[] pts){
+    }
   };
 
   public static Collection<TestSerializable> generate(int count) {

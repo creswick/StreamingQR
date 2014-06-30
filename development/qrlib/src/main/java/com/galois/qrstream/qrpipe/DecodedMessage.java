@@ -27,7 +27,7 @@ import com.google.common.io.ByteStreams;
  * Stores message from sequence of decoded QR codes. Note, the initial
  * capacity is unknown until first QR code is read.
  */
-public class DecodedMessage {
+public final class DecodedMessage {
   // Container for saving received data.
   // Using SortedMap so that message can be assembled in order.
   private final SortedMap<Integer, PartialMessage> receivedData;
@@ -70,7 +70,7 @@ public class DecodedMessage {
   /**
    * Mark transmission failure. Expect no more QR codes to decode.
    */
-  public void setFailedDecoding() {
+  protected void setFailedDecoding() {
     DecodeState failed;
 
     // Possible for transmission to fail before decodeState is initialized.
@@ -90,7 +90,10 @@ public class DecodedMessage {
    * the first QR code encountered.
    * @return The {@code State} indicating whether the whole message has been received.
    */
-  public State saveMessageChunk(PartialMessage msgPart) {
+  protected State saveMessageChunk(PartialMessage msgPart) {
+    if (msgPart == null) {
+      return State.Fail;
+    }
 
     // Set up message container if this is the first QR code encountered.
     if (decodeState == null) {
@@ -101,10 +104,12 @@ public class DecodedMessage {
     if (!receivedData.containsKey(msgPart.getChunkId())) {
       receivedData.put(msgPart.getChunkId(), msgPart);
       decodeState.markDataReceived(msgPart.getChunkId());
+      // Only update progress indicator when decoding is successful
+      // and we haven't seen this part of the message before.
       decodeProgress.changeState(decodeState);
-      System.out.println("saveMessageChunk: Saving chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
+      System.out.println("QRLib: Saving chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
     }else{
-      System.out.println("saveMessageChunk: Already saved chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
+      System.out.println("QRLib: Already saved chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
     }
     return decodeState.getState();
   }

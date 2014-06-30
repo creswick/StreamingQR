@@ -187,7 +187,8 @@ public class TransmitTest {
         } catch (IOException e1) {
           fail("Unable to write QR code to temporary file.");
         }
-      } catch (ReceiveException e) {
+      }
+      if (fromChunk == null) {
         fail("QR code is not formatted for QRLib.");
       }
       if (detectionErrors == 0) {

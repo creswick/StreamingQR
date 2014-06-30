@@ -21,8 +21,12 @@ import java.io.ObjectInputStream;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import com.galois.qrstream.image.YuvImage;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Floats;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.DecodeHintType;
@@ -31,6 +35,7 @@ import com.google.zxing.MultiFormatReader;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.Result;
+import com.google.zxing.ResultPoint;
 import com.google.zxing.common.HybridBinarizer;
 
 /**
@@ -42,7 +47,7 @@ import com.google.zxing.common.HybridBinarizer;
  *  - density of QR code
  *  - others?
  */
-public class Receive {
+public final class Receive {
 
   /* Dimension of received images */
   private final int height;
@@ -50,9 +55,12 @@ public class Receive {
 
   /* Track progress of decoding */
   private final IProgress progress;
-  
+
   /* Maximum number of chunks to accept in a QR stream. */
   private final int maxChunks;
+
+  /* Useful to communicate no QR codes found */
+  private static final Iterable<Result> NO_RESULTS = ImmutableList.of();
 
   /**
    * Initializes receiver of QR code stream.
@@ -70,7 +78,7 @@ public class Receive {
    * @param height The height of the received images.
    * @param width The width of the received images.
    * @param maxChunks The maximum number of QR code chunks to accept. Tune this
-   *                  parameter based on the memory available to your receiver. 
+   *                  parameter based on the memory available to your receiver.
    * @param progress The object used in tracking the progress of the message
    * transmission.
    */
@@ -79,8 +87,8 @@ public class Receive {
     this.width = width;
     this.progress = progress;
     this.maxChunks = maxChunks;
-  }  
-  
+  }
+
   /**
    * Decode an object from an incoming stream of QR codes.
    *
@@ -134,21 +142,31 @@ public class Receive {
         message.setFailedDecoding();
         throw new ReceiveException("Transmission failed to receive a valid frame from the camera");
       }
+      // Decode the QR codes from within the image
+      Iterable<Result> res;
       try {
-        Result res = decodeSingleQRCode(img.getYuvData());
-        State s = saveMessageAndUpdateProgress(res, message);
-
-        if(s == State.Final) {
-          System.out.println("decodeQRCodes: Hit final state");
-          break;
-        }
+        res = ImmutableList.of(decodeSingleQRCode(img.getYuvData()));
+        displayQRFinderPoints(res);
       } catch (NotFoundException e) {
         // Unable to detect QR in this image, try next one.
+        displayQRFinderPoints(NO_RESULTS);
         continue;
-      } catch (ReceiveException e) {
-        // Encountered invalid QR code during parsing, try next image.
+      }
+      // For the found QR codes, check that they are properly formatted
+      // streaming QR codes, and then save each of their message chunks.
+      State s = saveMessageAndUpdateProgress(res, message);
+
+      if(s == State.Fail) {
+        // All of the QR codes in `res` are not valid streaming QR codes
+        displayQRFinderPoints(NO_RESULTS);
         // TODO treat the QR code as a single QR code here, instead of a stream?
+        // Would only want to treat as single QR code if no other frames
+        // from stream have already decoded.  Then break out of loop if found valid
+        // normal QR code.
         continue;
+      }
+      if(s == State.Final) {
+          break;
       }
     }
     // Either message complete or received partial message
@@ -176,15 +194,56 @@ public class Receive {
    * Identify the chunk of data decoded from the QR code and
    * add its message to the collection of already received chunks.
    *
-   * @param decodedQR The result of decoding QR code from an image
+   * @param decodedQR The result of decoding QR code(s) from an image
    * @param receivedData The data decoded from prior images.
    * @return The {@code State} indicating whether the whole message has been received.
-   * @throws ReceiveException if the decoded QR code has an invalid format
+   *         If State.Invalid  is returned, that indicates that the qr codes were
+   *         not formatted properly for this streaming QR library.
    */
-  protected State saveMessageAndUpdateProgress(Result decodedQR, DecodedMessage receivedData)
-      throws ReceiveException {
-    PartialMessage messagePart = PartialMessage.createFromResult(decodedQR, maxChunks);
-    return receivedData.saveMessageChunk(messagePart);
+  protected State saveMessageAndUpdateProgress(Iterable<Result> decodedQR,
+                                               DecodedMessage receivedData){
+    State state = State.Invalid;
+
+    for (Result qr : decodedQR ) {
+
+      // Detect whether found QR code is properly formatted streaming QR code
+      // If it is valid, then save it's portion of the message. Otherwise,
+      // we ignore it and move on to the next detected QR code.
+      PartialMessage messagePart =
+          PartialMessage.createFromResult(qr, maxChunks);
+      if (messagePart != null) {
+        State s = receivedData.saveMessageChunk(messagePart);
+        if (state != s) {
+          state = s;
+        }
+      }
+      // No need to continue with other QR codes if message complete
+      if (state == State.Final) {
+        break;
+      }
+    }
+    return state;
+  }
+
+  /**
+   * Update IProgress with QR finder points that were
+   * found during the QR decoding. It orders the (x,y)
+   * coordinates as follows: [x1,y2,x2,y2...xi,yi...].
+   */
+  private void displayQRFinderPoints(Iterable<Result> decodedQRCodes) {
+    List<Float> list = Lists.newArrayList();
+    for (Result qr : decodedQRCodes) {
+      ResultPoint[] points = qr.getResultPoints();
+      if(points != null) {
+        for (ResultPoint point : points) {
+          if (point != null) {
+            list.add(point.getX());
+            list.add(point.getY());
+          }
+        }
+      }
+    }
+    progress.drawFinderPoints(Floats.toArray(list));
   }
 
   /**
@@ -229,7 +288,7 @@ public class Receive {
     return new MultiFormatReader().decode(bmap, hints);
   }
 
-  /**
+  /*
    * Convert luminance image to ZXing's BinaryBitmap type.
    * The ZXing decoders require input as BinaryBitmap.
    *

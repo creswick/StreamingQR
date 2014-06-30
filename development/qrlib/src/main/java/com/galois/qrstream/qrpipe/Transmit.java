@@ -44,7 +44,7 @@ import com.google.zxing.qrcode.decoder.Version;
  *  - density of QR code (QR version 1-40, not currently exposed in API)
  *  - others?
  */
-public class Transmit {
+public final class Transmit {
 
   /* Dimension of transmitted QR code images */
   private final int imgHeight;

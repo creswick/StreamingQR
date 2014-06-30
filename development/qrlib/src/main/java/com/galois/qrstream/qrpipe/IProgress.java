@@ -20,4 +20,5 @@ import com.galois.qrstream.qrpipe.DecodeState;
 
 public interface IProgress {
   void changeState(DecodeState state);
+  void drawFinderPoints(float[] pts);
 }

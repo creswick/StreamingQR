@@ -5,14 +5,26 @@
     android:layout_height="fill_parent"
     android:layout_width="fill_parent" >
 
+    <FrameLayout
+        android:id="@+id/camera_frame_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-    <SurfaceView
-        android:id="@+id/camera_window"
-        android:gravity="center_horizontal"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:tag="camera_window"
-        />
+        <SurfaceView
+            android:id="@+id/camera_window"
+            android:gravity="center_horizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:tag="camera_window"
+            />
+
+        <com.galois.qrstream.lib.QRFoundPointsView
+            android:id="@+id/camera_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"/>
+
+    </FrameLayout>
 
     <RelativeLayout android:id="@+id/status_overlay_footer"
         android:layout_width="fill_parent"
@@ -20,8 +32,7 @@
         android:layout_marginTop="5dp"
         android:alpha="0.7"
         android:orientation="horizontal"
-        android:layout_alignBottom="@id/camera_window"
-        >
+        android:layout_alignBottom="@id/camera_frame_layout">
 
         <Button
             android:id="@+id/cancel_button"
@@ -30,8 +41,7 @@
             android:layout_centerInParent="true"
             android:text="@string/cancel"
             />
-
-    </RelativeLayout>>
+    </RelativeLayout>
 
     <LinearLayout android:id="@+id/status_overlay"
         android:layout_width="match_parent"
