@@ -237,6 +237,9 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
         if(currentFragment == transmitFragment) {
             transmitFragment.toggleTransmission();
         }
+        if(currentFragment == receiveFragment) {
+            receiveFragment.autoFocus();
+        }
         return false;
     }
 
