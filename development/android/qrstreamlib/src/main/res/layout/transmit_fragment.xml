@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_marginBottom="5dp"
-        android:text="Send"
+        android:text="@string/transmit_sendButtonTxt"
         android:tag="send"
         />
 
