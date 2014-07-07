@@ -96,7 +96,7 @@ public class TransmitTest {
   }
 
   @Test
-  public void testSquareDimentions() throws TransmitException {
+  public void testSquareDimensions() throws TransmitException {
     Transmit rectangleTransmit = new Transmit(100,200);
     Version qrVersion = Version.getVersionForNumber(1);
     ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
@@ -106,7 +106,7 @@ public class TransmitTest {
       rectangleTransmit.encodeQRCodes(data, qrVersion, ecLevel);
 
     BitmapImage image = qrCodes.iterator().next();
-    assertEquals("Image dimentions are not square", true, image.getWidth() == image.getHeight() );
+    assertEquals("Image dimensions are not square", true, image.getWidth() == image.getHeight() );
   }
 
   /**
