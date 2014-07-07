@@ -24,6 +24,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.galois.qrstream.image.YuvImage;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -63,6 +67,10 @@ public final class Receive {
 
   /* Useful to communicate no QR codes found */
   private static final Iterable<Result> NO_RESULTS = ImmutableList.of();
+
+  // Logging utility for Rx
+  private final Logger logger = LoggerFactory.getLogger(Log.LOG_NAME);
+
 
   /**
    * Initializes receiver of QR code stream.
@@ -140,7 +148,7 @@ public final class Receive {
       YuvImage img = frameManager.captureFrameFromCamera();
       if (img == null) {
         // Communicate failed state to progress indicator.
-        System.out.println("decodeQRCodes: received invalid frame (null)");
+        logger.debug("decodeQRCodes: received invalid frame (null)");
         message.setFailedDecoding();
         throw new ReceiveException("Transmission failed to receive a valid frame from the camera");
       }

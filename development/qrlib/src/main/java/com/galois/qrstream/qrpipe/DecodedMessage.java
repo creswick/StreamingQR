@@ -20,6 +20,9 @@ import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 
@@ -35,6 +38,8 @@ public final class DecodedMessage {
   // Track progress of decoding
   private final IProgress decodeProgress;
   private DecodeState decodeState;
+
+  private final Logger logger = LoggerFactory.getLogger(Log.LOG_NAME);
 
   public DecodedMessage (IProgress progress) {
     // Initialize 'decodeState' upon decoding first QR code.
@@ -107,9 +112,9 @@ public final class DecodedMessage {
       // Only update progress indicator when decoding is successful
       // and we haven't seen this part of the message before.
       decodeProgress.changeState(decodeState);
-      System.out.println("QRLib: Saving chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
+      logger.debug("QRLib: Saving chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
     }else{
-      System.out.println("QRLib: Already saved chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
+      logger.debug("QRLib: Already saved chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
     }
     return decodeState.getState();
   }
