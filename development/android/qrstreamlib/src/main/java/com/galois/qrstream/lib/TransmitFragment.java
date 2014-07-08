@@ -52,9 +52,6 @@ import com.galois.qrstream.image.BitmapImage;
  */
 public class TransmitFragment extends Fragment {
 
-    // Allows easy toggling of background color for debugging frame sizes
-    private final boolean DEBUG_COLOR = false;
-
     // When true, place the labels after the QR codes, otherwise place before image.
     // Trying to make it easier to play around with some of the layouts.
     private final boolean IS_LABEL_AFTER = true;
@@ -146,10 +143,6 @@ public class TransmitFragment extends Fragment {
         int rowCount = numQRCodesDisplayed / columnCount;
 
         send_window = (TableLayout) rootView.findViewById(R.id.send_window);
-        // TODO Remove after satisfied with layout
-        if (DEBUG_COLOR) {
-            send_window.setBackgroundColor(Color.CYAN);
-        }
 
         // Setup the layout parameters for each row and column in the table.
         // A row in a table must use the layout parameters from its parent, i.e. TableLayout params
@@ -183,22 +176,6 @@ public class TransmitFragment extends Fragment {
 
                 // Create the view where each of the QR codes will get displayed
                 ImageView imgView = new ImageView(getActivity());
-                // TODO Remove after satisfied with layout
-                if (DEBUG_COLOR) {
-                    if (r % 4 == 3) {
-                        if (c == 1) {
-                            imgView.setBackgroundColor(Color.BLUE);
-                        } else {
-                            imgView.setBackgroundColor(Color.LTGRAY);
-                        }
-                    } else {
-                        if (c == 1) {
-                            imgView.setBackgroundColor(Color.LTGRAY);
-                        } else {
-                            imgView.setBackgroundColor(Color.BLUE);
-                        }
-                    }
-                }
 
                 // Items in a TableRow must use the layout parameters from its parent, i.e. TableRow params
                 imgView.setLayoutParams(tableColumnLayout);
