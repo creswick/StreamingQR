@@ -224,6 +224,42 @@ public class ReceiveTest {
     }
     return result;
   }
+  private Iterable<Result> decodeMultipleAndCheckValidQR(LuminanceSource img, String filename) {
+    Iterable<Result> results = null;
+    try {
+      results = Receive.decodeMultiple(img);
+
+      assertNotNull("QR result should not be null", results);
+      Iterator<Result> resIter = results.iterator();
+      assertTrue("QR has at least one result", resIter.hasNext());
+    } catch (NotFoundException e) {
+      if (filename != null) {
+        fail("Unable to find QR in image, " + filename +". "+ e.getMessage());
+      }else{
+        fail("Unable to find QR in image. " + e.getMessage());
+      }
+    }
+    return results;
+  }
+
+  @Test
+  public void testDecodeTwoQRCodesSameImage() throws ReceiveException {
+
+    String expectAll = "qr_4Of4.png";
+
+    // Use receive to decode this qr code:
+    Receive receive = new Receive(0, 0, NULL_MONITOR);
+
+    // The received data and track transmission status.
+    DecodedMessage message = new DecodedMessage(NULL_MONITOR);
+
+    LuminanceSource img = getLuminanceImgAndCheckNotNull(expectAll);
+    Iterable <Result> results = decodeMultipleAndCheckValidQR(img,expectAll);
+    State s = receive.saveMessageAndUpdateProgress(results, message);
+
+    assertTrue("Expected to be in Final state.", s == State.Final);
+    System.out.println("MESSAGE=" + message.toString());
+  }
 
   /**
    * Opens a test file in resources directory and converts it to ZXing's

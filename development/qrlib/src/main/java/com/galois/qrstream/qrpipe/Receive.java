@@ -18,6 +18,7 @@ package com.galois.qrstream.qrpipe;
 
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,6 +38,7 @@ import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.Result;
 import com.google.zxing.ResultPoint;
 import com.google.zxing.common.HybridBinarizer;
+import com.google.zxing.multi.qrcode.QRCodeMultiReader;
 
 /**
  * Class provides API for interfacing with Android application. It
@@ -145,7 +147,7 @@ public final class Receive {
       // Decode the QR codes from within the image
       Iterable<Result> res;
       try {
-        res = ImmutableList.of(decodeSingleQRCode(img.getYuvData()));
+        res = decodeMultipleQRCode(img.getYuvData());
         displayQRFinderPoints(res);
       } catch (NotFoundException e) {
         // Unable to detect QR in this image, try next one.
@@ -189,7 +191,17 @@ public final class Receive {
         width, height, 0, 0, width, height, false);
     return decodeSingle(src);
   }
-
+  /**
+   * Detect and decode QR codes from an image.
+   * @param yuvData The YUV image data containing a multiple QR codes.
+   * @return The collection of detected QR codes (with {@code Result} type).
+   * @throws ReceiveException If no QR code has been detected or decoding failed.
+   */
+  protected Iterable<Result> decodeMultipleQRCode(byte[] yuvData) throws NotFoundException {
+    LuminanceSource src = new PlanarYUVLuminanceSource(yuvData,
+        width, height, 0, 0, width, height, false);
+    return decodeMultiple(src);
+  }
   /**
    * Identify the chunk of data decoded from the QR code and
    * add its message to the collection of already received chunks.
@@ -288,7 +300,36 @@ public final class Receive {
     return new MultiFormatReader().decode(bmap, hints);
   }
 
-  /*
+  /**
+   * Detects and decode multiple QR codes from a single luminance image.
+   * Collection of results may be empty if no QR codes were detected.
+   *
+   * @param lumSrc The luminance image containing QR codes to decode.
+   * @throws NotFoundException if there was problem detecting or decoding QR
+   * code from image {@source lumSrc}.
+   */
+  protected static Iterable<Result> decodeMultiple(LuminanceSource lumSrc) throws NotFoundException {
+    return decodeMultiple(lumSrc, Receive.getDecodeHints());
+  }
+
+
+  /**
+   * Detects and decode multiple QR codes from a single luminance image.
+   * Collection of results may be empty if no QR codes were detected.
+   *
+   * @param lumSrc The luminance image containing QR codes to decode.
+   * @param hints Hints to help the ZXing barcode reader find the QR code easier
+   * @throws NotFoundException if there was problem detecting or decoding QR
+   * code from image {@source lumSrc}.
+   */
+  protected static Iterable<Result> decodeMultiple(LuminanceSource lumSrc,
+      Map<DecodeHintType,?> hints) throws NotFoundException {
+     BinaryBitmap bmap = toBinaryBitmap(lumSrc);
+     Result rawResult[] = new QRCodeMultiReader().decodeMultiple(bmap, hints);
+     return Arrays.asList(rawResult);
+   }
+
+  /**
    * Convert luminance image to ZXing's BinaryBitmap type.
    * The ZXing decoders require input as BinaryBitmap.
    *
