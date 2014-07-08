@@ -419,7 +419,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         } catch (RuntimeException re) {
             // TODO handle this more elegantly.
             Toast.makeText(getActivity(), "Unable to open camera", Toast.LENGTH_LONG).show();
-            Log.e(Constants.APP_TAG, "Could not open camera. "+re);
+            Log.e(Constants.APP_TAG, "Could not open camera. " + re);
             re.printStackTrace();
             displayUpdate.setCameraOn(false);
         } catch (IOException e) {
@@ -554,6 +554,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         return result;
     }
 
+    public void autoFocus() {
+        camera.autoFocus(new Camera.AutoFocusCallback() {
+            @Override
+            public void onAutoFocus(boolean success, Camera camera) {
+                // Do nothing. Let the user notice the image is in focus
+            }
+        });
+    }
     /*
      * Create a worker thread for decoding the preview frames
      * using the qrlib receiver.

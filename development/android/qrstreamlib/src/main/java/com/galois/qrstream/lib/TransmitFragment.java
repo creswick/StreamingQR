@@ -33,6 +33,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import java.util.Iterator;
@@ -52,6 +53,7 @@ public class TransmitFragment extends Fragment {
     private ImageView send_window;
     private Button sendButton;
     private Transmit transmitter;
+    private boolean transmitPaused;
 
     // Allows us to step through QR code transmission
     private Iterable<BitmapImage> qrCodes;
@@ -112,8 +114,8 @@ public class TransmitFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.transmit_fragment, container, false);
 
-        LinearLayout ll = (LinearLayout)rootView.findViewById(R.id.transmit_layout);
-        ll.setKeepScreenOn(true);
+        RelativeLayout rootLayout = (RelativeLayout)rootView.findViewById(R.id.transmit_layout);
+        rootLayout.setKeepScreenOn(true);
 
         send_window = (ImageView)rootView.findViewById(R.id.send_window);
         send_window.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
@@ -123,7 +125,8 @@ public class TransmitFragment extends Fragment {
                 if (transmitter == null) {
                     Log.d(Constants.APP_TAG, "onLayoutChange Transmitter created for width " +
                             send_window.getWidth() + " height " + send_window.getHeight());
-                    transmitter = new Transmit(send_window.getWidth(), send_window.getHeight());
+                    int size = Math.min(send_window.getWidth(), send_window.getHeight());
+                    transmitter = new Transmit(size, size);
                     sendJob();
                 }
             }
@@ -253,6 +256,7 @@ public class TransmitFragment extends Fragment {
     private void pauseTransmission() {
         handleFrameUpdate.removeCallbacks(runThroughFrames);
         sendButton.setText(getString(R.string.transmit_sendButtonTxt));
+        transmitPaused = true;
     }
     /*
      * Resume iterating through the QR codes
@@ -260,6 +264,18 @@ public class TransmitFragment extends Fragment {
     private void resumeTransmission() {
         sendButton.setText(getString(R.string.transmit_pauseButtonTxt));
         handleFrameUpdate.post(runThroughFrames);
+        transmitPaused = false;
+    }
+
+    /**
+     *  Start or Stop transmission
+     */
+    public void toggleTransmission() {
+        if(transmitPaused == true) {
+            resumeTransmission();
+        } else {
+            pauseTransmission();
+        }
     }
 
     private class CaptureClick implements View.OnClickListener {
