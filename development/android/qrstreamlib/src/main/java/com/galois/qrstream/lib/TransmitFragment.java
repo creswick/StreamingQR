@@ -253,6 +253,7 @@ public class TransmitFragment extends Fragment {
                     transmitter = new Transmit(smallerDimension, smallerDimension);
 
                     sendJob();
+                    Log.d(Constants.TIMING_TAG, "QR dimension: " + smallerDimension);
                 }
             }
         });
@@ -301,6 +302,11 @@ public class TransmitFragment extends Fragment {
             qrCodeIter = qrCodes.iterator();
             currentQR = null;
             Log.i(Constants.APP_TAG, "transmitData(), Successful creation of QR codes");
+
+            // Log some performance characteristics at start of job
+            logNewJob(title, bytes.length);
+            logUserSettings();
+
         } catch (TransmitException e) {
             Log.e(Constants.APP_TAG, e.getMessage());
         }
@@ -316,6 +322,9 @@ public class TransmitFragment extends Fragment {
         for (int i=0; i<numQRCodesDisplayed; i++) {
             currentQR = getNextFrame();
             insertFrame(currentQR);
+            if (i == 0) {
+                logTotalQRCodes(currentQR);
+            }
         }
     }
 
@@ -350,6 +359,19 @@ public class TransmitFragment extends Fragment {
         }
     }
 
+    private void logTotalQRCodes(BitmapImage qrCode) {
+        String chunkStr = qrCode.toString();
+        String description = "Total QR codes: ";
+
+        if (chunkStr.contains("of")) {
+            // peel off the total chunks from the end
+            String[] splitStr = chunkStr.split("of");
+            Log.d(Constants.TIMING_TAG, description + splitStr[1]);
+        } else {
+            // Otherwise there is only one chunk
+            Log.d(Constants.TIMING_TAG, description + chunkStr.substring("chunk ".length()));
+        }
+    }
     /**
      * Draw a frame containing QR codes to the phone. This pushes any other
      * images down to the next location in the view.
@@ -510,4 +532,33 @@ public class TransmitFragment extends Fragment {
         bmp.setPixels(pixels, 0, width, 0, 0, width, height);
         return bmp;
     }
+
+    // Output some of the user settings to the performance log
+    private void logUserSettings() {
+        //  Number of QR codes per frame
+        Log.d(Constants.TIMING_TAG, "Number QR codes per frame: " + numQRCodesDisplayed);
+
+        //  Time to display each frame
+        Log.d(Constants.TIMING_TAG, "Desired frame display time (ms): " + transmitInterval);
+
+        //  QR version and error correction level
+        Log.d(Constants.TIMING_TAG, "QR version:" +
+                settings.getString("qr_density", "10"));
+        Log.d(Constants.TIMING_TAG, "Error correction level: " +
+                settings.getString("error_correction", "L"));
+
+        // Note: Payload bytes per frame comes from QRlib (getPayloadMaxBytes)
+
+    }
+
+    // Output some of the job characteristics to the performance log
+    private void logNewJob(String jobTitle, int msgLength) {
+        String logNewJob = "New job starting";
+        if (!jobTitle.isEmpty()) {
+            logNewJob = logNewJob + ", title: " + jobTitle;
+        }
+        Log.d(Constants.TIMING_TAG, logNewJob);
+        Log.d(Constants.TIMING_TAG, "Message length (bytes): " + msgLength);
+    }
+
 }
