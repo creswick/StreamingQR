@@ -28,6 +28,7 @@ import android.os.HandlerThread;
 import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -237,6 +238,16 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
         rootLayout = (RelativeLayout)rootView.findViewById(R.id.receive_layout);
         rootLayout.setKeepScreenOn(true);
+
+        rootView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                autoFocus();
+                return false;
+            }
+        });
+
+
         /* remember the camera_window details for rebuilding later */
         camera_window = (SurfaceView)rootLayout.findViewById(R.id.camera_window);
         camera_window_params = camera_window.getLayoutParams();

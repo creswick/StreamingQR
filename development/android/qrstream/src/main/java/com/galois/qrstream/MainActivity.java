@@ -234,12 +234,8 @@ public class MainActivity extends CommonActivity implements View.OnTouchListener
 
     public boolean onTouch(View v, MotionEvent event) {
         showUI();
-        if(currentFragment == transmitFragment) {
-            transmitFragment.toggleTransmission();
-        }
-        if(currentFragment == receiveFragment) {
-            receiveFragment.autoFocus();
-        }
+        Log.d(Constants.APP_TAG, "Touch event, in fragment: "+currentFragment);
+
         return false;
     }
 

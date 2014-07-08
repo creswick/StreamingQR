@@ -26,6 +26,7 @@ import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Gravity;
@@ -139,6 +140,15 @@ public class TransmitFragment extends Fragment {
 
         LinearLayout rootLayout = (LinearLayout)rootView.findViewById(R.id.transmit_layout);
         rootLayout.setKeepScreenOn(true);
+
+        rootView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                   Log.d(Constants.APP_TAG, "Handling onTouch event in TransmitFragment");
+                   toggleTransmission();
+                   return false;
+                }
+            });
 
         // Determine the row and columns to display based on settings
         int columnCount = (numQRCodesDisplayed <= 2) ? 1 : 2;
