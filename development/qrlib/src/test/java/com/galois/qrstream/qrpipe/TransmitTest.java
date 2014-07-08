@@ -95,6 +95,20 @@ public class TransmitTest {
     testRoundTripWithNoBarcodeHint(expectedBytes);
   }
 
+  @Test
+  public void testSquareDimensions() throws TransmitException {
+    Transmit rectangleTransmit = new Transmit(100,200);
+    Version qrVersion = Version.getVersionForNumber(1);
+    ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
+
+    byte[] data = "Square".getBytes();
+    Iterable<BitmapImage> qrCodes =
+      rectangleTransmit.encodeQRCodes(data, qrVersion, ecLevel);
+
+    BitmapImage image = qrCodes.iterator().next();
+    assertEquals("Image dimensions are not square", true, image.getWidth() == image.getHeight() );
+  }
+
   /**
    * Check that ZXing will round trip the input bytes when we send
    * the hint that resulting encoded image contains only a pure QR code.
