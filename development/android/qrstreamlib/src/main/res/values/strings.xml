@@ -36,5 +36,9 @@
     <!-- Possible settings for number QR codes per frame -->
     <string name="preference_frame_population_low">1</string>
     <string name="preference_frame_population_med">2</string>
-    <string name="preference_frame_population_high">4</string>
+    <string name="preference_frame_population_high">6</string>
+
+    <!-- Settings: Toggle display of QR chunk labels -->
+    <string name="preference_title_chunk_labels">Display QR code labels</string>
+
 </resources>

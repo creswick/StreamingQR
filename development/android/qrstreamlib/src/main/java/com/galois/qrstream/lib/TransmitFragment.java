@@ -20,6 +20,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
@@ -27,14 +28,17 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Gravity;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
+import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 
 import java.util.Iterator;
 
@@ -49,8 +53,15 @@ import com.galois.qrstream.image.BitmapImage;
  */
 public class TransmitFragment extends Fragment {
 
-    private TextView dataTitle;
-    private ImageView send_window;
+    // When true, place the labels after the QR codes, otherwise place before image.
+    // Trying to make it easier to play around with some of the layouts.
+    private final boolean IS_LABEL_AFTER = true;
+
+    // User setting. When true, display QR chunkIds on screen,
+    // otherwise hide them to use more screen real estate for QR codes.
+    private boolean hasQRCodeLabels = true;
+
+    private TableLayout send_window;
     private Button sendButton;
     private Transmit transmitter;
     private boolean transmitPaused = true;
@@ -59,22 +70,31 @@ public class TransmitFragment extends Fragment {
     private Iterable<BitmapImage> qrCodes;
     private Iterator<BitmapImage> qrCodeIter;
     private BitmapImage currentQR;
-    private int count = 0;
 
     // Manage shared settings for application
     private SharedPreferences settings;
+    private int numQRCodesDisplayed = 1;
     private final OnSharedPreferenceChangeListener settingsChangeListener =
         new SharedPreferences.OnSharedPreferenceChangeListener() {
             @Override
             public void onSharedPreferenceChanged(SharedPreferences pref, String key) {
-                Log.i(Constants.APP_TAG, "Setting with key changed: " + key
-                        + " to value: " + pref.getString(key, "no default"));
-                if (key.equalsIgnoreCase("frame_time")) {
+                if (key.equalsIgnoreCase("display_labels")) {
+                    hasQRCodeLabels = pref.getBoolean(key, true);
+                    Log.i(Constants.APP_TAG, "new show QR code label value= " + hasQRCodeLabels);
+                } else if (key.equalsIgnoreCase("frame_time")) {
                     // Only the frame rate changed, no need to restart transmission
                     transmitInterval = Integer.parseInt(pref.getString(key, ""));
                     Log.i(Constants.APP_TAG, "new frame time =" + transmitInterval);
+                } else if (key.equalsIgnoreCase("frame_population")) {
+                    // Save display count so that we can populate the Tx with the
+                    // right number of QR codes. No need to restart transmission
+                    // since this will be handled onCreateView
+                    numQRCodesDisplayed = Integer.parseInt(pref.getString(key, ""));
+                    Log.i(Constants.APP_TAG, "new # of QR codes to display =" + numQRCodesDisplayed);
                 } else {
-                    // When remaining settings (qr_density, error_correction,frame_population)
+                    Log.i(Constants.APP_TAG, "Setting with key changed: " + key
+                            + " to value: " + pref.getString(key, "no default"));
+                    // When remaining settings (qr_density and error_correction)
                     // get updated, the transmission will need to be restarted.
                     sendJob();
                 }
@@ -87,7 +107,7 @@ public class TransmitFragment extends Fragment {
     private final Runnable runThroughFrames = new Runnable() {
         @Override
         public void run() {
-            nextFrame();
+            displayNextFrame();
             handleFrameUpdate.postDelayed(this,transmitInterval);
         }
     };
@@ -101,6 +121,9 @@ public class TransmitFragment extends Fragment {
 
         // Setup initial default interval since we have settings
         transmitInterval = Integer.parseInt(settings.getString("frame_time", ""));
+        numQRCodesDisplayed = Integer.parseInt(settings.getString("frame_population", "1"));
+        hasQRCodeLabels = settings.getBoolean("display_labels", true);
+
         super.onAttach(activity);
     }
 
@@ -114,25 +137,113 @@ public class TransmitFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.transmit_fragment, container, false);
 
-        RelativeLayout rootLayout = (RelativeLayout)rootView.findViewById(R.id.transmit_layout);
+        LinearLayout rootLayout = (LinearLayout)rootView.findViewById(R.id.transmit_layout);
         rootLayout.setKeepScreenOn(true);
 
-        send_window = (ImageView)rootView.findViewById(R.id.send_window);
+        // Determine the row and columns to display based on settings
+        int columnCount = (numQRCodesDisplayed <= 2) ? 1 : 2;
+        int rowCount = numQRCodesDisplayed / columnCount;
+
+        send_window = (TableLayout) rootView.findViewById(R.id.send_window);
+
+        // Setup the layout parameters for each row and column in the table.
+        // A row in a table must use the layout parameters from its parent, i.e. TableLayout params
+        TableLayout.LayoutParams tableRowLayout = new TableLayout.LayoutParams(
+                TableLayout.LayoutParams.MATCH_PARENT,
+                TableLayout.LayoutParams.MATCH_PARENT, 1.0f);
+
+        // Items in a TableRow must use the layout parameters from its parent, i.e. TableRow params
+        TableRow.LayoutParams tableColumnLayout = new TableRow.LayoutParams(
+                TableRow.LayoutParams.MATCH_PARENT,
+                TableRow.LayoutParams.MATCH_PARENT, 1.0f);
+
+        // Create placeholder views for each of the QR codes and labels too.
+        for (int r=1; r<=rowCount; r++) {
+            TableRow imgRow = new TableRow(getActivity());
+
+            // The default row layout will set the child width to MATCH_PARENT and
+            // the child height to WRAP_CONTENT. Default is okay for labels but will
+            // not stretch the images very well. Therefore set the layout for the image row only.
+            imgRow.setLayoutParams(tableRowLayout);
+            for (int c = 1; c <= columnCount; c++) {
+                // Add labels and image together into LinearLayout before adding to row
+                // Items in TableRow must use the layout parameters from its parent,
+                // i.e. TableRow params
+                LinearLayout colView = new LinearLayout(getActivity());
+                colView.setLayoutParams(tableColumnLayout);
+                colView.setOrientation(LinearLayout.VERTICAL);
+
+                // Create the view where each of the QR codes will get displayed
+                ImageView imgView = new ImageView(getActivity());
+
+                // Create the text view for each of the QR code labels
+                if (hasQRCodeLabels) {
+                    TextView textView = new TextView(getActivity());
+                    textView.setGravity(Gravity.CENTER_HORIZONTAL);
+                    // Give more space to the QR code than the labels
+                    textView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
+                            LayoutParams.WRAP_CONTENT, 0.1f));
+                    imgView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
+                            LayoutParams.MATCH_PARENT, 0.9f));
+
+                    if (IS_LABEL_AFTER) {
+                        colView.addView(imgView);
+                        colView.addView(textView);
+                    }else{
+                        colView.addView(textView);
+                        colView.addView(imgView);
+                    }
+                }else{
+                    imgView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
+                            LayoutParams.MATCH_PARENT));
+                    colView.addView(imgView);
+                }
+
+                imgRow.addView(colView);
+            }
+            send_window.addView(imgRow);
+        }
+
         send_window.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom,
                                        int oldLeft, int oldTop, int oldRight, int oldBottom) {
                 if (transmitter == null) {
+
                     Log.d(Constants.APP_TAG, "onLayoutChange Transmitter created for width " +
                             send_window.getWidth() + " height " + send_window.getHeight());
-                    int size = Math.min(send_window.getWidth(), send_window.getHeight());
-                    transmitter = new Transmit(size, size);
+
+                    // Calculate the image height and width given the row and column count.
+                    // The numRows we divide by two since we added rows for the image labels.
+                    int numCols = 1;
+                    int numRows = send_window.getChildCount();
+
+                    if (numRows >= 1) {
+                        TableRow r = (TableRow) send_window.getChildAt(0);
+                        numCols = r.getChildCount();
+                    }
+                    Log.i(Constants.APP_TAG, "onLayoutChange: numRows= " + numRows +
+                                             " numCols= " + numCols);
+
+                    int imageWidth = send_window.getWidth() / numCols;
+                    int imageHeight = send_window.getHeight();
+                    if (numRows > 1) {
+                        imageHeight = imageHeight / numRows;
+                    }
+                    Log.i(Constants.APP_TAG, "onLayoutChange: imgWidth= " + imageWidth +
+                            " imgHeight= " + imageHeight);
+
+                    // Choose smaller dimension so that we reduce the whitespace of
+                    // final image. Otherwise, the taller dimension would just be filled in
+                    // with white pixels.
+                    int smallerDimension = Math.min(imageWidth, imageHeight);
+                    transmitter = new Transmit(smallerDimension, smallerDimension);
+
                     sendJob();
                 }
             }
         });
 
-        dataTitle = (TextView)rootView.findViewById(R.id.data_title);
         sendButton = (Button)rootView.findViewWithTag("send");
         sendButton.setOnClickListener(new CaptureClick());
         return rootView;
@@ -143,7 +254,7 @@ public class TransmitFragment extends Fragment {
         if(bundle != null) {
             Job job = (Job) bundle.getSerializable("job");
             transmitData(job);
-            nextFrame();
+            showInitialFrame();
         }
     }
 
@@ -164,7 +275,6 @@ public class TransmitFragment extends Fragment {
         String title = job.getTitle();
         Log.i(Constants.APP_TAG, "Trying to create and transmit QR codes");
         Log.i(Constants.APP_TAG, "transmitData title=" + title + " byte count=" + bytes.length);
-        updateUi(title);
 
         // Retrieve transmission settings before encoding QR codes
         int density = Integer.parseInt(settings.getString("qr_density", "10"));
@@ -177,67 +287,147 @@ public class TransmitFragment extends Fragment {
             qrCodes = transmitter.encodeQRCodes(job, density, ecLevel);
             qrCodeIter = qrCodes.iterator();
             currentQR = null;
-            count = 0;
             Log.i(Constants.APP_TAG, "transmitData(), Successful creation of QR codes");
         } catch (TransmitException e) {
             Log.e(Constants.APP_TAG, e.getMessage());
         }
     }
 
-    private void updateUi(String title) {
-        dataTitle.setText(title);
+    private void displayNextFrame() {
+        currentQR = getNextFrame();
+        insertFrame(currentQR);
     }
 
-    // Update the title with the QR chunkId being displayed.
-    // Imagine it will be most useful for debugging.
-    private void updateUI(int chunkId ) {
-        String title = dataTitle.getText().toString();
-        String chunkSep = getString(R.string.transmit_chunk_sep);
-        String chunkStr = getString(R.string.transmit_chunkTxt);
-        int index = title.indexOf(chunkSep + chunkStr);
-        String newTitle;
-        if (index >= 0) {
-            newTitle = title.substring(0, index) + chunkSep + chunkStr + chunkId;
-        }else{
-            newTitle = chunkStr + chunkId;
+    // Fill up the display with the number of QR codes set in the preferences
+    private void showInitialFrame() {
+        for (int i=0; i<numQRCodesDisplayed; i++) {
+            currentQR = getNextFrame();
+            insertFrame(currentQR);
         }
-        updateUi(newTitle);
     }
 
-    private void nextFrame() {
-        // Doesn't make sense to go to next frame if there are no qrCodes
+    // Returns the next BitmapImage in the sequence
+    // when it is available, otherwise, return null.
+    private BitmapImage getNextFrame() {
         if (qrCodes == null) {
-            return;
+            return null;
         }
         // Reset so we can transmit again
         if (qrCodeIter == null || !qrCodeIter.hasNext()) {
             resetQRTransmission();
         }
-        count++;
-        currentQR = qrCodeIter.next();
-        displayImageOnUI(currentQR, count);
+        return qrCodeIter.next();
     }
 
     /**
      * Re-draw a frame with QR codes whenever resume from pause
      */
     private void repeatFrame() {
+        // When a view is full of QR codes, pauses, and then resumes display
+        // this function will not restore multiple QR codes - only the last
+        // one that was displayed.
+        // Probably better to restore full state but not part of this refactor.
+        // TODO: Perhaps save the display state on pause and then restore it on resume
         if (currentQR != null) {
-            displayImageOnUI(currentQR, count);
+            insertFrame(currentQR);
+            for (int i=1; i<numQRCodesDisplayed; i++) {
+                currentQR = getNextFrame();
+                insertFrame(currentQR);
+            }
         }
     }
 
     /**
-     * Draw a frame containing to the phone.
+     * Draw a frame containing QR codes to the phone. This pushes any other
+     * images down to the next location in the view.
      *
      * @param qrCode The image to display on the UI, should contain QR codes.
-     * @param frame Indicates which frame from the stream is being displayed.
      */
-    private void displayImageOnUI(BitmapImage qrCode, int frame) {
-        Log.i(Constants.APP_TAG, "Drawing QR Code: " + frame);
-        Bitmap b = toBitmap(qrCode);
-        send_window.setImageDrawable(new BitmapDrawable(getResources(), b));
-        updateUI(frame);
+    private void insertFrame(BitmapImage qrCode) {
+        // Push down all of the other frames
+        moveImagesDown();
+
+        // Insert frame in the first row and first column of table
+        int r = 0;
+        int c = 0;
+
+        TableRow imageRow = (TableRow) send_window.getChildAt(r);
+        LinearLayout colView = (LinearLayout) imageRow.getChildAt(c);
+        ImageView imgView = getImageData(colView);
+
+        // Insert an empty frame whenever passed an null BitmapImage
+        if (qrCode != null) {
+            Bitmap b = toBitmap(qrCode);
+            imgView.setImageDrawable(new BitmapDrawable(getResources(), b));
+        } else{
+            imgView.setImageDrawable(null);
+
+        }
+        // Update the label for the QR code too, if desired.
+        if (hasQRCodeLabels) {
+            TextView textView = getLabelData(colView);
+            if (qrCode != null) {
+                textView.setText(qrCode.toString());
+            }else{
+                textView.setText(null);
+            }
+        }
+
+    }
+
+    // Retrieve the label data in an order agnostic way
+    private TextView getLabelData(LinearLayout view) {
+        if(hasQRCodeLabels) {
+            if (IS_LABEL_AFTER) {
+                return (TextView) view.getChildAt(1);
+            }
+            return (TextView) view.getChildAt(0);
+        }
+        return null;
+    }
+    // Retrieve the image data in an order agnostic way
+    private ImageView getImageData(LinearLayout view) {
+        if(hasQRCodeLabels) {
+            if (!IS_LABEL_AFTER) {
+                return (ImageView) view.getChildAt(1);
+            }
+        }
+        return (ImageView) view.getChildAt(0);
+    }
+
+    private void moveImagesDown() {
+        Drawable prevImage = null;
+        CharSequence prevLabel = null;
+
+        int nRows = send_window.getChildCount();
+        for (int r = 0; r < nRows; r++) {
+            TableRow imageRow = (TableRow) send_window.getChildAt(r);
+            if (imageRow == null)
+                continue;
+
+            for (int c = 0; c < imageRow.getChildCount(); c++) {
+                //Indicates which frame from the stream is being displayed.
+                LinearLayout colView = (LinearLayout) imageRow.getChildAt(c);
+                ImageView imgView = getImageData(colView);
+
+                // Pop off the current frame
+                Drawable tmpImg = imgView.getDrawable();
+
+                // Replace it with previous frame
+                imgView.setImageDrawable(prevImage);
+
+                // Set the previous frame to saved frame
+                prevImage = tmpImg;
+
+                // Do the same for the labels if there are any
+                if(hasQRCodeLabels) {
+                    TextView textView = getLabelData(colView);
+                    CharSequence tmpText = textView.getText();
+                    textView.setText(prevLabel);
+                    prevLabel = tmpText;
+                }
+            }
+        }
     }
 
     /**
@@ -247,7 +437,6 @@ public class TransmitFragment extends Fragment {
         if (qrCodes != null) {
             Log.d(Constants.APP_TAG, "Tx: Restarting transmission");
             qrCodeIter = qrCodes.iterator();
-            count = 0;
         }
     }
     /**

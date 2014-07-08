@@ -253,7 +253,7 @@ public final class Transmit {
     }
     byte[] prependedData = Utils.prependChunkId(chunkedData, chunkId, totalChunks);
     BitMatrix bMat = bytesToQRCode(prependedData, ecLevel);
-    return BitmapImage.createBitmapImage(bMat);
+    return BitmapImage.createBitmapImage(chunkId, totalChunks, bMat);
   }
 
   /**
@@ -278,7 +278,20 @@ public final class Transmit {
   }
 
   /**
-   * Generates a QR code given a set of input bytes. This function
+   * Generates a QR code given a set of input bytes and default ZXing
+   * encode hints. This function assumes that any injection of a
+   * sequence number has already occurred.
+   *
+   * @param rawData the binary data to encode into a single QR code image.
+   * @param ecLevel the error correction level to encode the QR code with.
+   *
+   */
+  protected BitMatrix bytesToQRCode(byte[] rawData, ErrorCorrectionLevel ecLevel) {
+    return bytesToQRCode(rawData, getEncodeHints(ecLevel));
+  }
+
+  /**
+   * Generates a QR code given a set of input bytes and QR encode hints. This function
    * assumes that any injection of a sequence number has already occurred.
    *
    * ZXing library only encodes String and does not accept byte[], therefore we
@@ -287,10 +300,11 @@ public final class Transmit {
    *  3. When ZXing sees ISO-8859-1 character-set they set the QR
    *     encoding mode to 'Byte encoding' and turn the String back to turn to byte[].
    * @param rawData the binary data to encode into a single QR code image.
-   * @param ecLevel the error correction level to encode the QR code with.
+   * @param encodeHints the ZXing encode hints to use in generating a QR code.
    *
    */
-  protected BitMatrix bytesToQRCode(byte[] rawData, ErrorCorrectionLevel ecLevel) {
+  protected BitMatrix bytesToQRCode(byte[] rawData,
+                                    Map<EncodeHintType, Object> encodeHints) {
     /*
      * Max QR code density is function of error correction level and version of
      * QR code. Max bytes for QR in binary/byte mode = 2,953 bytes using, QR
@@ -314,7 +328,7 @@ public final class Transmit {
       // note: writer.encode cannot return a null value, as written. (It would throw a NPE.)
       int shortestDimension = Math.min(imgWidth, imgHeight);
       BitMatrix bMat = writer.encode(data, BarcodeFormat.QR_CODE,
-          shortestDimension, shortestDimension, getEncodeHints(ecLevel));
+          shortestDimension, shortestDimension, encodeHints);
       return bMat;
     } catch (WriterException e) {
       //throw new TransmitException(e.getMessage());
@@ -327,10 +341,11 @@ public final class Transmit {
       //
       // Given all that, I think it's safe to wrap this exception up as an
       // unchecked exception, and re-throw it.  If this happens, it will almost
-      // certainly show up in the test suite, and it will let use Iterators.
+      // certainly show up in the test suite, and it will let us use Iterators.
       throw new IllegalArgumentException(e.getMessage(), e);
     }
   }
+
 
   /**
    * Returns properties for the ZXing QR code writer indicating use of
@@ -342,11 +357,12 @@ public final class Transmit {
    *   Level Q (Quartile)  25% of codewords can be restored.
    *   Level H (High)      30% of codewords can be restored.
    */
-  private Map<EncodeHintType, Object> getEncodeHints(ErrorCorrectionLevel errorLevel) {
+  protected Map<EncodeHintType, Object> getEncodeHints(ErrorCorrectionLevel errorLevel) {
     /* Hints */
     HashMap<EncodeHintType, Object> hints = new HashMap<EncodeHintType, Object>();
     hints.put(EncodeHintType.CHARACTER_SET, "ISO-8859-1");
     hints.put(EncodeHintType.ERROR_CORRECTION, errorLevel);
+    hints.put(EncodeHintType.MARGIN, 1);
 
     return hints;
   }

@@ -23,24 +23,37 @@ import com.google.zxing.common.BitMatrix;
  * Class used for converting from Zebra Xing library BitMatrix image type to
  * byte[] for Android to convert into Bitmap. This intermediate class is needed
  * since Android does not have BufferedImage in its Java implementation.
+ *
+ * Additionally, it communicates to application that is transmitting
+ * the QR codes, the id of the QR code contained within the image
+ * and the totalChunks being transmitted so that the
+ * application doesn't have to decode the QR code to access this information.
  */
 public class BitmapImage {
 
   private final BitMatrix m;
   private final int w;
   private final int h;
+  private final int id;
+  private final int total;
 
   /**
    * Convert BitMatrix to BitmapImage type
    * @param mat the BitMatrix to convert
    */
-  public static BitmapImage createBitmapImage (BitMatrix mat) {
+  public static BitmapImage createBitmapImage (int chunkId,
+                                               int totalChunks,
+                                               BitMatrix mat) {
     int w = mat.getWidth();
     int h = mat.getHeight();
-    return new BitmapImage(w,h,mat);
+    return new BitmapImage(chunkId,totalChunks,w,h,mat);
   }
 
-  private BitmapImage(int width, int height, BitMatrix bitMatrix) {
+  private BitmapImage(int chunkId, int totalChunks,
+                      int width, int height,
+                      BitMatrix bitMatrix) {
+    id = chunkId;
+    total = totalChunks;
     w = width;
     h = height;
     m = bitMatrix;
@@ -52,6 +65,15 @@ public class BitmapImage {
 
   public int getHeight() {
     return h;
+  }
+
+  @Override
+  public String toString() {
+    String label = "chunk " + id;
+    if (total > 1) {
+        return label + " of " + total;
+    }
+    return label;
   }
 
   /**
@@ -68,7 +90,7 @@ public class BitmapImage {
   }
 
   /**
-   * BitMatrix accessor, currently only used for testing, which is why it is 
+   * BitMatrix accessor, currently only used for testing, which is why it is
    * protected.
    */
   protected BitMatrix getBitMatrix() {
