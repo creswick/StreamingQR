@@ -53,7 +53,7 @@ public class TransmitFragment extends Fragment {
     private ImageView send_window;
     private Button sendButton;
     private Transmit transmitter;
-    private boolean transmitPaused;
+    private boolean transmitPaused = true;
 
     // Allows us to step through QR code transmission
     private Iterable<BitmapImage> qrCodes;
