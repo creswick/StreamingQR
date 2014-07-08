@@ -29,6 +29,7 @@
     <string name="preference_density_high">12</string>
 
     <!-- Possible settings for frame display rate (milliseconds) -->
+    <string name="preference_frame_time_super_low">100</string>
     <string name="preference_frame_time_low">200</string>
     <string name="preference_frame_time_med">500</string>
     <string name="preference_frame_time_high">1000</string>
