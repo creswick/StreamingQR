@@ -35,6 +35,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.widget.LinearLayout;
+import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -158,41 +159,48 @@ public class TransmitFragment extends Fragment {
         // Create placeholder views for each of the QR codes and labels too.
         for (int r=1; r<=rowCount; r++) {
             TableRow imgRow = new TableRow(getActivity());
-            TableRow labelRow = new TableRow(getActivity());
 
             // The default row layout will set the child width to MATCH_PARENT and
             // the child height to WRAP_CONTENT. Default is okay for labels but will
             // not stretch the images very well. Therefore set the layout for the image row only.
             imgRow.setLayoutParams(tableRowLayout);
             for (int c = 1; c <= columnCount; c++) {
+                // Add labels and image together into LinearLayout before adding to row
+                // Items in TableRow must use the layout parameters from its parent,
+                // i.e. TableRow params
+                LinearLayout colView = new LinearLayout(getActivity());
+                colView.setLayoutParams(tableColumnLayout);
+                colView.setOrientation(LinearLayout.VERTICAL);
+
+                // Create the view where each of the QR codes will get displayed
+                ImageView imgView = new ImageView(getActivity());
 
                 // Create the text view for each of the QR code labels
                 if (hasQRCodeLabels) {
                     TextView textView = new TextView(getActivity());
                     textView.setGravity(Gravity.CENTER_HORIZONTAL);
-                    textView.setLayoutParams(tableColumnLayout);
-                    labelRow.addView(textView);
+                    // Give more space to the QR code than the labels
+                    textView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
+                            LayoutParams.WRAP_CONTENT, 0.1f));
+                    imgView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
+                            LayoutParams.MATCH_PARENT, 0.9f));
+
+                    if (IS_LABEL_AFTER) {
+                        colView.addView(imgView);
+                        colView.addView(textView);
+                    }else{
+                        colView.addView(textView);
+                        colView.addView(imgView);
+                    }
+                }else{
+                    imgView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
+                            LayoutParams.MATCH_PARENT));
+                    colView.addView(imgView);
                 }
 
-                // Create the view where each of the QR codes will get displayed
-                ImageView imgView = new ImageView(getActivity());
-
-                // Items in a TableRow must use the layout parameters from its parent, i.e. TableRow params
-                imgView.setLayoutParams(tableColumnLayout);
-                imgRow.addView(imgView);
+                imgRow.addView(colView);
             }
-
-            if (!hasQRCodeLabels) {
-                send_window.addView(imgRow);
-            } else {
-                if (IS_LABEL_AFTER) {
-                    send_window.addView(imgRow);
-                    send_window.addView(labelRow);
-                } else {
-                    send_window.addView(labelRow);
-                    send_window.addView(imgRow);
-                }
-            }
+            send_window.addView(imgRow);
         }
 
         send_window.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
@@ -208,9 +216,7 @@ public class TransmitFragment extends Fragment {
                     // The numRows we divide by two since we added rows for the image labels.
                     int numCols = 1;
                     int numRows = send_window.getChildCount();
-                    if (hasQRCodeLabels) {
-                        numRows = numRows / 2;
-                    }
+
                     if (numRows >= 1) {
                         TableRow r = (TableRow) send_window.getChildAt(0);
                         numCols = r.getChildCount();
@@ -219,14 +225,17 @@ public class TransmitFragment extends Fragment {
                                              " numCols= " + numCols);
 
                     int imageWidth = send_window.getWidth() / numCols;
-                    int imageHeight = send_window.getHeight() / numRows;
+                    int imageHeight = send_window.getHeight();
+                    if (numRows > 1) {
+                        imageHeight = imageHeight / numRows;
+                    }
                     Log.i(Constants.APP_TAG, "onLayoutChange: imgWidth= " + imageWidth +
                             " imgHeight= " + imageHeight);
 
                     // Choose smaller dimension so that we reduce the whitespace of
                     // final image. Otherwise, the taller dimension would just be filled in
                     // with white pixels.
-                    int smallerDimension = imageWidth < imageHeight ? imageWidth : imageHeight;
+                    int smallerDimension = Math.min(imageWidth, imageHeight);
                     transmitter = new Transmit(smallerDimension, smallerDimension);
 
                     sendJob();
@@ -341,8 +350,9 @@ public class TransmitFragment extends Fragment {
         int r = 0;
         int c = 0;
 
-        TableRow imageRow = getImageRow(r);
-        ImageView imgView = (ImageView) imageRow.getChildAt(c);
+        TableRow imageRow = (TableRow) send_window.getChildAt(r);
+        LinearLayout colView = (LinearLayout) imageRow.getChildAt(c);
+        ImageView imgView = getImageData(colView);
 
         // Insert an empty frame whenever passed an null BitmapImage
         if (qrCode != null) {
@@ -354,8 +364,7 @@ public class TransmitFragment extends Fragment {
         }
         // Update the label for the QR code too, if desired.
         if (hasQRCodeLabels) {
-            TableRow labelRow = getLabelRow(r);
-            TextView textView = (TextView) labelRow.getChildAt(c);
+            TextView textView = getLabelData(colView);
             if (qrCode != null) {
                 textView.setText(qrCode.toString());
             }else{
@@ -365,50 +374,40 @@ public class TransmitFragment extends Fragment {
 
     }
 
-    // Retrieve the image row in an label agnostic way
-    private TableRow getImageRow(int r) {
+    // Retrieve the label data in an order agnostic way
+    private TextView getLabelData(LinearLayout view) {
         if(hasQRCodeLabels) {
             if (IS_LABEL_AFTER) {
-                return (TableRow) send_window.getChildAt(2*r);
+                return (TextView) view.getChildAt(1);
             }
-            return (TableRow) send_window.getChildAt(2*r + 1);
+            return (TextView) view.getChildAt(0);
         }
-        return (TableRow) send_window.getChildAt(r);
+        return null;
     }
-
-    // Retrieve the label row in an order agnostic way
-    private TableRow getLabelRow(int r) {
-        // If no labels, then no label row
-        if(!hasQRCodeLabels) {
-            return null;
+    // Retrieve the image data in an order agnostic way
+    private ImageView getImageData(LinearLayout view) {
+        if(hasQRCodeLabels) {
+            if (!IS_LABEL_AFTER) {
+                return (ImageView) view.getChildAt(1);
+            }
         }
-        if(IS_LABEL_AFTER) {
-            return (TableRow) send_window.getChildAt(2*r + 1);
-        }
-        return (TableRow) send_window.getChildAt(2*r);
-    }
-
-    // Returns the number of rows as if there were no labels
-    private int getNumRows() {
-        int numRows = send_window.getChildCount();
-        if (hasQRCodeLabels) {
-            return numRows / 2;
-        }
-        return numRows;
+        return (ImageView) view.getChildAt(0);
     }
 
     private void moveImagesDown() {
         Drawable prevImage = null;
         CharSequence prevLabel = null;
 
-        int nRows = getNumRows();
+        int nRows = send_window.getChildCount();
         for (int r = 0; r < nRows; r++) {
-            TableRow imageRow = getImageRow(r);
-            TableRow labelRow = getLabelRow(r);
+            TableRow imageRow = (TableRow) send_window.getChildAt(r);
+            if (imageRow == null)
+                continue;
 
             for (int c = 0; c < imageRow.getChildCount(); c++) {
                 //Indicates which frame from the stream is being displayed.
-                ImageView imgView = (ImageView) imageRow.getChildAt(c);
+                LinearLayout colView = (LinearLayout) imageRow.getChildAt(c);
+                ImageView imgView = getImageData(colView);
 
                 // Pop off the current frame
                 Drawable tmpImg = imgView.getDrawable();
@@ -421,12 +420,11 @@ public class TransmitFragment extends Fragment {
 
                 // Do the same for the labels if there are any
                 if(hasQRCodeLabels) {
-                    TextView textView = (TextView) labelRow.getChildAt(c);
+                    TextView textView = getLabelData(colView);
                     CharSequence tmpText = textView.getText();
                     textView.setText(prevLabel);
                     prevLabel = tmpText;
                 }
-
             }
         }
     }
