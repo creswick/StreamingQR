@@ -16,9 +16,10 @@
  */
 package com.galois.qrstream.lib;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 
 import com.galois.qrstream.qrpipe.IProgress;
@@ -41,16 +42,19 @@ import java.net.URI;
 public class DecodeThread extends Thread {
     private final Receive receiver;
     private final CameraManager cameraManager;
-    private final ReceiveFragment fragment;
+    private final Context context;
+    private final Handler uiHandle;
 
-    public DecodeThread(ReceiveFragment ctx, IProgress progress, CameraManager cameraManager) {
-        this.fragment = ctx;
+    public DecodeThread(Context ctx, IProgress progress, CameraManager cameraManager,
+                        Handler uiHandle) {
+        this.context = ctx;
         this.cameraManager = cameraManager;
         this.receiver = new Receive(
                 cameraManager.getDisplayHeight(),
                 cameraManager.getDisplayWidth(),
                 Constants.MAX_CHUNKS,
                 progress);
+        this.uiHandle = uiHandle;
     }
 
     @Override
@@ -63,15 +67,10 @@ public class DecodeThread extends Thread {
             Log.w(Constants.APP_TAG, "DecodeThread heard " + new String(message.getData()));
 
             // The receiver has finished. Clear the UI.
-            fragment.getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    fragment.resetUI();
-                }
-            });
+            uiHandle.sendMessage(new Message());
 
             Intent i = buildIntent(message);
-            fragment.getActivity().startActivity(Intent.createChooser(i, "Open with"));
+            context.startActivity(Intent.createChooser(i, "Open with"));
         } catch(ReceiveException e) {
             Log.e(Constants.APP_TAG, "DecodeThread failed to read message. " + e.getMessage());
         } catch (IOException e) {
@@ -108,7 +107,7 @@ public class DecodeThread extends Thread {
     }
 
     private @NotNull URI storeData(Job message) throws IOException {
-        File cacheDir = fragment.getActivity().getCacheDir();
+        File cacheDir = context.getCacheDir();
         File tmpFile = File.createTempFile(Constants.APP_TAG, "", cacheDir);
 
         // make tmpFile world-readable:
