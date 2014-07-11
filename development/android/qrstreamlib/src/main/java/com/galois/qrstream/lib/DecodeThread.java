@@ -41,10 +41,10 @@ import java.net.URI;
 public class DecodeThread extends Thread {
     private final Receive receiver;
     private final CameraManager cameraManager;
-    private final Context context;
+    private final ReceiveFragment fragment;
 
-    public DecodeThread(Context ctx, IProgress progress, CameraManager cameraManager) {
-        this.context = ctx;
+    public DecodeThread(ReceiveFragment ctx, IProgress progress, CameraManager cameraManager) {
+        this.fragment = ctx;
         this.cameraManager = cameraManager;
         this.receiver = new Receive(
                 cameraManager.getDisplayHeight(),
@@ -62,9 +62,16 @@ public class DecodeThread extends Thread {
                                      message.getMimeType());
             Log.w(Constants.APP_TAG, "DecodeThread heard " + new String(message.getData()));
 
+            // The receiver has finished. Clear the UI.
+            fragment.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    fragment.resetUI();
+                }
+            });
 
             Intent i = buildIntent(message);
-            context.startActivity(Intent.createChooser(i, "Open with"));
+            fragment.getActivity().startActivity(Intent.createChooser(i, "Open with"));
         } catch(ReceiveException e) {
             Log.e(Constants.APP_TAG, "DecodeThread failed to read message. " + e.getMessage());
         } catch (IOException e) {
@@ -101,7 +108,7 @@ public class DecodeThread extends Thread {
     }
 
     private @NotNull URI storeData(Job message) throws IOException {
-        File cacheDir = context.getCacheDir();
+        File cacheDir = fragment.getActivity().getCacheDir();
         File tmpFile = File.createTempFile(Constants.APP_TAG, "", cacheDir);
 
         // make tmpFile world-readable:

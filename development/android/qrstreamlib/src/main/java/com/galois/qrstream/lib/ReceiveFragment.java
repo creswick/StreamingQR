@@ -359,7 +359,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     /*
      * Reset the UI elements to an initial state.
      */
-    private void resetUI() {
+    public void resetUI() {
         statusHeader.setVisibility(View.GONE);
         statusFooter.setVisibility(View.GONE);
 
@@ -597,7 +597,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             if (cameraManager == null || !cameraManager.isRunning()) {
                 cameraManager = new CameraManager(camera);
             }
-            decodeThread = new DecodeThread(getActivity(), progress, cameraManager);
+            decodeThread = new DecodeThread(this, progress, cameraManager);
             decodeThread.start();
         }
     }
