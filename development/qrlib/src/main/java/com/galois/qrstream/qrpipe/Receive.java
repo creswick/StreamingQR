@@ -70,7 +70,7 @@ public final class Receive {
 
   // Logging utility for Rx
   private final Logger logger = LoggerFactory.getLogger(Log.LOG_NAME);
-
+  private final Logger perfLog = LoggerFactory.getLogger(Log.TIMING_LOG);
 
   /**
    * Initializes receiver of QR code stream.
@@ -141,6 +141,11 @@ public final class Receive {
     // The received data and track transmission status.
     DecodedMessage message = new DecodedMessage(progress);
 
+    // Trying to keep some performance metrics
+    int numFramesFromCamera = 0;
+    int numFramesNoQRDetected = 0;
+    int numFramesQRDetected = 0;
+
     // Try decoding frames only while external application
     // is running and waiting for a response.
     while( frameManager.isRunning() ) {
@@ -152,14 +157,17 @@ public final class Receive {
         message.setFailedDecoding();
         throw new ReceiveException("Transmission failed to receive a valid frame from the camera");
       }
+      numFramesFromCamera++;
       // Decode the QR codes from within the image
       Iterable<Result> res;
       try {
         res = decodeMultipleQRCode(img.getYuvData());
         displayQRFinderPoints(res);
+        numFramesQRDetected++;
       } catch (NotFoundException e) {
         // Unable to detect QR in this image, try next one.
         displayQRFinderPoints(NO_RESULTS);
+        numFramesNoQRDetected++;
         continue;
       }
       // For the found QR codes, check that they are properly formatted
@@ -176,7 +184,11 @@ public final class Receive {
         continue;
       }
       if(s == State.Final) {
-          break;
+        perfLog.debug("Number frames from camera: " + numFramesFromCamera);
+        perfLog.debug("Number frames no QR codes detected: " + numFramesNoQRDetected);
+        perfLog.debug("Number frames with detected QR codes: " +numFramesQRDetected);
+        message.logNumberDuplicateQRDecodes();
+        break;
       }
     }
     // Either message complete or received partial message

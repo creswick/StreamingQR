@@ -546,6 +546,9 @@ public class TransmitFragment extends Fragment {
         Log.d(Constants.TIMING_TAG, "Error correction level: " +
                 settings.getString("error_correction", "L"));
 
+        // Whether the labels are displayed on the screen
+        Log.d(Constants.TIMING_TAG, "QR Labels shown?: " + hasQRCodeLabels);
+
         // Note: Payload bytes per frame comes from QRlib (getPayloadMaxBytes)
 
     }
