@@ -423,6 +423,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
             cameraOverlay.setCameraParameters(camera.getParameters().getPreviewSize(), rotation);
             displayUpdate.setCameraOn(true);
+            autoFocus();
 
         } catch (RuntimeException re) {
             // TODO handle this more elegantly.
