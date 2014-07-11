@@ -333,8 +333,9 @@ public final class Transmit {
     QRCodeWriter writer = new QRCodeWriter();
     try {
       // note: writer.encode cannot return a null value, as written. (It would throw a NPE.)
+      int shortestDimension = Math.min(imgWidth, imgHeight);
       BitMatrix bMat = writer.encode(data, BarcodeFormat.QR_CODE,
-          imgWidth, imgHeight, encodeHints);
+          shortestDimension, shortestDimension, encodeHints);
       return bMat;
     } catch (WriterException e) {
       //throw new TransmitException(e.getMessage());

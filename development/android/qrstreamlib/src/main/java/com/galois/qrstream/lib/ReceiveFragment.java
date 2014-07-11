@@ -28,6 +28,7 @@ import android.os.HandlerThread;
 import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -72,17 +73,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     private QRFoundPointsView cameraOverlay;
 
     // Used to show cancellation message on UI thread
-    // The dialog is setup in onCreateView since fragment context is available
-    private static AlertDialog alertDialog;
-    private static final Runnable runShowRxFailedDialog = new Runnable () {
-        @Override
-        public void run() {
-            Log.e(Constants.APP_TAG, "About to show failed alert message!");
-            if (alertDialog != null) {
-                alertDialog.show();
-            }
-        }
-    };
+    private Runnable runShowRxFailedDialog;
 
     private static final class DrawFinderPointsRunnable implements Runnable {
         private final float[] points;
@@ -132,6 +123,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         private View statusHeader;
         private QRFoundPointsView cameraOverlay;
         private boolean isCameraOn = false;
+        private Runnable runShowRxFailedDialog;
 
         public void setCameraOn(boolean isCameraOn) {
             this.isCameraOn = isCameraOn;
@@ -139,12 +131,13 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
         public void setupUi(TorrentBar tb, TextView pt,
                             View statusHeader, View statusFooter,
-                            QRFoundPointsView cameraOverlay) {
+                            QRFoundPointsView cameraOverlay, Runnable runShowRxFailedDialog) {
             this.torrentBar = tb;
             this.progressText = pt;
             this.statusHeader = statusHeader;
             this.statusFooter = statusFooter;
             this.cameraOverlay = cameraOverlay;
+            this.runShowRxFailedDialog = runShowRxFailedDialog;
         }
 
         @Override
@@ -245,6 +238,16 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         View rootView = inflater.inflate(R.layout.receive_fragment, container, false);
         rootLayout = (RelativeLayout)rootView.findViewById(R.id.receive_layout);
         rootLayout.setKeepScreenOn(true);
+
+        rootView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                autoFocus();
+                return false;
+            }
+        });
+
+
         /* remember the camera_window details for rebuilding later */
         camera_window = (SurfaceView)rootLayout.findViewById(R.id.camera_window);
         camera_window_params = camera_window.getLayoutParams();
@@ -256,24 +259,20 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         statusFooter = (ViewGroup)rootLayout.findViewById(R.id.status_overlay_footer);
         Button cancelButton = (Button)rootLayout.findViewById(R.id.cancel_button);
         cancelButton.setOnClickListener(cancelListener);
-        displayUpdate.setupUi(torrentBar, progressText, statusHeader, statusFooter, cameraOverlay);
         ImageButton progressCancelButton = (ImageButton) rootView.findViewById(R.id.progressbutton);
         progressCancelButton.setOnClickListener(cancelListener);
 
 
-        // Setup the alert dialog in case we need it to report Rx errors to the user.
-        alertDialog = new AlertDialog.Builder(activity).
-                setMessage(R.string.receive_failedTxt).
-                setPositiveButton(R.string.receive_buttonOkTxt,
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                Log.e(Constants.APP_TAG, "AlertDialog OK pressed, about to resume()");
-                                resetUI();
-                                startPipe(progress);
-                            }
-                }).create();
+        runShowRxFailedDialog = new Runnable () {
+            @Override
+            public void run() {
+                Toast.makeText(getActivity(), R.string.receive_failedTxt, Toast.LENGTH_LONG).show();
+                resetUI();
+                startPipe(progress);
+            }
+        };
 
+        displayUpdate.setupUi(torrentBar, progressText, statusHeader, statusFooter, cameraOverlay, runShowRxFailedDialog);
         resetUI();
         return rootView;
     }
@@ -298,7 +297,6 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         // However, it's causing the alert dialog to show whenever we navigate to
         // the settings fragment.
         displayUpdate.removeCallbacksAndMessages(null);
-        alertDialog.dismiss();
         super.onStop();
     }
 
@@ -377,15 +375,11 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         torrentBar.reset();
         progressText.setText("");
 
-        if (alertDialog.isShowing()) {
-            alertDialog.dismiss();
-        }
     }
 
     private void clearPendingAlertMessages() {
         // Dispose of cancellation messages that are no longer relevant.
         displayUpdate.removeCallbacks(runShowRxFailedDialog);
-        alertDialog.dismiss();
     }
 
     @Override
@@ -436,7 +430,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         } catch (RuntimeException re) {
             // TODO handle this more elegantly.
             Toast.makeText(getActivity(), "Unable to open camera", Toast.LENGTH_LONG).show();
-            Log.e(Constants.APP_TAG, "Could not open camera. "+re);
+            Log.e(Constants.APP_TAG, "Could not open camera. " + re);
             re.printStackTrace();
             displayUpdate.setCameraOn(false);
         } catch (IOException e) {
@@ -571,6 +565,14 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         return result;
     }
 
+    public void autoFocus() {
+        camera.autoFocus(new Camera.AutoFocusCallback() {
+            @Override
+            public void onAutoFocus(boolean success, Camera camera) {
+                // Do nothing. Let the user notice the image is in focus
+            }
+        });
+    }
     /*
      * Create a worker thread for decoding the preview frames
      * using the qrlib receiver.

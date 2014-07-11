@@ -13,11 +13,13 @@
     </string-array>
 
     <string-array name="frame_time">
+        <item>100ms</item>
         <item>200ms</item>
         <item>500ms</item>
         <item>1000ms</item>
     </string-array>
     <string-array name="frame_time_values">
+        <item>@string/preference_frame_time_super_low</item>
         <item>@string/preference_frame_time_low</item>
         <item>@string/preference_frame_time_med</item>
         <item>@string/preference_frame_time_high</item>
