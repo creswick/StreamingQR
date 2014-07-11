@@ -264,9 +264,12 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         runShowRxFailedDialog = new Runnable () {
             @Override
             public void run() {
-                Toast.makeText(getActivity(), R.string.receive_failedTxt, Toast.LENGTH_LONG).show();
-                resetUI();
-                startPipe(progress);
+                Activity activity = getActivity();
+                if(activity != null) {
+                    Toast.makeText(activity, R.string.receive_failedTxt, Toast.LENGTH_LONG).show();
+                    resetUI();
+                    startPipe(progress);
+                }
             }
         };
 
