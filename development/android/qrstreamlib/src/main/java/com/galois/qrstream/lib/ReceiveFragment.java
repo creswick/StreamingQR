@@ -17,9 +17,7 @@
 package com.galois.qrstream.lib;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Fragment;
-import android.content.DialogInterface;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.os.Bundle;
@@ -289,14 +287,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     public void onStop() {
         Log.e(Constants.APP_TAG, "ReceiveFragment onStop");
 
-        // Dispose of UI update messages that are no longer relevant.
-        // With 'null' as parameter, it removes all pending messages on UI thread.
-        // Ok because camera callbacks are not handled on UI thread anymore.
-        // We should be able to run this command to remove the alert dialog
-        //   displayUpdate.removeCallbacks(runShowRxFailedDialog);
-        // However, it's causing the alert dialog to show whenever we navigate to
-        // the settings fragment.
-        displayUpdate.removeCallbacksAndMessages(null);
+        clearPendingUIMessages();
         super.onStop();
     }
 
@@ -377,16 +368,22 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
     }
 
-    private void clearPendingAlertMessages() {
-        // Dispose of cancellation messages that are no longer relevant.
-        displayUpdate.removeCallbacks(runShowRxFailedDialog);
+    private void clearPendingUIMessages() {
+        // Dispose of UI update messages that are no longer relevant.
+        // With 'null' as parameter, it removes all pending messages on UI thread.
+        // Ok because camera callbacks are not handled on UI thread anymore.
+        // We should be able to run this command to remove the alert messages
+        //   displayUpdate.removeCallbacks(runShowRxFailedDialog);
+        // but there seems to be some kind of race condition that allows the runnable to continue
+        // running.
+        displayUpdate.removeCallbacksAndMessages(null);
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         Log.e(Constants.APP_TAG, "surfaceDestroyed");
         disposeCamera();
-        clearPendingAlertMessages();
+        clearPendingUIMessages();
     }
 
     @Override
@@ -530,8 +527,8 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
 
         camera = null;
 
-        // Dispose of cancellation messages that are no longer relevant.
-        displayUpdate.removeCallbacks(runShowRxFailedDialog);
+        // Dispose of any UI update messages that are no longer relevant.
+        clearPendingUIMessages();
     }
 
 
@@ -590,7 +587,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             }
         }
 
-        if(decodeThread == null) {
+        if(decodeThread == null && camera != null) {
             Log.d(Constants.APP_TAG, "startPipe building new decodeThread");
 
             // If we get this far, the camera preview is available for
