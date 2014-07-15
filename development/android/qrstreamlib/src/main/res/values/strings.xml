@@ -11,7 +11,7 @@
     <string name="settings_actionbar_title">Settings</string>
     <string name="preference_title_qr_density">QR Code Density</string>
     <string name="preference_description_qr_density">Set the relative capacity of each QR code used</string>
-    <string name="preference_title_frame_time">Frame time</string>
+    <string name="preference_title_frame_time">Transmission Speed</string>
     <string name="preference_description_frame_time">Time used to display each frame</string>
     <string name="preference_title_error_correction">Error Correction</string>
     <string name="preference_description_error_correction">Amount of redundancy in each QR code</string>

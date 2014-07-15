@@ -22,7 +22,7 @@
             android:summary="@string/preference_description_frame_time"
             android:entries="@array/frame_time"
             android:entryValues="@array/frame_time_values"
-            android:defaultValue="@string/preference_frame_time_high"
+            android:defaultValue="@string/preference_frame_time_low"
             />
 
         <ListPreference
@@ -40,13 +40,13 @@
             android:summary="@string/preference_description_frame_population"
             android:entries="@array/frame_population"
             android:entryValues="@array/frame_population_values"
-            android:defaultValue="@string/preference_frame_population_low"
+            android:defaultValue="@string/preference_frame_population_high"
             />
 
         <CheckBoxPreference
             android:key="display_labels"
             android:title="@string/preference_title_chunk_labels"
-            android:defaultValue="true"
+            android:defaultValue="false"
             />
     </PreferenceCategory>
 
