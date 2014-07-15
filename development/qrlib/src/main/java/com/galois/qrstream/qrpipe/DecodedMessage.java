@@ -19,7 +19,12 @@ package com.galois.qrstream.qrpipe;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Stopwatch;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 
@@ -35,6 +40,14 @@ public final class DecodedMessage {
   // Track progress of decoding
   private final IProgress decodeProgress;
   private DecodeState decodeState;
+
+  // Performance metric counters
+  private int numRepeatedQRDecodes = 0;
+
+  private final Logger logger = LoggerFactory.getLogger(Log.LOG_NAME);
+  private final Logger perfLog = LoggerFactory.getLogger(Log.TIMING_LOG);
+
+  private final Stopwatch stopwatch = Stopwatch.createUnstarted();
 
   public DecodedMessage (IProgress progress) {
     // Initialize 'decodeState' upon decoding first QR code.
@@ -97,6 +110,8 @@ public final class DecodedMessage {
 
     // Set up message container if this is the first QR code encountered.
     if (decodeState == null) {
+      // This is the beginning of the message. Start the performance timer!
+      stopwatch.start();
       decodeState = new DecodeState(msgPart.getTotalChunks());
       receivedData.clear();
     }
@@ -107,10 +122,24 @@ public final class DecodedMessage {
       // Only update progress indicator when decoding is successful
       // and we haven't seen this part of the message before.
       decodeProgress.changeState(decodeState);
-      System.out.println("QRLib: Saving chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
+      logger.debug("QRLib: Saving chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
     }else{
-      System.out.println("QRLib: Already saved chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
+      logger.debug("QRLib: Already saved chunk " + msgPart.getChunkId() + " of " + msgPart.getTotalChunks());
+      numRepeatedQRDecodes++;
     }
-    return decodeState.getState();
+    State currentState = decodeState.getState();
+    if (currentState == State.Final) {
+      // This is the end of the message. Report the decoding performance.
+      stopwatch.stop();
+      long secToDecodeMessage = stopwatch.elapsed(TimeUnit.SECONDS);
+      perfLog.debug("Time (in seconds) to decode message after receiving a " +
+                    "valid QR code: " + secToDecodeMessage);
+    }
+
+    return currentState;
+  }
+
+  protected void logNumberDuplicateQRDecodes() {
+    perfLog.debug("Number of duplicate QR decodes: " + numRepeatedQRDecodes);
   }
 }

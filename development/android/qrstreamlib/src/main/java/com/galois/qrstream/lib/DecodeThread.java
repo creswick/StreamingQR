@@ -64,9 +64,8 @@ public class DecodeThread extends Thread {
         Job message;
         try {
             message = (Job)receiver.decodeQRSerializable(cameraManager);
-            Log.w(Constants.APP_TAG, "DecodeThread received " + message.getData().length + " bytes " +
-                                     message.getMimeType());
-            Log.w(Constants.APP_TAG, "DecodeThread heard " + new String(message.getData()));
+            Log.w(Constants.APP_TAG, "DecodeThread received " + message.getData().length + " bytes, " +
+                                     "mimetype: " + message.getMimeType());
 
             Intent i = buildIntent(message);
             context.startActivity(Intent.createChooser(i, "Open with"));

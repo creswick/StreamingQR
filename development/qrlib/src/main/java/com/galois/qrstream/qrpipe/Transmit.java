@@ -24,6 +24,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.galois.qrstream.image.BitmapImage;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
@@ -49,6 +52,9 @@ public final class Transmit {
   /* Dimension of transmitted QR code images */
   private final int imgHeight;
   private final int imgWidth;
+
+  // Logging utility for Rx
+  private final Logger perfLog = LoggerFactory.getLogger(Log.TIMING_LOG);
 
   public Transmit(int height, int width) {
     imgHeight = height;
@@ -187,6 +193,7 @@ public final class Transmit {
       maxChunkSize = getPayloadMaxBytes(ecLevel, qrVersion);
       totalChunks = getTotalChunks(data.length, maxChunkSize);
       chunkId = 0;
+      perfLog.debug("Max bytes of payload per QR code: " + maxChunkSize);
       byteInputStream = new ByteArrayInputStream(data.clone());
     }
 

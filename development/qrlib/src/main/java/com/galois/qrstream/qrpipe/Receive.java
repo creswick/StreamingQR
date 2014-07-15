@@ -24,6 +24,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.galois.qrstream.image.YuvImage;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -63,6 +67,10 @@ public final class Receive {
 
   /* Useful to communicate no QR codes found */
   private static final Iterable<Result> NO_RESULTS = ImmutableList.of();
+
+  // Logging utility for Rx
+  private final Logger logger = LoggerFactory.getLogger(Log.LOG_NAME);
+  private final Logger perfLog = LoggerFactory.getLogger(Log.TIMING_LOG);
 
   /**
    * Initializes receiver of QR code stream.
@@ -133,6 +141,11 @@ public final class Receive {
     // The received data and track transmission status.
     DecodedMessage message = new DecodedMessage(progress);
 
+    // Trying to keep some performance metrics
+    int numFramesFromCamera = 0;
+    int numFramesNoQRDetected = 0;
+    int numFramesQRDetected = 0;
+
     // Try decoding frames only while external application
     // is running and waiting for a response.
     while( frameManager.isRunning() ) {
@@ -140,18 +153,21 @@ public final class Receive {
       YuvImage img = frameManager.captureFrameFromCamera();
       if (img == null) {
         // Communicate failed state to progress indicator.
-        System.out.println("decodeQRCodes: received invalid frame (null)");
+        logger.debug("decodeQRCodes: received invalid frame (null)");
         message.setFailedDecoding();
         throw new ReceiveException("Transmission failed to receive a valid frame from the camera");
       }
+      numFramesFromCamera++;
       // Decode the QR codes from within the image
       Iterable<Result> res;
       try {
         res = decodeMultipleQRCode(img.getYuvData());
         displayQRFinderPoints(res);
+        numFramesQRDetected++;
       } catch (NotFoundException e) {
         // Unable to detect QR in this image, try next one.
         displayQRFinderPoints(NO_RESULTS);
+        numFramesNoQRDetected++;
         continue;
       }
       // For the found QR codes, check that they are properly formatted
@@ -168,7 +184,11 @@ public final class Receive {
         continue;
       }
       if(s == State.Final) {
-          break;
+        perfLog.debug("Number frames from camera: " + numFramesFromCamera);
+        perfLog.debug("Number frames no QR codes detected: " + numFramesNoQRDetected);
+        perfLog.debug("Number frames with detected QR codes: " +numFramesQRDetected);
+        message.logNumberDuplicateQRDecodes();
+        break;
       }
     }
     // Either message complete or received partial message
