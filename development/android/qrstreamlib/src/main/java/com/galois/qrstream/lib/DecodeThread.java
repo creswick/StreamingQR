@@ -18,8 +18,10 @@ package com.galois.qrstream.lib;
 
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.MediaStore.Images;
 import android.util.Log;
 
 import com.galois.qrstream.qrpipe.IProgress;
@@ -88,25 +90,40 @@ public class DecodeThread extends Thread {
         if(mimeType.equals("text/plain")) {
             String msg = new String(message.getData());
             i.putExtra(Intent.EXTRA_TEXT, msg);
-        } else if (mimeType.equals(Constants.MIME_TYPE_TEXT_NOTE)) {
-            String json = new String(message.getData());
-            try {
-                JSONObject note = new JSONObject(json);
-                i.putExtra(Intent.EXTRA_TEXT, note.getString(Intent.EXTRA_TEXT));
-                i.putExtra(Intent.EXTRA_SUBJECT, note.getString(Intent.EXTRA_SUBJECT));
-                i.setType("text/plain");
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
         } else {
-            // this should conditionally use a URI if the payload is too large.
-            URI dataLoc = storeData(message);
-            i.putExtra(Intent.EXTRA_STREAM, dataLoc);
+            // content that is not text uses the filesystem to store the data
+            // (when sharing with a new local app)
+            File dataLoc = storeData(message);
+
+            if(mimeType.startsWith("image/")) {
+                String path = Images.Media.insertImage(context.getContentResolver(),
+                        dataLoc.getPath(), message.getTitle(), null);
+                Uri imageUri = Uri.parse(path);
+                i.putExtra(Intent.EXTRA_STREAM, imageUri);
+
+                // we can delete the temporary location in this case, since the file has been saved
+                // to the media store.
+                // In the other cases, the receiver has to handle the content of the temp file before
+                // it can be deleted -- but we will never know if/when that happens.
+                dataLoc.delete();
+            } else if (mimeType.equals(Constants.MIME_TYPE_TEXT_NOTE)) {
+                String json = new String(message.getData());
+                try {
+                    JSONObject note = new JSONObject(json);
+                    i.putExtra(Intent.EXTRA_TEXT, note.getString(Intent.EXTRA_TEXT));
+                    i.putExtra(Intent.EXTRA_SUBJECT, note.getString(Intent.EXTRA_SUBJECT));
+                    i.setType("text/plain");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                i.putExtra(Intent.EXTRA_STREAM, dataLoc.toURI());
+            }
         }
         return i;
     }
 
-    private @NotNull URI storeData(Job message) throws IOException {
+    private @NotNull File storeData(Job message) throws IOException {
         File cacheDir = context.getCacheDir();
         File tmpFile = File.createTempFile(Constants.APP_TAG, "", cacheDir);
 
@@ -124,6 +141,6 @@ public class DecodeThread extends Thread {
                 bos.close();
             }
         }
-        return tmpFile.toURI();
+        return tmpFile;
     }
 }
