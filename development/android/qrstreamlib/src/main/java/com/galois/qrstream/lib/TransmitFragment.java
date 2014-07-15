@@ -42,8 +42,10 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 
 import java.util.Iterator;
+import java.util.concurrent.TimeUnit;
 
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import com.google.common.base.Stopwatch;
 
 import com.galois.qrstream.qrpipe.Transmit;
 import com.galois.qrstream.qrpipe.TransmitException;
@@ -102,12 +104,30 @@ public class TransmitFragment extends Fragment {
             }
         };
 
+    // Keep track of time each QR code gets displayed
+    private final Stopwatch stopwatch = Stopwatch.createUnstarted();
+    private int numCallsToRunThroughFrames = 0;
+
     // Updates frame of QR code at regular interval
     private int transmitInterval = 0; // set once settings are loaded
     private final Handler handleFrameUpdate = new Handler();
     private final Runnable runThroughFrames = new Runnable() {
         @Override
         public void run() {
+            // Log the time that each frame takes to display
+            if (numCallsToRunThroughFrames < 20) {
+                numCallsToRunThroughFrames++;
+                if (!stopwatch.isRunning()) {
+                    stopwatch.start();
+                } else {
+                    stopwatch.stop();
+                    long timeLastFrameDisplayed = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+                    Log.d(Constants.TIMING_TAG, "Frame display time (ms): " + timeLastFrameDisplayed);
+                    if(numCallsToRunThroughFrames < 20) {
+                        stopwatch.reset();
+                    }
+                }
+            }
             displayNextFrame();
             handleFrameUpdate.postDelayed(this,transmitInterval);
         }
