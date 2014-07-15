@@ -66,15 +66,15 @@ public class DecodeThread extends Thread {
                                      message.getMimeType());
             Log.w(Constants.APP_TAG, "DecodeThread heard " + new String(message.getData()));
 
-            // The receiver has finished. Clear the UI.
-            uiHandle.sendMessage(new Message());
-
             Intent i = buildIntent(message);
             context.startActivity(Intent.createChooser(i, "Open with"));
         } catch(ReceiveException e) {
             Log.e(Constants.APP_TAG, "DecodeThread failed to read message. " + e.getMessage());
         } catch (IOException e) {
             Log.e(Constants.APP_TAG, "Could not store data to temp file." + e.getMessage());
+        } finally {
+            // The receiver has finished. Clear the UI.
+            uiHandle.sendMessage(new Message());
         }
     }
 
