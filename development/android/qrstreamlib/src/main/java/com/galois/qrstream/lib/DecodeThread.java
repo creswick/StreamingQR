@@ -16,9 +16,10 @@
  */
 package com.galois.qrstream.lib;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 
 import com.galois.qrstream.qrpipe.IProgress;
@@ -42,8 +43,10 @@ public class DecodeThread extends Thread {
     private final Receive receiver;
     private final CameraManager cameraManager;
     private final Context context;
+    private final Handler uiHandle;
 
-    public DecodeThread(Context ctx, IProgress progress, CameraManager cameraManager) {
+    public DecodeThread(Context ctx, IProgress progress, CameraManager cameraManager,
+                        Handler uiHandle) {
         this.context = ctx;
         this.cameraManager = cameraManager;
         this.receiver = new Receive(
@@ -51,6 +54,7 @@ public class DecodeThread extends Thread {
                 cameraManager.getDisplayWidth(),
                 Constants.MAX_CHUNKS,
                 progress);
+        this.uiHandle = uiHandle;
     }
 
     @Override
@@ -62,13 +66,15 @@ public class DecodeThread extends Thread {
                                      message.getMimeType());
             Log.w(Constants.APP_TAG, "DecodeThread heard " + new String(message.getData()));
 
-
             Intent i = buildIntent(message);
             context.startActivity(Intent.createChooser(i, "Open with"));
         } catch(ReceiveException e) {
             Log.e(Constants.APP_TAG, "DecodeThread failed to read message. " + e.getMessage());
         } catch (IOException e) {
             Log.e(Constants.APP_TAG, "Could not store data to temp file." + e.getMessage());
+        } finally {
+            // The receiver has finished. Clear the UI.
+            uiHandle.sendMessage(new Message());
         }
     }
 

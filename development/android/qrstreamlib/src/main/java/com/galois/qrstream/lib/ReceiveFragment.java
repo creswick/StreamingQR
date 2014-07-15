@@ -206,6 +206,22 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
         }
     };
 
+    private static class UiHandler extends Handler {
+        private ReceiveFragment rf;
+
+        public void setupFragment(ReceiveFragment rf) {
+            this.rf = rf;
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            final Bundle params = msg.getData();
+            rf.resetUI();
+        }
+    }
+
+    private final UiHandler uiHandle = new UiHandler();
+
     private final Progress progress = new Progress(displayUpdate);
 
     public ReceiveFragment() {
@@ -273,6 +289,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             }
         };
 
+        uiHandle.setupFragment(this);
         displayUpdate.setupUi(torrentBar, progressText, statusHeader, statusFooter, cameraOverlay, runShowRxFailedDialog);
         resetUI();
         return rootView;
@@ -362,7 +379,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
     /*
      * Reset the UI elements to an initial state.
      */
-    private void resetUI() {
+    public void resetUI() {
         statusHeader.setVisibility(View.GONE);
         statusFooter.setVisibility(View.GONE);
 
@@ -600,7 +617,7 @@ public class ReceiveFragment extends Fragment implements SurfaceHolder.Callback 
             if (cameraManager == null || !cameraManager.isRunning()) {
                 cameraManager = new CameraManager(camera);
             }
-            decodeThread = new DecodeThread(getActivity(), progress, cameraManager);
+            decodeThread = new DecodeThread(this.getActivity(), progress, cameraManager, uiHandle);
             decodeThread.start();
         }
     }
