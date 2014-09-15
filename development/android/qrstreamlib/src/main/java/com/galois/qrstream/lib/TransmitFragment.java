@@ -235,11 +235,8 @@ public class TransmitFragment extends Fragment {
                 if (totalQRCodes == 1) {
                     columnCount = 1;
                     rowCount = 1;
-                } else if (totalQRCodes == 2) {
-                    columnCount = 1;
-                    rowCount = 2;
                 } else if (totalQRCodes <= 4) {
-                    columnCount = 2;
+                    columnCount = 1;
                     rowCount = 2;
                 }
             }
