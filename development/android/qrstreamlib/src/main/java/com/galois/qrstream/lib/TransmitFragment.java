@@ -42,6 +42,7 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 
 import java.util.Iterator;
+import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
@@ -70,7 +71,7 @@ public class TransmitFragment extends Fragment {
     private boolean transmitPaused = true;
 
     // Allows us to step through QR code transmission
-    private Iterable<BitmapImage> qrCodes;
+    private Collection<BitmapImage> qrCodes;
     private Iterator<BitmapImage> qrCodeIter;
     private BitmapImage currentQR;
 
@@ -170,11 +171,80 @@ public class TransmitFragment extends Fragment {
                 }
             });
 
+
+        send_window = (TableLayout) rootView.findViewById(R.id.send_window);
+        setupQRCodeLayout(send_window);
+
+
+        send_window.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(View v, int left, int top, int right, int bottom,
+                                       int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                if (transmitter == null) {
+
+                    Log.d(Constants.APP_TAG, "onLayoutChange Transmitter created for width " +
+                            send_window.getWidth() + " height " + send_window.getHeight());
+
+                    // Calculate the image height and width given the row and column count.
+                    // The numRows we divide by two since we added rows for the image labels.
+                    int numCols = 1;
+                    int numRows = send_window.getChildCount();
+
+                    if (numRows >= 1) {
+                        TableRow r = (TableRow) send_window.getChildAt(0);
+                        numCols = r.getChildCount();
+                    }
+                    Log.i(Constants.APP_TAG, "onLayoutChange: numRows= " + numRows +
+                                             " numCols= " + numCols);
+
+                    int imageWidth = send_window.getWidth() / numCols;
+                    int imageHeight = send_window.getHeight();
+                    if (numRows > 1) {
+                        imageHeight = imageHeight / numRows;
+                    }
+                    Log.i(Constants.APP_TAG, "onLayoutChange: imgWidth= " + imageWidth +
+                            " imgHeight= " + imageHeight);
+
+                    // Choose smaller dimension so that we reduce the whitespace of
+                    // final image. Otherwise, the taller dimension would just be filled in
+                    // with white pixels.
+                    int smallerDimension = Math.min(imageWidth, imageHeight);
+                    transmitter = new Transmit(smallerDimension, smallerDimension);
+
+                    sendJob();
+                    Log.d(Constants.TIMING_TAG, "QR dimension: " + smallerDimension);
+                }
+            }
+        });
+
+        sendButton = (Button)rootView.findViewWithTag("send");
+        sendButton.setOnClickListener(new CaptureClick());
+        return rootView;
+    }
+
+    private void setupQRCodeLayout(TableLayout qrCodeLayout) {
         // Determine the row and columns to display based on settings
         int columnCount = (numQRCodesDisplayed <= 2) ? 1 : 2;
         int rowCount = numQRCodesDisplayed / columnCount;
 
-        send_window = (TableLayout) rootView.findViewById(R.id.send_window);
+        // If there are fewer QR codes from job than settings would like to display,
+        // then reduce the number of rows or columns shown to the user.
+        if(qrCodes != null) {
+            int totalQRCodes = qrCodes.size();
+            if (totalQRCodes < numQRCodesDisplayed) {
+                if (totalQRCodes == 1) {
+                    columnCount = 1;
+                    rowCount = 1;
+                } else if (totalQRCodes == 2) {
+                    columnCount = 1;
+                    rowCount = 2;
+                } else if (totalQRCodes <= 4) {
+                    columnCount = 2;
+                    rowCount = 2;
+                }
+            }
+        }
+        qrCodeLayout.removeAllViews();
 
         // Setup the layout parameters for each row and column in the table.
         // A row in a table must use the layout parameters from its parent, i.e. TableLayout params
@@ -231,53 +301,8 @@ public class TransmitFragment extends Fragment {
 
                 imgRow.addView(colView);
             }
-            send_window.addView(imgRow);
+            qrCodeLayout.addView(imgRow);
         }
-
-        send_window.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
-            @Override
-            public void onLayoutChange(View v, int left, int top, int right, int bottom,
-                                       int oldLeft, int oldTop, int oldRight, int oldBottom) {
-                if (transmitter == null) {
-
-                    Log.d(Constants.APP_TAG, "onLayoutChange Transmitter created for width " +
-                            send_window.getWidth() + " height " + send_window.getHeight());
-
-                    // Calculate the image height and width given the row and column count.
-                    // The numRows we divide by two since we added rows for the image labels.
-                    int numCols = 1;
-                    int numRows = send_window.getChildCount();
-
-                    if (numRows >= 1) {
-                        TableRow r = (TableRow) send_window.getChildAt(0);
-                        numCols = r.getChildCount();
-                    }
-                    Log.i(Constants.APP_TAG, "onLayoutChange: numRows= " + numRows +
-                                             " numCols= " + numCols);
-
-                    int imageWidth = send_window.getWidth() / numCols;
-                    int imageHeight = send_window.getHeight();
-                    if (numRows > 1) {
-                        imageHeight = imageHeight / numRows;
-                    }
-                    Log.i(Constants.APP_TAG, "onLayoutChange: imgWidth= " + imageWidth +
-                            " imgHeight= " + imageHeight);
-
-                    // Choose smaller dimension so that we reduce the whitespace of
-                    // final image. Otherwise, the taller dimension would just be filled in
-                    // with white pixels.
-                    int smallerDimension = Math.min(imageWidth, imageHeight);
-                    transmitter = new Transmit(smallerDimension, smallerDimension);
-
-                    sendJob();
-                    Log.d(Constants.TIMING_TAG, "QR dimension: " + smallerDimension);
-                }
-            }
-        });
-
-        sendButton = (Button)rootView.findViewWithTag("send");
-        sendButton.setOnClickListener(new CaptureClick());
-        return rootView;
     }
 
     private void sendJob() {
@@ -319,6 +344,11 @@ public class TransmitFragment extends Fragment {
             qrCodeIter = qrCodes.iterator();
             currentQR = null;
             Log.i(Constants.APP_TAG, "transmitData(), Successful creation of QR codes");
+
+            // Force different layout whenever there are fewer QR codes than expected
+            if(qrCodes.size() < numQRCodesDisplayed) {
+                setupQRCodeLayout(send_window);
+            }
 
             // Log some performance characteristics at start of job
             logNewJob(title, bytes.length);
