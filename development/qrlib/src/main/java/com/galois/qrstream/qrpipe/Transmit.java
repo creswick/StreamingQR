@@ -22,6 +22,8 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.AbstractCollection;
+import java.util.Collection;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -76,7 +78,7 @@ public final class Transmit {
    * @throws TransmitException If something goes wrong (inspect the thrown cause
    *         for more details).
    */
-  public Iterable<BitmapImage> encodeQRCodes(Serializable s, int density, ErrorCorrectionLevel ecLevel)
+  public Collection<BitmapImage> encodeQRCodes(Serializable s, int density, ErrorCorrectionLevel ecLevel)
       throws TransmitException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
@@ -89,7 +91,7 @@ public final class Transmit {
     return encodeQRCodes(baos.toByteArray(), density, ecLevel);
   }
 
-  public Iterable<BitmapImage> encodeQRCodes(Serializable s)
+  public Collection<BitmapImage> encodeQRCodes(Serializable s)
       throws TransmitException {
     // Use default QR density and error correction level so that
     // we can calculate the appropriate chunk size for the input data.
@@ -113,7 +115,7 @@ public final class Transmit {
    * @return The sequence of QR codes generated from input data.
    * @throws TransmitException if input {@code data} cannot be encoded as QR code.
    */
-  public Iterable<BitmapImage> encodeQRCodes(final byte[] data, int density, ErrorCorrectionLevel ecLevel)
+  public Collection<BitmapImage> encodeQRCodes(final byte[] data, int density, ErrorCorrectionLevel ecLevel)
           throws TransmitException {
     if (density < 1 || density > 40) {
       throw new IllegalArgumentException("QR density must be equal an integer between 1 and 40.");
@@ -123,7 +125,7 @@ public final class Transmit {
     return encodeQRCodes(data, qrVersion, ecLevel);
   }
 
-  public Iterable<BitmapImage> encodeQRCodes(final byte[] data) throws TransmitException {
+  public Collection<BitmapImage> encodeQRCodes(final byte[] data) throws TransmitException {
     // Use default QR density and error correction level so that
     // we can calculate the appropriate chunk size for the input data.
     Version qrVersion = Version.getVersionForNumber(1);
@@ -141,7 +143,7 @@ public final class Transmit {
    * @return The sequence of QR codes generated from input data.
    * @throws TransmitException if input {@code data} cannot be encoded as QR code.
    */
-  protected Iterable<BitmapImage> encodeQRCodes(final byte[] data,
+  protected Collection<BitmapImage> encodeQRCodes(final byte[] data,
       final Version qrVersion,
       final ErrorCorrectionLevel ecLevel) throws TransmitException {
 
@@ -158,12 +160,50 @@ public final class Transmit {
           + ", but got (" + imgWidth + "," + imgHeight + ").");
     }
 
-    return new Iterable<BitmapImage>() {
-      @Override
-      public Iterator<BitmapImage> iterator() {
-        return new ImgIterator(data, qrVersion, ecLevel);
-      }
-    };
+    return new ImgCollection(data,qrVersion,ecLevel);
+  }
+
+  /**
+   * Collection generates QR code bitmaps on demand.
+   *
+   */
+  private class ImgCollection extends AbstractCollection<BitmapImage> {
+    private final Version qrVersion;
+    private final ErrorCorrectionLevel ecLevel;
+    private final byte[] data;
+
+    private final int maxChunkSize;
+    private final int totalChunks;
+
+    // Suppress PMD warning about storing data array
+    // directly since ImgIterator will clone the data.
+    public ImgCollection(byte[] data, //NOPMD
+        Version qrVersion,
+        ErrorCorrectionLevel ecLevel) {
+      this.data = data;
+      this.qrVersion = qrVersion;
+      this.ecLevel = ecLevel;
+
+      int desiredChunkSize = getPayloadMaxBytes(ecLevel, qrVersion);
+      totalChunks = getTotalChunks(data.length, desiredChunkSize);
+      // Recalculate maxChunkSize to more evenly spread data across QR codes.
+      maxChunkSize = Math.min(desiredChunkSize, ((int) Math.ceil((float)data.length / totalChunks)));
+    }
+    // Suppress default constructor to force instantiation with data
+    // default density, and error correction levels.
+    private ImgCollection() {
+      throw new AssertionError();
+    }
+
+    @Override
+    public Iterator<BitmapImage> iterator() {
+      return new ImgIterator(data, qrVersion, ecLevel, maxChunkSize, totalChunks);
+    }
+
+    @Override
+    public int size() {
+      return totalChunks;
+    }
   }
 
   /**
@@ -186,12 +226,12 @@ public final class Transmit {
     private ByteArrayInputStream byteInputStream;
 
     public ImgIterator(byte[] data, Version qrVersion,
-        ErrorCorrectionLevel ecLevel) {
+        ErrorCorrectionLevel ecLevel, int maxChunkSize, int totalChunks) {
       this.qrVersion = qrVersion;
       this.ecLevel = ecLevel;
+      this.maxChunkSize = maxChunkSize;
+      this.totalChunks = totalChunks;
 
-      maxChunkSize = getPayloadMaxBytes(ecLevel, qrVersion);
-      totalChunks = getTotalChunks(data.length, maxChunkSize);
       chunkId = 0;
       perfLog.debug("Max bytes of payload per QR code: " + maxChunkSize);
       byteInputStream = new ByteArrayInputStream(data.clone());

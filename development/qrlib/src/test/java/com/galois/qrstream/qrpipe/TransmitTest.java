@@ -28,6 +28,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Collection;
 
 import javax.imageio.ImageIO;
 
@@ -70,13 +71,10 @@ public class TransmitTest {
 
     byte[] noByteData = new byte[0];
 
-    Iterable<BitmapImage> qrCodes =
+    Collection<BitmapImage> qrCodes =
         encodeQRAndCheckNotNull(noByteData, qrVersion, ecLevel);
 
-    int size = 0;
-    for(@SuppressWarnings("unused") BitmapImage c : qrCodes) {
-       size++;
-    }
+    int size = qrCodes.size();
     assertEquals("Empty transmission should yield no QR code", 0, size);
   }
 
@@ -103,7 +101,7 @@ public class TransmitTest {
     ErrorCorrectionLevel ecLevel = ErrorCorrectionLevel.L;
 
     byte[] data = "Square".getBytes();
-    Iterable<BitmapImage> qrCodes =
+    Collection<BitmapImage> qrCodes =
       rectangleTransmit.encodeQRCodes(data, qrVersion, ecLevel);
 
     BitmapImage image = qrCodes.iterator().next();
@@ -180,11 +178,11 @@ public class TransmitTest {
     // Count of failed QR code detections within sequence.
     int detectionErrors = 0;
 
-    Iterable<BitmapImage> qrCodes = encodeQRAndCheckNotNull(expectedBytes, qrVersion, ecLevel);
-    int size = 0;
+    Collection<BitmapImage> qrCodes = encodeQRAndCheckNotNull(expectedBytes, qrVersion, ecLevel);
+    int numQRCodes = 0;
     int resultLength = 0;
     for(BitmapImage c : qrCodes) {
-      size++;
+      numQRCodes++;
       BufferedImage b = UtilsTest.toBufferedImage(c);
       LuminanceSource lumSrc = new BufferedImageLuminanceSource(b);
 
@@ -196,8 +194,8 @@ public class TransmitTest {
         try {
           detectionErrors++;
           System.out.print("Failed to read QR code (Version: "+
-                           qrVersion+" chunk, "+size+"): ");
-          System.out.println(bitmapImageToFile(c,size,prefix));
+                           qrVersion+" chunk, "+numQRCodes+"): ");
+          System.out.println(bitmapImageToFile(c,numQRCodes,prefix));
         } catch (IOException e1) {
           fail("Unable to write QR code to temporary file.");
         }
@@ -213,6 +211,7 @@ public class TransmitTest {
         resultLength += fromChunk.length;
       }
     }
+    assertEquals("Expected total QR codes equal to size", numQRCodes, qrCodes.size());
     if (detectionErrors == 0) {
       assertArrayEquals("Decoded result should be same as original msg",
         expectedBytes, resultBytes);
@@ -328,10 +327,10 @@ public class TransmitTest {
    * @param qrVersion The density of the QR code.
    * @throws WriterException if QR encoding fails to encode {@code data}.
    */
-  private Iterable<BitmapImage> encodeQRAndCheckNotNull(
+  private Collection<BitmapImage> encodeQRAndCheckNotNull(
       byte[] data, Version qrVersion, ErrorCorrectionLevel ecLevel)
           throws TransmitException {
-    Iterable<BitmapImage> qrCodes = transmitter.encodeQRCodes(data, qrVersion, ecLevel);
+    Collection<BitmapImage> qrCodes = transmitter.encodeQRCodes(data, qrVersion, ecLevel);
     assertNotNull("Expect encoding will be successful", qrCodes);
     return qrCodes;
   }
