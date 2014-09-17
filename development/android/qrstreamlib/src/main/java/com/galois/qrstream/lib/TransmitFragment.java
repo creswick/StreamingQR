@@ -192,9 +192,9 @@ public class TransmitFragment extends Fragment {
 
                     if (numRows >= 1) {
                         TableRow r = (TableRow) send_window.getChildAt(0);
-                        numCols = r.getChildCount();
+                        numCols = Math.max(1,r.getChildCount());
                     }
-                    Log.i(Constants.APP_TAG, "onLayoutChange: numRows= " + numRows +
+                    Log.d(Constants.APP_TAG, "onLayoutChange: numRows= " + numRows +
                                              " numCols= " + numCols);
 
                     int imageWidth = send_window.getWidth() / numCols;
@@ -202,7 +202,7 @@ public class TransmitFragment extends Fragment {
                     if (numRows > 1) {
                         imageHeight = imageHeight / numRows;
                     }
-                    Log.i(Constants.APP_TAG, "onLayoutChange: imgWidth= " + imageWidth +
+                    Log.d(Constants.APP_TAG, "onLayoutChange: imgWidth= " + imageWidth +
                             " imgHeight= " + imageHeight);
 
                     // Choose smaller dimension so that we reduce the whitespace of
